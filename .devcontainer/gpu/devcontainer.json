@@ -1,0 +1,26 @@
+{
+    "name": "Sample Walking GPU Dev Container",
+    "dockerComposeFile": "../../docker/docker-compose.yml",
+    "service": "sample-walking",
+    "workspaceFolder": "${localEnv:HOME}/sample-contact-walking",
+    "shutdownAction": "stopCompose",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "mutantdino.resourcemonitor",
+                "ms-azuretools.vscode-docker",
+                "nvidia.nsight-vscode-edition",
+                "ritwickdey.liveserver",
+                "ms-vscode.cmake-tools",
+                "ms-python.python",
+                "charliermarsh.ruff",
+                "ms-vscode.cpptools",
+                "twxs.cmake",
+                "tamasfe.even-better-toml"
+            ]
+        }
+    },
+    "remoteEnv": {
+        "OBELISK_ROOT": "${localEnv: OBELISK_ROOT}"
+    }
+}

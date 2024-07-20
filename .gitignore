@@ -30,3 +30,11 @@
 *.exe
 *.out
 *.app
+
+# ros
+build/
+install/
+log/
+
+#obelisk
+obk_logs/
