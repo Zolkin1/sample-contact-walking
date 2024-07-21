@@ -48,6 +48,16 @@ RUN groupadd --gid $GID $USER && \
     usermod -aG sudo ${USER} && \
     echo "%${USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
+# Install pinocchio
+RUN apt-get update && apt-get install -qqy lsb-release curl && \
+    mkdir -p /etc/apt/keyrings && \
+    curl http://robotpkg.openrobots.org/packages/debian/robotpkg.asc \
+    | sudo tee /etc/apt/keyrings/robotpkg.asc && \
+    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/robotpkg.asc] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -cs) robotpkg" \
+    | sudo tee /etc/apt/sources.list.d/robotpkg.list && \
+    apt update && \
+    apt install -qqy robotpkg-pinocchio
+
 # switch to new user and workdir
 USER ${UID}
 
@@ -56,7 +66,15 @@ COPY docker_setup.sh /tmp/docker_setup.sh
 RUN source /tmp/docker_setup.sh --skip-docker && \
     sudo rm /tmp/docker_setup.sh
 
+# RUN export PATH=/opt/openrobots/bin:$PATH && \
+#     export PKG_CONFIG_PATH=/opt/openrobots/lib/pkgconfig:$PKG_CONFIG_PATH && \
+#     export LD_LIBRARY_PATH=/opt/openrobots/lib:$LD_LIBRARY_PATH && \
+#     export CMAKE_PREFIX_PATH=/opt/openrobots:$CMAKE_PREFIX_PATH
+
 # add local user binary folder to PATH variable
-ENV PATH="${PATH}:/home/${USER}/.local/bin"
+ENV PATH="${PATH}:/opt/openrobots/bin:/home/${USER}/.local/bin"
 ENV XDG_RUNTIME_DIR=/run/user/${UID}
+ENV PKG_CONFIG_PATH = "${PKG_CONFIG_PATH}:/opt/openrobots/lib/pkgconfig"
+ENV LD_LIBRARY_PATH = "${LD_LIBRARY_PATH}:/opt/openrobots/lib"
+ENV CMAKE_PREFIX_PATH = "${CMAKE_PREFIX_PATH}:/opt/openrobots"
 WORKDIR /home/${USER}
