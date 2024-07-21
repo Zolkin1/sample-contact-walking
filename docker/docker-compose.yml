@@ -41,7 +41,7 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [ gpu ]
-    working_dir: /sample-contact-walking
+    working_dir: ${HOME}/sample-contact-walking
     stdin_open: true
     tty: true
     command: /bin/bash

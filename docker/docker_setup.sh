@@ -1,45 +1,5 @@
 #!/bin/bash
 
-# installing pixi
-if ! command -v pixi &> /dev/null; then
-	echo -e "\033[1;32mPixi is not installed. Installing Pixi...\033[0m"
-	curl -fsSL https://pixi.sh/install.sh | bash
-else
-	echo -e "\033[1;33mPixi is already installed. Skipping Pixi installation.\033[0m"
-fi
-
-# installing uv
-if ! command -v uv &> /dev/null; then
-	echo -e "\033[1;32muv is not installed. Installing uv...\033[0m"
-	curl -LsSf https://astral.sh/uv/install.sh | sh
-else
-	echo -e "\033[1;33muv is already installed. Skipping uv installation.\033[0m"
-fi
-
-# installing nvm
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-if ! command -v nvm &> /dev/null; then
-	echo -e "\033[1;32mnvm is not installed. Installing nvm...\033[0m"
-	curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-	export NVM_DIR="$HOME/.nvm"
-	[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-	[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-	source ~/.bashrc
-	nvm install 20
-else
-	echo -e "\033[1;33mnvm is already installed. Skipping NVM installation.\033[0m"
-fi
-
-# set PYRIGHT_PYTHON_FORCE_VERSION=latest and add to .bashrc
-if ! grep -q "PYRIGHT_PYTHON_FORCE_VERSION=latest" ~/.bashrc; then
-	echo "export PYRIGHT_PYTHON_FORCE_VERSION=latest" >> ~/.bashrc
-	echo -e "\033[1;32mPYRIGHT_PYTHON_FORCE_VERSION=latest added to ~/.bashrc!\033[0m"
-else
-	echo -e "\033[1;33mPYRIGHT_PYTHON_FORCE_VERSION=latest already exists in ~/.bashrc, skipping...\033[0m"
-fi
-
 # colorized error messages for ROS2
 if ! grep -q "export RCUTILS_COLORIZED_OUTPUT=1" ~/.bashrc; then
     echo "export RCUTILS_COLORIZED_OUTPUT=1" >> ~/.bashrc

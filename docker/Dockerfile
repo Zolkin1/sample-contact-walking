@@ -31,6 +31,7 @@ RUN apt-get update && apt-get install -y \
     python-is-python3 \
     python3-pip \
     python3-argcomplete \
+    libeigen3-dev \
     mesa-utils \
     x11-apps \
     libyaml-dev \
@@ -78,3 +79,21 @@ ENV PKG_CONFIG_PATH = "${PKG_CONFIG_PATH}:/opt/openrobots/lib/pkgconfig"
 ENV LD_LIBRARY_PATH = "${LD_LIBRARY_PATH}:/opt/openrobots/lib"
 ENV CMAKE_PREFIX_PATH = "${CMAKE_PREFIX_PATH}:/opt/openrobots"
 WORKDIR /home/${USER}
+
+# Install OSQP and OSQPEigen
+RUN mkdir -p ${HOME}/repos && cd ${HOME}/repos && \
+    git clone --recursive https://github.com/osqp/osqp && \
+    cd osqp && \
+    mkdir build && cd build && \
+    cmake ../ && \
+    cmake --build . && \
+    sudo cmake --build . --target install && \
+    cd ${HOME}/repos && \
+    git clone https://github.com/robotology/osqp-eigen.git && \
+    cd osqp-eigen && \
+    mkdir build && \
+    cd build && \
+    cmake ../ && \
+    make && \
+    sudo make install
+# ENV OsqpEigen_DIR = "/home/${USER}"

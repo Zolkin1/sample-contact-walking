@@ -21,7 +21,7 @@ FetchContent_MakeAvailable(Obelisk)
 # ------- Fetch TORC ------- #
 set(BUILD_WITH_PINOCCHIO ON CACHE BOOL "t")
 set(BUILD_WITH_IPOPT OFF CACHE BOOL "t")
-set(BUILD_WITH_OSQP OFF CACHE BOOL "t")
+set(BUILD_WITH_OSQP ON CACHE BOOL "t")
 set(BUILD_WITH_CLARABEL OFF CACHE BOOL "t")
 
 FetchContent_Declare(

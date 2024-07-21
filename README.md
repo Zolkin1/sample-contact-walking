@@ -28,5 +28,5 @@ source install/setup.bash
 
 Launch the stack:
 ```
-obk-launch config_file_path=<file_path>.yaml device_name=onboard
+obk-launch config_file_path=${HOME}/sample-contact-walking/sample_contact_walking/configs/obk_sim_config.yaml device_name=onboard
 ```
