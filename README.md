@@ -1,14 +1,24 @@
 # sample-contact-walking
 
 ## Useful commands
+Setup:
+```
+bash setup.sh
+```
+
 Enter the docker container: 
 ```
 docker compose -f docker/docker-compose.yml run --build sample-walking
 ```
 
-Source Obelisk:
+Source base ROS:
 ```
-source $OBELISK_ROOT/obelisk_ws/install/setup.bash
+source /opt/ros/humble/setup.bash
+```
+
+Build and activate Obelisk:
+```
+obk
 ```
 
 Build all the packages:
@@ -28,5 +38,5 @@ source install/setup.bash
 
 Launch the stack:
 ```
-obk-launch config_file_path=${HOME}/sample-contact-walking/sample_contact_walking/configs/obk_sim_config.yaml device_name=onboard
+obk-launch config_file_path=${SAMPLE_WALKING_ROOT}/sample_contact_walking/configs/obk_sim_config.yaml device_name=onboard
 ```
