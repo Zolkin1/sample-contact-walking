@@ -31,6 +31,9 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(TORC)
 
+# ------- Pinocchio ------- #
+find_package(pinocchio 3.0.0 REQUIRED)
+
 # ------- Executables ------- #
 include_directories(include)
 ament_export_include_directories(include)
@@ -41,7 +44,7 @@ target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo)
 add_executable(state_estimator 
     src/achilles_estimator.cpp
     )
-target_link_libraries(state_estimator PUBLIC Obelisk::Core Obelisk::Zoo)
+target_link_libraries(state_estimator PUBLIC Obelisk::Core pinocchio::pinocchio)
 
 # ------- Install ------- #
 install(TARGETS

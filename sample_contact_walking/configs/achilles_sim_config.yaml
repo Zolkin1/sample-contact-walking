@@ -1,4 +1,4 @@
-config: achilles-sim
+config: achilles_sim
 onboard:
   control:
     - pkg: sample_contact_walking
