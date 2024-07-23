@@ -29,7 +29,7 @@ services:
       - $HOME/.Xauthority:$HOME/.Xauthority:rw
       - $HOME/.bashrc:$HOME/.bashrc
       - $HOME/.bash_aliases:$HOME/.bash_aliases
-      # - ../:$HOME/sample-contact-walking
+      - ../:$HOME/sample-contact-walking
       - ../../../Project-TORC/torc:$HOME/torc
     ports:
       - 7007:7007

@@ -36,21 +36,28 @@ onboard:
           history_depth: 10
           callback_group: None
           non_obelisk: False
+      timers:
+        - ros_parameter: timer_est_setting
+          timer_period_sec: 0.001
+          callback_group: None
+          # callback_key: timer_callback1
       subscribers:
-        - ros_parameter: sub_sensor_setting
-          # key: sub1
-          topic: /obelisk/dummy/sensor
-          msg_type: JointEncoders
+      # ---------- Joint Encoders ---------- #
+        - ros_parameter: joint_encoders_setting
+          topic: /obelisk/achilles/joint_encoders
+          # msg_type: ObkJointEncoders
           history_depth: 10
           # callback_key: sub_callback1
           callback_group: None
           non_obelisk: False
-      timers:
-        - ros_parameter: timer_est_setting
-          # key: timer1
-          timer_period_sec: 0.001
+      # ---------- Mocap ---------- #
+        - ros_parameter: mocap_setting
+          topic: /obelisk/achilles/mocap
+          # msg_type: ObkFramePose
+          history_depth: 10
+          # callback_key: sub_callback1
           callback_group: None
-          # callback_key: timer_callback1
+          non_obelisk: False
   # sensing:
   robot:
     - is_simulated: True
@@ -74,111 +81,80 @@ onboard:
           time_step: 0.002
           num_steps_per_viz: 5
           sensor_settings:
-          # ---------- Joint Positions ---------- #
-          - topic: /obelisk/achilles/joint_pos
+          # ---------- Joint Encoders ---------- #
+          - topic: /obelisk/achilles/joint_encoders
             dt: 0.002
-            sensor_type: jointpos
+            sensor_type: ObkJointEncoders
             sensor_names:
-            - left_hip_yaw_joint_pos_sensor
-            - left_hip_roll_joint_pos_sensor
-            - left_hip_pitch_joint_pos_sensor
-            - left_knee_pitch_joint_pos_sensor
-            - left_ankle_pitch_joint_pos_sensor
-            - left_shoulder_pitch_joint_pos_sensor
-            - left_shoulder_roll_joint_pos_sensor
-            - left_shoulder_yaw_joint_pos_sensor
-            - left_elbow_pitch_joint_pos_sensor
-            - right_hip_yaw_joint_pos_sensor
-            - right_hip_roll_joint_pos_sensor
-            - right_hip_pitch_joint_pos_sensor
-            - right_knee_pitch_joint_pos_sensor
-            - right_ankle_pitch_joint_pos_sensor
-            - right_shoulder_pitch_joint_pos_sensor
-            - right_shoulder_roll_joint_pos_sensor
-            - right_shoulder_yaw_joint_pos_sensor
-            - right_elbow_pitch_joint_pos_sensors
-          # ---------- Joint Velocities ---------- #
-          - topic: /obelisk/achilles/joint_vel
-            dt: 0.002
-            sensor_type: jointvel
-            sensor_names:
-            - left_hip_yaw_joint_vel_sensor
-            - left_hip_roll_joint_vel_sensor
-            - left_hip_pitch_joint_vel_sensor
-            - left_knee_pitch_joint_vel_sensor
-            - left_ankle_pitch_joint_vel_sensor
-            - left_shoulder_pitch_joint_vel_sensor
-            - left_shoulder_roll_joint_vel_sensor
-            - left_shoulder_yaw_joint_vel_sensor
-            - left_elbow_pitch_joint_vel_sensor
-            - right_hip_yaw_joint_vel_sensor
-            - right_hip_roll_joint_vel_sensor
-            - right_hip_pitch_joint_vel_sensor
-            - right_knee_pitch_joint_vel_sensor
-            - right_ankle_pitch_joint_vel_sensor
-            - right_shoulder_pitch_joint_vel_sensor
-            - right_shoulder_roll_joint_vel_sensor
-            - right_shoulder_yaw_joint_vel_sensor
-            - right_elbow_pitch_joint_vel_sensor
+            # ---------- Joint Positions ---------- #
+            - left_hip_yaw_joint_pos_sensor: jointpos
+              left_hip_roll_joint_pos_sensor: jointpos
+              left_hip_pitch_joint_pos_sensor: jointpos
+              left_knee_pitch_joint_pos_sensor: jointpos
+              left_ankle_pitch_joint_pos_sensor: jointpos
+              left_shoulder_pitch_joint_pos_sensor: jointpos
+              left_shoulder_roll_joint_pos_sensor: jointpos
+              left_shoulder_yaw_joint_pos_sensor: jointpos
+              left_elbow_pitch_joint_pos_sensor: jointpos
+              right_hip_yaw_joint_pos_sensor: jointpos
+              right_hip_roll_joint_pos_sensor: jointpos
+              right_hip_pitch_joint_pos_sensor: jointpos
+              right_knee_pitch_joint_pos_sensor: jointpos
+              right_ankle_pitch_joint_pos_sensor: jointpos
+              right_shoulder_pitch_joint_pos_sensor: jointpos
+              right_shoulder_roll_joint_pos_sensor: jointpos
+              right_shoulder_yaw_joint_pos_sensor: jointpos
+              right_elbow_pitch_joint_pos_sensors: jointpos
+            # ---------- Joint Velocities ---------- #
+              left_hip_yaw_joint_vel_sensor: jointvel
+              left_hip_roll_joint_vel_sensor: jointvel
+              left_hip_pitch_joint_vel_sensor: jointvel
+              left_knee_pitch_joint_vel_sensor: jointvel
+              left_ankle_pitch_joint_vel_sensor: jointvel
+              left_shoulder_pitch_joint_vel_sensor: jointvel
+              left_shoulder_roll_joint_vel_sensor: jointvel
+              left_shoulder_yaw_joint_vel_sensor: jointvel
+              left_elbow_pitch_joint_vel_sensor: jointvel
+              right_hip_yaw_joint_vel_sensor: jointvel
+              right_hip_roll_joint_vel_sensor: jointvel
+              right_hip_pitch_joint_vel_sensor: jointvel
+              right_knee_pitch_joint_vel_sensor: jointvel
+              right_ankle_pitch_joint_vel_sensor: jointvel
+              right_shoulder_pitch_joint_vel_sensor: jointvel
+              right_shoulder_roll_joint_vel_sensor: jointvel
+              right_shoulder_yaw_joint_vel_sensor: jointvel
+              right_elbow_pitch_joint_vel_sensor: jointvel
           # ---------- Torso IMU ---------- #
-          - topic: /obelisk/achilles/torso_acc
+          - topic: /obelisk/achilles/torso_imu
             dt: 0.002
-            sensor_type: accelerometer
+            sensor_type: ObkImu
             sensor_names:
-            - torso_imu_acc_sensor
-          - topic: /obelisk/achilles/torso_gyro
-            dt: 0.002
-            sensor_type: gyro
-            sensor_names:
-            - torso_imu_gyro_sensor
-          - topic: /obelisk/achilles/torso_quat
-            dt: 0.002
-            sensor_type: framequat
-            sensor_names:
-            - torso_imu_quat_sensor
+            - torso_imu_acc_sensor: accelerometer
+              torso_imu_gyro_sensor: gyro
+              torso_imu_quat_sensor: framequat
           # ---------- Left Foot IMU ---------- #
-          - topic: /obelisk/achilles/left_foot_acc
+          - topic: /obelisk/achilles/left_foot_imu
             dt: 0.002
-            sensor_type: accelerometer
+            sensor_type: ObkImu
             sensor_names:
-            - left_foot_imu_acc_sensor
-          - topic: /obelisk/achilles/left_foot_gyro
-            dt: 0.002
-            sensor_type: gyro
-            sensor_names:
-            - left_foot_imu_gyro_sensor
-          - topic: /obelisk/achilles/left_foot_quat
-            dt: 0.002
-            sensor_type: framequat
-            sensor_names:
-            - left_foot_imu_quat_sensor
+            - left_foot_imu_acc_sensor: accelerometer
+              left_foot_imu_gyro_sensor: gyro
+              left_foot_imu_quat_sensor: framequat
           # ---------- Right Foot IMU ---------- #
-          - topic: /obelisk/achilles/left_foot_acc
+          - topic: /obelisk/achilles/left_foot_imu
             dt: 0.002
-            sensor_type: accelerometer
+            sensor_type: ObkImu
             sensor_names:
-            - right_foot_imu_acc_sensor
-          - topic: /obelisk/achilles/right_foot_gyro
-            dt: 0.002
-            sensor_type: gyro
-            sensor_names:
-            - right_foot_imu_gyro_sensor
-          - topic: /obelisk/achilles/right_foot_quat
-            dt: 0.002
-            sensor_type: framequat
-            sensor_names:
-            - right_foot_imu_quat_sensor
+            - right_foot_imu_acc_sensor: accelerometer
+              right_foot_imu_gyro_sensor: gyro
+              right_foot_imu_quat_sensor: framequat
           # ---------- Mocap ---------- #
-          - topic: /obelisk/achilles/torso_pos
+          - topic: /obelisk/achilles/torso_pose
             dt: 0.002
-            sensor_type: framepos
+            sensor_type: ObkFramePose
             sensor_names:
-            - torso_mocap_pos_sensor
-          - topic: /obelisk/achilles/torso_quat
-            dt: 0.002
-            sensor_type: framequat
-            sensor_names:
-            - torso_mocap_quat_sensor
+            - torso_mocap_pos_sensor: framepos
+              torso_mocap_quat_sensor: framequat
   viz:
     on: True
     viz_tool: foxglove

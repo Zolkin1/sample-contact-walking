@@ -32,18 +32,28 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(TORC)
 
 # ------- Executables ------- #
+include_directories(include)
+ament_export_include_directories(include)
+
 add_executable(ll_controller src/controller_spin.cpp)
 target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo)
 
+add_executable(state_estimator 
+    src/achilles_estimator.cpp
+    )
+target_link_libraries(state_estimator PUBLIC Obelisk::Core Obelisk::Zoo)
+
+# ------- Install ------- #
 install(TARGETS
     ll_controller
+    state_estimator
     DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  set(ament_cmake_copyright_FOUND TRUE)
-  set(ament_cmake_cpplint_FOUND TRUE)
-  ament_lint_auto_find_test_dependencies()
+    find_package(ament_lint_auto REQUIRED)
+    set(ament_cmake_copyright_FOUND TRUE)
+    set(ament_cmake_cpplint_FOUND TRUE)
+    ament_lint_auto_find_test_dependencies()
 endif()
 
 ament_package()
