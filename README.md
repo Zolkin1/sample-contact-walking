@@ -36,7 +36,16 @@ Source the package:
 source install/setup.bash
 ```
 
+Set logging dir:
+```
+export ROS_HOME=~/sample-contact-walking
+```
+
 Launch the stack:
 ```
-obk-launch config_file_path=${SAMPLE_WALKING_ROOT}/sample_contact_walking/configs/obk_sim_config.yaml device_name=onboard
+obk-launch config_file_path=${SAMPLE_WALKING_ROOT}/sample_contact_walking/configs/achilles_sim_config.yaml device_name=onboard auto_start=configure
+```
+Wait for the viz software to connect then run:
+```
+obk-activate achilles
 ```

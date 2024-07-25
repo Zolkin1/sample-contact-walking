@@ -7,6 +7,8 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
 
 # ------- Fetch the Obelisk library ------- #
 include(FetchContent)
@@ -45,6 +47,12 @@ add_executable(state_estimator
     src/achilles_estimator.cpp
     )
 target_link_libraries(state_estimator PUBLIC Obelisk::Core pinocchio::pinocchio)
+
+ament_target_dependencies(
+    state_estimator PUBLIC
+    tf2_ros
+    tf2
+)
 
 # ------- Install ------- #
 install(TARGETS

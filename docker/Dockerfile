@@ -80,7 +80,7 @@ RUN mkdir -p ${HOME}/repos && cd ${HOME}/repos && \
 # ENV OsqpEigen_DIR = "/home/${USER}"
 
 # clone Obelisk into this docker image at the $OBELISK_ROOT path
-RUN git clone -b mujoco-cpp-sensors https://github.com/Caltech-AMBER/obelisk.git /home/${USER}/obelisk
+RUN git clone https://github.com/Caltech-AMBER/obelisk.git /home/${USER}/obelisk
 ENV OBELISK_ROOT=/home/${USER}/obelisk
 
 # run setup script in Dockerfile

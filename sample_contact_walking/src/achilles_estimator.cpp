@@ -4,9 +4,12 @@
 #include "pinocchio/fwd.hpp"
 #include "pinocchio/spatial/explog.hpp"
 
+#include "geometry_msgs/msg/transform_stamped.hpp"
+#include "tf2/LinearMath/Quaternion.h"
+#include "tf2_ros/static_transform_broadcaster.h"
+
 #include "sample_contact_walking/achilles_estimator.h"
 #include "obelisk_ros_utils.h"
-// #include "position_setpoint_controller.h"
 
 namespace achilles {
     AchillesEstimator::AchillesEstimator(const std::string& name) 
@@ -22,6 +25,11 @@ namespace achilles {
             "mocap_setting", "mocap_sensor",
             std::bind(&AchillesEstimator::MocapCallback, this, std::placeholders::_1));
 
+        // ---------- IMU Subscriptions ---------- //
+        this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkImu>(
+            "torso_imu_setting", "torso_imu_sensor",
+            std::bind(&AchillesEstimator::TorsoImuCallback, this, std::placeholders::_1));
+
         // Create broadcasters to map Mujoco Sites to frames
 
         // Reset values
@@ -31,6 +39,13 @@ namespace achilles {
 
         std::fill(std::begin(prev_base_pos_), std::end(prev_base_pos_), 0);
         std::fill(std::begin(base_pos_), std::end(base_pos_), 0);
+
+        // TODO: remove
+        recieved_first_imu_ = true;
+
+        // Make broadcasters
+        torso_mocap_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
+        this->MakeTorsoMocapTransform();
     }
 
     void AchillesEstimator::JointEncoderCallback(const obelisk_sensor_msgs::msg::ObkJointEncoders& msg) {
@@ -45,6 +60,7 @@ namespace achilles {
         recieved_first_mocap_ = true;
 
         prev_base_pos_ = base_pos_;
+        prev_base_quat_ = base_quat_;
         prev_base_sec_ = base_sec_;
         prev_base_nanosec_ = base_nanosec_;
 
@@ -52,10 +68,10 @@ namespace achilles {
         base_pos_.at(1) = msg.position.y;
         base_pos_.at(2) = msg.position.z;
 
-        base_pos_.at(3) = msg.orientation.x;
-        base_pos_.at(4) = msg.orientation.y;
-        base_pos_.at(5) = msg.orientation.z;
-        base_pos_.at(6) = msg.orientation.w;
+        base_quat_.x() = msg.orientation.x;
+        base_quat_.y() = msg.orientation.y;
+        base_quat_.z() = msg.orientation.z;
+        base_quat_.w() = msg.orientation.w;
 
         base_sec_ = msg.header.stamp.sec;
         base_nanosec_ = msg.header.stamp.nanosec;
@@ -67,7 +83,7 @@ namespace achilles {
         }
     }
 
-    void AchillesEstimator::ImuCallback(__attribute__((__unused__)) const obelisk_sensor_msgs::msg::ObkImu& msg) {
+    void AchillesEstimator::TorsoImuCallback(__attribute__((__unused__)) const obelisk_sensor_msgs::msg::ObkImu& msg) {
         recieved_first_imu_ = true;
     }
 
@@ -77,9 +93,15 @@ namespace achilles {
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Starting to publish estimated states.");
 
             msg.q_joints = joint_pos_;
-            for (int i = 0; i < FLOATING_POS_SIZE; i++) {
+            for (int i = 0; i < POS_VARS; i++) {
                 msg.q_base.emplace_back(base_pos_.at(i));
             }
+
+            msg.q_base.emplace_back(base_quat_.x());
+            msg.q_base.emplace_back(base_quat_.y());
+            msg.q_base.emplace_back(base_quat_.z());
+            msg.q_base.emplace_back(base_quat_.w());
+
             
             msg.joint_names = joint_names_;
             msg.base_link_name = base_link_name_;
@@ -94,21 +116,10 @@ namespace achilles {
                 base_vel_.at(i) = (base_pos_.at(i) - prev_base_pos_.at(i))/dt;
             }
 
-            Eigen::Quaterniond prev_quat, curr_quat;
-            prev_quat.x() = prev_base_pos_.at(POS_VARS);
-            prev_quat.y() = prev_base_pos_.at(POS_VARS + 1);
-            prev_quat.z() = prev_base_pos_.at(POS_VARS + 2);
-            prev_quat.w() = prev_base_pos_.at(POS_VARS + 3);
+            base_quat_.normalize();
+            prev_base_quat_.normalize();
 
-            curr_quat.x() = base_pos_.at(POS_VARS);
-            curr_quat.y() = base_pos_.at(POS_VARS + 1);
-            curr_quat.z() = base_pos_.at(POS_VARS + 2);
-            curr_quat.w() = base_pos_.at(POS_VARS + 3);
-
-            prev_quat.normalize();
-            curr_quat.normalize();
-
-            Eigen::Vector3d tangent_vec = pinocchio::quaternion::log3(curr_quat); // prev_quat.inverse()*
+            Eigen::Vector3d tangent_vec = pinocchio::quaternion::log3(base_quat_); // prev_quat.inverse()*
 
             for (size_t i = 0; i < 3; i++) {
                 base_vel_.at(i + POS_VARS) = tangent_vec(i)/dt;
@@ -125,6 +136,29 @@ namespace achilles {
 
         return msg;
     }
+
+    void AchillesEstimator::MakeTorsoMocapTransform() {
+        geometry_msgs::msg::TransformStamped t;
+
+        t.header.stamp = this->get_clock()->now();
+        t.header.frame_id = "torso_mocap_site";
+        t.child_frame_id = "base_link";
+
+        t.transform.translation.x = 0.0;
+        t.transform.translation.y = 0.0;
+        t.transform.translation.z = 0.0;
+        tf2::Quaternion q;
+        q.setRPY(
+        0.0,
+        0.0, //3.14,
+        0.0); //3.14);
+        t.transform.rotation.x = q.x();
+        t.transform.rotation.y = q.y();
+        t.transform.rotation.z = q.z();
+        t.transform.rotation.w = q.w();
+
+        torso_mocap_broadcaster_->sendTransform(t);
+    } 
 
 } // namespace achilles
 
