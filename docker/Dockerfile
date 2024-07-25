@@ -80,11 +80,21 @@ RUN mkdir -p ${HOME}/repos && cd ${HOME}/repos && \
 # ENV OsqpEigen_DIR = "/home/${USER}"
 
 # clone Obelisk into this docker image at the $OBELISK_ROOT path
+# RUN git clone https://github.com/Caltech-AMBER/obelisk.git /home/${USER}/obelisk
+# ENV OBELISK_ROOT=/home/${USER}/obelisk
+
+# # run setup script in Dockerfile
+# RUN source /home/${USER}/obelisk/setup.sh --pixi --cyclone-perf && \
+#     bash /home/${USER}/obelisk/scripts/install_sys_deps.sh -y --no-source-ros
+RUN echo "About to pull obelsik."
+
+# clone Obelisk into this docker image at the $OBELISK_ROOT path
 RUN git clone https://github.com/Caltech-AMBER/obelisk.git /home/${USER}/obelisk
 ENV OBELISK_ROOT=/home/${USER}/obelisk
 
-# run setup script in Dockerfile
-RUN source /home/${USER}/obelisk/setup.sh --pixi --cyclone-perf && \
-    bash /home/${USER}/obelisk/scripts/install_sys_deps.sh -y --no-source-ros
+# you must run the setup script from a directory where the user has permissions
+# run docker setup script in Dockerfile
+WORKDIR /home/${USER}
+RUN source /home/${USER}/obelisk/setup.sh --install-sys-deps --cyclone-perf --obk-aliases --basic
 
 WORKDIR /home/${USER}
