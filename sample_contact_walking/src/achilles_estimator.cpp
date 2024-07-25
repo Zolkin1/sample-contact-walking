@@ -90,46 +90,53 @@ namespace achilles {
     obelisk_estimator_msgs::msg::EstimatedState AchillesEstimator::ComputeStateEstimate() {
         obelisk_estimator_msgs::msg::EstimatedState msg;
         if (recieved_first_imu_ && recieved_first_encoders_ && recieved_first_mocap_) {
-            RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Starting to publish estimated states.");
-
-            msg.q_joints = joint_pos_;
-            for (int i = 0; i < POS_VARS; i++) {
-                msg.q_base.emplace_back(base_pos_.at(i));
-            }
-
-            msg.q_base.emplace_back(base_quat_.x());
-            msg.q_base.emplace_back(base_quat_.y());
-            msg.q_base.emplace_back(base_quat_.z());
-            msg.q_base.emplace_back(base_quat_.w());
-
-            
-            msg.joint_names = joint_names_;
-            msg.base_link_name = base_link_name_;
-
-            msg.v_joints = joint_vels_;
-
-            // Calculate base velocity via simple euler
             double d_sec = base_sec_ - prev_base_sec_;
             double d_nano_sec = base_nanosec_ - prev_base_nanosec_;
             double dt = ((d_sec * 1e9) + d_nano_sec)/1e9;
-            for (size_t i = 0; i < POS_VARS; i++) {
-                base_vel_.at(i) = (base_pos_.at(i) - prev_base_pos_.at(i))/dt;
+
+            if (dt > 0) {
+                RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Starting to publish estimated states.");
+
+                msg.q_joints = joint_pos_;
+                for (int i = 0; i < POS_VARS; i++) {
+                    msg.q_base.emplace_back(base_pos_.at(i));
+                }
+
+                msg.q_base.emplace_back(base_quat_.x());
+                msg.q_base.emplace_back(base_quat_.y());
+                msg.q_base.emplace_back(base_quat_.z());
+                msg.q_base.emplace_back(base_quat_.w());
+
+                
+                msg.joint_names = joint_names_;
+                msg.base_link_name = base_link_name_;
+
+                msg.v_joints = joint_vels_;
+
+                // Calculate base velocity via simple euler
+                double d_sec = base_sec_ - prev_base_sec_;
+                double d_nano_sec = base_nanosec_ - prev_base_nanosec_;
+                double dt = ((d_sec * 1e9) + d_nano_sec)/1e9;
+
+                for (size_t i = 0; i < POS_VARS; i++) {
+                    base_vel_.at(i) = (base_pos_.at(i) - prev_base_pos_.at(i))/dt;
+                }
+
+                base_quat_.normalize();
+                prev_base_quat_.normalize();
+
+                Eigen::Vector3d tangent_vec = pinocchio::quaternion::log3(base_quat_); // prev_quat.inverse()*
+
+                for (size_t i = 0; i < 3; i++) {
+                    base_vel_.at(i + POS_VARS) = tangent_vec(i)/dt;
+                }
+
+                for (int i = 0; i < FLOATING_VEL_SIZE; i++) {
+                    msg.v_base.emplace_back(base_vel_.at(i));
+                }
+
+                this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>(this->est_pub_key_)->publish(msg);
             }
-
-            base_quat_.normalize();
-            prev_base_quat_.normalize();
-
-            Eigen::Vector3d tangent_vec = pinocchio::quaternion::log3(base_quat_); // prev_quat.inverse()*
-
-            for (size_t i = 0; i < 3; i++) {
-                base_vel_.at(i + POS_VARS) = tangent_vec(i)/dt;
-            }
-
-            for (int i = 0; i < FLOATING_VEL_SIZE; i++) {
-                msg.v_base.emplace_back(base_vel_.at(i));
-            }
-
-            this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>(this->est_pub_key_)->publish(msg);
         } else {
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Waiting on sensor measurements to publish estimated state.");
         }

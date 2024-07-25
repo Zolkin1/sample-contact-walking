@@ -31,6 +31,11 @@ Build packages with verbose output:
 colcon build --symlink-install --parallel-workers $(nproc) --event-handlers console_direct+
 ```
 
+Build packages in debug mode:
+```
+colcon build --symlink-install --parallel-workers $(nproc) --cmake-args -DCMAKE_BUILD_TYPE=Debug
+```
+
 Source the package:
 ```
 source install/setup.bash

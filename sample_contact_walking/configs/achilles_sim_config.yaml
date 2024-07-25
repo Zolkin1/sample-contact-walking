@@ -4,6 +4,8 @@ onboard:
     - pkg: sample_contact_walking
       executable: ll_controller
       params_path: /home/zolkin/sample-contact-walking/sample_contact_walking/configs/wbc_config.yaml
+      params:
+        urdf_path: /home/zolkin/obelisk/obelisk_ws/install/achilles_model/share/achilles_model/urdf/achilles.urdf
       callback_groups: 
         control_cbg: MutuallyExclusiveCallbackGroup
         estimation_cbg: MutuallyExclusiveCallbackGroup
@@ -23,7 +25,7 @@ onboard:
           non_obelisk: False
       timers:
         - ros_parameter: timer_ctrl_setting
-          timer_period_sec: 0.001
+          timer_period_sec: 1
           callback_group: control_cbg
   estimation:
     - pkg: sample_contact_walking
@@ -38,7 +40,7 @@ onboard:
           non_obelisk: False
       timers:
         - ros_parameter: timer_est_setting
-          timer_period_sec: 0.001
+          timer_period_sec: 0.002
           callback_group: None
           # callback_key: timer_callback1
       subscribers:
@@ -69,8 +71,8 @@ onboard:
   # sensing:
   robot:
     - is_simulated: True
-      pkg: obelisk_sim_cpp
-      executable: obelisk_mujoco_robot
+      pkg: sample_contact_walking
+      executable: simulation
       # callback_groups:
       # publishers:
       subscribers:

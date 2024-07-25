@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
+# find_package(obelisk_estimator_msgs REQUIRED)
 
 # ------- Fetch the Obelisk library ------- #
 include(FetchContent)
@@ -40,9 +41,11 @@ find_package(pinocchio 3.0.0 REQUIRED)
 include_directories(include)
 ament_export_include_directories(include)
 
-add_executable(ll_controller src/controller_spin.cpp)
-target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo)
+# ------- Controller ------- #
+add_executable(ll_controller src/achilles_wbc.cpp)
+target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo Controllers)
 
+# ------- Estimator ------- #
 add_executable(state_estimator 
     src/achilles_estimator.cpp
     )
@@ -54,10 +57,15 @@ ament_target_dependencies(
     tf2
 )
 
+# ------- Simulation ------- #
+add_executable(simulation src/achilles_sim.cpp)
+target_link_libraries(simulation PUBLIC Obelisk::Core)
+
 # ------- Install ------- #
 install(TARGETS
     ll_controller
     state_estimator
+    simulation
     DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
