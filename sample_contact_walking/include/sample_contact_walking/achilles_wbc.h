@@ -15,8 +15,9 @@ namespace achilles {
             obelisk_control_msgs::msg::PDFeedForward ComputeControl() override;
             void UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) override;
 
-            void ConvertEigenToStd(const vectorx_t& eig_vec, std::vector<double> std_vec);
+            void ConvertEigenToStd(const vectorx_t& eig_vec, std::vector<double>& std_vec);
 
+            vectorx_t ConvertControlToMujocoU(const vectorx_t& pos_target, const vectorx_t& vel_target, const vectorx_t& feed_forward);
             // ---------- Member Variables ---------- //
             static constexpr int FLOATING_POS_SIZE = 7;
             static constexpr int FLOATING_VEL_SIZE = 6;

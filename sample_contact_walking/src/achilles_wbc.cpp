@@ -70,33 +70,45 @@ namespace achilles
             vectorx_t v_target = vectorx_t::Zero(model_->GetVelDim());
             vectorx_t target_state = torc::models::FullOrderRigidBody::BuildState(q_target, v_target);
             
+            vectorx_t feed_forward = vectorx_t::Zero(model_->GetNumInputs());
+
             // Create force_target
             vectorx_t force_target = vectorx_t::Constant(2, model_->GetMass()/2);
 
             // Create current state
             vectorx_t state = torc::models::FullOrderRigidBody::BuildState(q_, v_);
-            RCLCPP_INFO_STREAM(this->get_logger(), "State: " << state);
 
             // Call QP WBC controller
-            vectorx_t control = wbc_.ComputeControl(target_state, force_target, state, contact_state_);
+            // vectorx_t control = wbc_.ComputeControl(target_state, force_target, state, contact_state_);
 
             // Make the message
-            // ConvertEigenToStd(control, msg.u_mujoco);
-            // ConvertEigenToStd(q_target, msg.pos_target);
-            // ConvertEigenToStd(v_target, msg.vel_target);
-            // ConvertEigenToStd(control, msg.feed_forward);
+            vectorx_t u_mujoco = ConvertControlToMujocoU(q_target.tail(model_->GetNumInputs()), v_target.tail(model_->GetNumInputs()), feed_forward);
+            ConvertEigenToStd(u_mujoco, msg.u_mujoco);
+            ConvertEigenToStd(q_target.tail(model_->GetNumInputs()), msg.pos_target);
+            ConvertEigenToStd(v_target.tail(model_->GetNumInputs()), msg.vel_target);
+            ConvertEigenToStd(feed_forward, msg.feed_forward);
 
-            // this->GetPublisher<obelisk_control_msgs::msg::PDFeedForward>(this->ctrl_key_)->publish(msg);
+            if (msg.u_mujoco.size() != 54) {
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Message's u_mujoco is incorrectly sized. Size: " << msg.u_mujoco.size());
+            }
+
+            this->GetPublisher<obelisk_control_msgs::msg::PDFeedForward>(this->ctrl_key_)->publish(msg);
         }
 
         return msg;
     }
 
-    void AchillesController::ConvertEigenToStd(const vectorx_t& eig_vec, std::vector<double> std_vec) {
+    void AchillesController::ConvertEigenToStd(const vectorx_t& eig_vec, std::vector<double>& std_vec) {
         std_vec.clear();
         for (int i = 0; i < eig_vec.size(); i++) {
             std_vec.emplace_back(eig_vec(i));
         }
+    }
+
+    vectorx_t AchillesController::ConvertControlToMujocoU(const vectorx_t& pos_target, const vectorx_t& vel_target, const vectorx_t& feed_forward) {
+        vectorx_t u(pos_target.size() + vel_target.size() + feed_forward.size());
+        u << pos_target, vel_target, feed_forward;
+        return u;
     }
 
 } // namespace achilles
