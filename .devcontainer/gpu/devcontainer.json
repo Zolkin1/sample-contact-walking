@@ -19,8 +19,5 @@
                 "tamasfe.even-better-toml"
             ]
         }
-    },
-    "remoteEnv": {
-        "OBELISK_ROOT": "${localEnv: OBELISK_ROOT}"
     }
 }

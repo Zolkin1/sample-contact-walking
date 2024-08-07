@@ -1,0 +1,194 @@
+config: achilles_sim
+onboard:
+  control:
+    - pkg: sample_contact_walking
+      executable: ll_controller
+      params_path: /home/zolkin/sample-contact-walking/sample_contact_walking/configs/wbc_config.yaml
+      params:
+        urdf_path: /home/zolkin/sample-contact-walking/achilles_model_custom/urdf/achilles.urdf
+      callback_groups: 
+        control_cbg: MutuallyExclusiveCallbackGroup
+        estimation_cbg: MutuallyExclusiveCallbackGroup
+      publishers:
+        - ros_parameter: pub_ctrl_setting
+          topic: /obelisk/achilles/low_level_control
+          # msg_type: PD_FF
+          history_depth: 10
+          # callback_group: None
+          non_obelisk: False
+      subscribers:
+        - ros_parameter: sub_est_setting
+          topic: /obelisk/achilles/est_state
+          # msg_type: EstimatedState
+          history_depth: 10
+          callback_group: estimation_cbg
+          non_obelisk: False
+      timers:
+        - ros_parameter: timer_ctrl_setting
+          timer_period_sec: 0.01
+          callback_group: control_cbg
+  estimation:
+    - pkg: sample_contact_walking
+      executable: state_estimator
+      # callback_groups:
+      publishers:
+        - ros_parameter: pub_est_setting
+          topic: /obelisk/achilles/est_state
+          # msg_type: EstimatedState
+          history_depth: 10
+          callback_group: None
+          non_obelisk: False
+      timers:
+        - ros_parameter: timer_est_setting
+          timer_period_sec: 0.002
+          callback_group: None
+          # callback_key: timer_callback1
+      subscribers:
+      # ---------- Joint Encoders ---------- #
+        - ros_parameter: joint_encoders_setting
+          topic: /obelisk/achilles/joint_encoders
+          # msg_type: ObkJointEncoders
+          history_depth: 10
+          # callback_key: sub_callback1
+          callback_group: None
+          non_obelisk: False
+      # ---------- Mocap ---------- #
+        - ros_parameter: mocap_setting
+          topic: /obelisk/achilles/torso_pose
+          # msg_type: ObkFramePose
+          history_depth: 10
+          # callback_key: sub_callback1
+          callback_group: None
+          non_obelisk: False
+      # ---------- Torso IMU ---------- #
+        - ros_parameter: torso_imu_setting
+          topic: /obelisk/achilles/torso_imu
+          # msg_type: ObkFramePose
+          history_depth: 10
+          # callback_key: sub_callback1
+          callback_group: None
+          non_obelisk: False
+  # sensing:
+  robot:
+    - is_simulated: True
+      pkg: sample_contact_walking
+      executable: simulation
+      # callback_groups:
+      # publishers:
+      subscribers:
+        - ros_parameter: sub_ctrl_setting
+          # key: sub1
+          topic: /obelisk/achilles/low_level_control
+          # msg_type: PD_FF
+          history_depth: 10
+          # callback_key: sub_callback1
+          callback_group: None
+          non_obelisk: False
+      sim:
+        - ros_parameter: mujoco_setting
+          robot_pkg: achilles_model_custom
+          model_xml_path: achilles.xml
+          n_u: 54
+          time_step: 0.002
+          num_steps_per_viz: 5
+          sensor_settings:
+          # ---------- Joint Encoders ---------- #
+          - topic: /obelisk/achilles/joint_encoders
+            dt: 0.002
+            msg_type: ObkJointEncoders
+            sensor_names:
+            # ---------- Joint Positions ---------- #
+              left_hip_yaw_joint_pos_sensor: jointpos
+              left_hip_roll_joint_pos_sensor: jointpos
+              left_hip_pitch_joint_pos_sensor: jointpos
+              left_knee_pitch_joint_pos_sensor: jointpos
+              left_ankle_pitch_joint_pos_sensor: jointpos
+              left_shoulder_pitch_joint_pos_sensor: jointpos
+              left_shoulder_roll_joint_pos_sensor: jointpos
+              left_shoulder_yaw_joint_pos_sensor: jointpos
+              left_elbow_pitch_joint_pos_sensor: jointpos
+              right_hip_yaw_joint_pos_sensor: jointpos
+              right_hip_roll_joint_pos_sensor: jointpos
+              right_hip_pitch_joint_pos_sensor: jointpos
+              right_knee_pitch_joint_pos_sensor: jointpos
+              right_ankle_pitch_joint_pos_sensor: jointpos
+              right_shoulder_pitch_joint_pos_sensor: jointpos
+              right_shoulder_roll_joint_pos_sensor: jointpos
+              right_shoulder_yaw_joint_pos_sensor: jointpos
+              right_elbow_pitch_joint_pos_sensor: jointpos
+            # ---------- Joint Velocities ---------- #
+              left_hip_yaw_joint_vel_sensor: jointvel
+              left_hip_roll_joint_vel_sensor: jointvel
+              left_hip_pitch_joint_vel_sensor: jointvel
+              left_knee_pitch_joint_vel_sensor: jointvel
+              left_ankle_pitch_joint_vel_sensor: jointvel
+              left_shoulder_pitch_joint_vel_sensor: jointvel
+              left_shoulder_roll_joint_vel_sensor: jointvel
+              left_shoulder_yaw_joint_vel_sensor: jointvel
+              left_elbow_pitch_joint_vel_sensor: jointvel
+              right_hip_yaw_joint_vel_sensor: jointvel
+              right_hip_roll_joint_vel_sensor: jointvel
+              right_hip_pitch_joint_vel_sensor: jointvel
+              right_knee_pitch_joint_vel_sensor: jointvel
+              right_ankle_pitch_joint_vel_sensor: jointvel
+              right_shoulder_pitch_joint_vel_sensor: jointvel
+              right_shoulder_roll_joint_vel_sensor: jointvel
+              right_shoulder_yaw_joint_vel_sensor: jointvel
+              right_elbow_pitch_joint_vel_sensor: jointvel
+          # ---------- Torso IMU ---------- #
+          - topic: /obelisk/achilles/torso_imu
+            dt: 0.002
+            msg_type: ObkImu
+            sensor_names:
+              torso_imu_acc_sensor: accelerometer
+              torso_imu_gyro_sensor: gyro
+              torso_imu_quat_sensor: framequat
+          # ---------- Left Foot IMU ---------- #
+          - topic: /obelisk/achilles/left_foot_imu
+            dt: 0.002
+            msg_type: ObkImu
+            sensor_names:
+              left_foot_imu_acc_sensor: accelerometer
+              left_foot_imu_gyro_sensor: gyro
+              left_foot_imu_quat_sensor: framequat
+          # ---------- Right Foot IMU ---------- #
+          - topic: /obelisk/achilles/left_foot_imu
+            dt: 0.002
+            msg_type: ObkImu
+            sensor_names:
+              right_foot_imu_acc_sensor: accelerometer
+              right_foot_imu_gyro_sensor: gyro
+              right_foot_imu_quat_sensor: framequat
+          # ---------- Mocap ---------- #
+          - topic: /obelisk/achilles/torso_pose
+            dt: 0.002
+            msg_type: ObkFramePose
+            sensor_names:
+              torso_mocap_pos_sensor: framepos
+              torso_mocap_quat_sensor: framequat
+  viz:
+    on: True
+    viz_tool: foxglove
+    rviz_pkg: obelisk_ros
+    rviz_config: basic_obk_config.rviz
+    viz_nodes:
+      - pkg: obelisk_viz_cpp
+        executable: default_robot_viz
+        robot_pkg: achilles_model_custom
+        urdf: achilles.urdf
+        robot_topic: robot_description
+        subscribers:
+          - ros_parameter: sub_viz_est_setting
+            topic: /obelisk/achilles/est_state
+            history_depth: 10
+            callback_group: None
+            non_obelisk: False
+        publishers:
+          - ros_parameter: pub_viz_joint_setting
+            topic: joint_states
+            history_depth: 10
+            callback_group: None
+        timers:
+          - ros_parameter: timer_viz_joint_setting
+            timer_period_sec: 0.05
+            callback_group: None
