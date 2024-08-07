@@ -19,7 +19,7 @@
 
   <!-- Specify the light settings -->
   <visual>
-      <headlight diffuse="0.4 0.4 0.4" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+      <headlight diffuse="0.5 0.5 0.5" ambient="0.3 0.3 0.3" specular="0 0 0"/>
       <rgba haze="0.15 0.25 0.35 1"/>
       <global elevation="-35"/>
   </visual>
@@ -32,10 +32,10 @@
     <!-- Hip Pitch Settings -->
     <default class="hip_pitch">
       <default class="hip_pitch_pos">
-        <position kp="25" ctrllimited="true" ctrlrange="-35 35"/>
+        <position kp="50" ctrllimited="true" ctrlrange="-35 35"/>
       </default>
       <default class="hip_pitch_vel">
-        <velocity kv="8" ctrllimited="true" ctrlrange="-35 35"/>
+        <velocity kv="10" ctrllimited="true" ctrlrange="-35 35"/>
       </default>
       <motor ctrllimited="true" ctrlrange="-35 35"/>
       <joint axis="0 1 0" pos="0 0 0" range="-1.5 0.5" damping="0.1" frictionloss="0.3"/> <!-- limited="true"-->
@@ -68,10 +68,10 @@
     <!-- Knee Pitch Settings  -->
     <default class="knee_pitch">
       <default class="knee_pitch_pos">
-        <position kp="25" ctrllimited="true" ctrlrange="-70  70"/>
+        <position kp="50" ctrllimited="true" ctrlrange="-70  70"/>
       </default>
       <default class="knee_pitch_vel">
-        <velocity kv="8" ctrllimited="true" ctrlrange="-70  70"/>
+        <velocity kv="10" ctrllimited="true" ctrlrange="-70  70"/>
       </default>
       <motor ctrllimited="true" ctrlrange="-70  70"/>
       <joint axis="0 1 0" pos="0 0 0" range="0 2.0" damping="0.1" frictionloss="0.3"/>
@@ -80,10 +80,10 @@
     <!-- Ankle Pitch Settings  -->
     <default class="ankle_pitch">
       <default class="ankle_pitch_pos">
-        <position kp="25" ctrllimited="true" ctrlrange="-35 35"/>
+        <position kp="50" ctrllimited="true" ctrlrange="-35 35"/>
       </default>
       <default class="ankle_pitch_vel">
-        <velocity kv="8" ctrllimited="true" ctrlrange="-35 35"/>
+        <velocity kv="10" ctrllimited="true" ctrlrange="-35 35"/>
       </default>
       <motor ctrllimited="true" ctrlrange="-35 35"/>
       <joint axis="0 1 0" pos="0 0 0" range="-1.0 1.0" damping="0.1" frictionloss="0.3"/>
@@ -186,7 +186,7 @@
    <worldbody>
       <!-- Light -->
       <!-- <light pos="0 0 1.5" dir="0 0 -1" directional="true"/> -->
-      <light name="spotlight" mode="targetbodycom" target="torso" diffuse=".6 .6 .6" specular="0.3 0.3 0.3" pos="1.5 -6 4" cutoff="30"/>
+      <light name="spotlight" mode="targetbodycom" target="torso" diffuse=".7 .7 .7" specular="0.3 0.3 0.3" pos="1.5 -6 4" cutoff="30"/>
 
       <!-- Ground -->
       <geom material="plane" name="plane" rgba=".9 .9 .9 1" size="100 100 0.1" type="plane" euler="0 0 0"/>
@@ -501,6 +501,54 @@
 
   <!-- Keyframes -->
   <keyframe>
-    <key name="home" qpos="0 0 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"/>
+      <!-- qpos:
+      x y z
+      qw qx qy qz
+      l_hip_yaw l_hip_roll l_hip_pitch
+      l_knee_pitch l_ankle_pitch
+      l_shoulder_pitch l_shoulder_roll l_shoulder_yaw
+      l_elbow_pitch
+      r_hip_yaw r_hip_roll r_hip_pitch
+      r_knee_pitch r_ankle_pitch
+      r_shoulder_pitch r_shoulder_roll r_shoulder_yaw
+      r_elbow_pitch -->
+    <key name="ic"
+      qpos="
+      0 0 0.97
+      0 0 0 0
+      0 0 -0.26
+      0.65 -0.43 
+      0 0 0
+      0
+      0 0 -0.26
+      0.65 -0.43
+      0 0 0
+      0"
+      
+      ctrl="
+      0 0 -0.39
+      0.65 -0.33 
+      0 0 0
+      0
+      0 0 -0.39
+      0.65 -0.33
+      0 0 0
+      0
+      0 0 0
+      0 0 
+      0 0 0
+      0
+      0 0 0
+      0 0
+      0 0 0
+      0
+      0 0 0
+      0 0 
+      0 0 0
+      0
+      0 0 0
+      0 0
+      0 0 0
+      0"/>
   </keyframe>
 </mujoco>

@@ -11,11 +11,6 @@ Enter the docker container:
 docker compose -f docker/docker-compose.yml run --build sample-walking
 ```
 
-Source base ROS:
-```
-source /opt/ros/humble/setup.bash
-```
-
 Build and activate Obelisk:
 ```
 obk
@@ -50,7 +45,8 @@ Launch the stack:
 ```
 obk-launch config_file_path=${SAMPLE_WALKING_ROOT}/sample_contact_walking/configs/achilles_sim_config.yaml device_name=onboard auto_start=configure
 ```
-Wait for the viz software to connect then run:
+
+Wait for the viz software to connect then run in a seperate terminal:
 ```
-obk-activate achilles
+obk-activate achilles_sim
 ```

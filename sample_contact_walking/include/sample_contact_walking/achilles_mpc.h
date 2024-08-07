@@ -1,10 +1,11 @@
 #include "rclcpp/rclcpp.hpp"
 #include "obelisk_controller.h"
 
-#include "whole_body_qp_controller.h"
+// #include "whole_body_qp_controller.h"
+#include "full_order_mpc.h"
 
 namespace achilles {
-    using torc::controllers::vectorx_t;
+    using torc::mpc::vectorx_t;
 
     class AchillesController : public obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState> {
         public:
@@ -32,7 +33,7 @@ namespace achilles {
             vectorx_t v_;
 
             torc::models::RobotContactInfo contact_state_;
-            torc::controllers::WholeBodyQPController wbc_;
+            // torc::controllers::WholeBodyQPController wbc_;
             std::unique_ptr<torc::models::FullOrderRigidBody> model_;
     };
 } // namespace achilles

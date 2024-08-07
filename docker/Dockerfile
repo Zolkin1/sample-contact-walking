@@ -61,36 +61,21 @@ ENV PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/opt/openrobots/lib/pkgconfig"
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/opt/openrobots/lib"
 ENV CMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}:/opt/openrobots"
 
-# Install OSQP and OSQPEigen
-RUN mkdir -p ${HOME}/repos && cd ${HOME}/repos && \
-    git clone --recursive https://github.com/osqp/osqp && \
-    cd osqp && \
-    mkdir build && cd build && \
-    cmake ../ && \
-    cmake --build . && \
-    sudo cmake --build . --target install && \
-    cd ${HOME}/repos && \
-    git clone https://github.com/robotology/osqp-eigen.git && \
-    cd osqp-eigen && \
-    mkdir build && \
-    cd build && \
-    cmake ../ && \
-    make && \
-    sudo make install
-# ENV OsqpEigen_DIR = "/home/${USER}"
+RUN echo "About to pull obelisk."
 
 # clone Obelisk into this docker image at the $OBELISK_ROOT path
-# RUN git clone https://github.com/Caltech-AMBER/obelisk.git /home/${USER}/obelisk
-# ENV OBELISK_ROOT=/home/${USER}/obelisk
-
-# # run setup script in Dockerfile
-# RUN source /home/${USER}/obelisk/setup.sh --pixi --cyclone-perf && \
-#     bash /home/${USER}/obelisk/scripts/install_sys_deps.sh -y --no-source-ros
-RUN echo "About to pull obelsik."
-
-# clone Obelisk into this docker image at the $OBELISK_ROOT path
-RUN git clone https://github.com/Caltech-AMBER/obelisk.git /home/${USER}/obelisk
+RUN git clone -b main https://github.com/Caltech-AMBER/obelisk.git /home/${USER}/obelisk
 ENV OBELISK_ROOT=/home/${USER}/obelisk
+
+# CppAD and CppAD Codegen
+RUN cd /home/${USER} && git clone https://github.com/coin-or/CppAD.git /home/${USER}/cppad.git && \
+    cd /home/${USER}/cppad.git && mkdir build && cd build && \
+    cmake -DCMAKE_BUILD_TYPE=Release -Dcppad_cxx_flags=-std=c++17 .. && \
+    sudo make install -j8 && cd /home/${USER} && \
+    git clone https://github.com/joaoleal/CppADCodeGen.git /home/${USER}/CppADCodeGen && \
+    cd CppADCodeGen && mkdir build && cd build && \
+    cmake .. && \
+    sudo make install -j8
 
 # you must run the setup script from a directory where the user has permissions
 # run docker setup script in Dockerfile

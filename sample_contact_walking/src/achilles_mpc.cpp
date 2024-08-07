@@ -1,11 +1,11 @@
 #include "obelisk_ros_utils.h"
 
-#include "sample_contact_walking/achilles_wbc.h"
+#include "sample_contact_walking/achilles_mpc.h"
 
 namespace achilles
 {
     AchillesController::AchillesController(const std::string& name) 
-    : obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState>(name), wbc_(name), recieved_first_state_(false) {
+    : obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState>(name), recieved_first_state_(false) {
         // For now model the feet as point contacts
         contact_state_.contacts.emplace("left_ankle_pitch", torc::models::Contact(torc::models::PointContact, false));
         contact_state_.contacts.emplace("right_ankle_pitch", torc::models::Contact(torc::models::PointContact, false));
@@ -13,13 +13,13 @@ namespace achilles
         //  Update model
         this->declare_parameter<std::string>("urdf_path", "");
         std::filesystem::path urdf_path(this->get_parameter("urdf_path").as_string());
-        wbc_.UpdateModelPath(urdf_path);
+        // wbc_.UpdateModelPath(urdf_path);
 
         std::string model_name = name + "_model";
         model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path);
 
         // Update the wbc config file
-        wbc_.UpdateConfigFile(this->get_parameter("params_path").as_string());
+        // wbc_.UpdateConfigFile(this->get_parameter("params_path").as_string());
     }
 
     void AchillesController::UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) {
@@ -67,6 +67,7 @@ namespace achilles
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Computing first control.");
             // Create target state
             vectorx_t q_target = vectorx_t::Zero(model_->GetConfigDim());
+            q_target << 0, 0, 0.97, 0, 0, 0, 0, 0, 0, -0.26, 0.65, -0.43, 0, 0, 0, 0, 0, 0, -0.26, 0.65, -0.43, 0, 0, 0, 0;
             vectorx_t v_target = vectorx_t::Zero(model_->GetVelDim());
             vectorx_t target_state = torc::models::FullOrderRigidBody::BuildState(q_target, v_target);
             

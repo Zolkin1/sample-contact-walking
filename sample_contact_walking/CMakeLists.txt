@@ -2,8 +2,10 @@ cmake_minimum_required(VERSION 3.8)
 project(sample_contact_walking)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
+#   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
+
+set(CMAKE_BUILD_TYPE Release)
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
@@ -24,7 +26,7 @@ FetchContent_MakeAvailable(Obelisk)
 # ------- Fetch TORC ------- #
 set(BUILD_WITH_PINOCCHIO ON CACHE BOOL "t")
 set(BUILD_WITH_IPOPT OFF CACHE BOOL "t")
-set(BUILD_WITH_OSQP ON CACHE BOOL "t")
+set(BUILD_WITH_OSQP OFF CACHE BOOL "t")
 set(BUILD_WITH_CLARABEL OFF CACHE BOOL "t")
 
 FetchContent_Declare(
@@ -42,8 +44,8 @@ include_directories(include)
 ament_export_include_directories(include)
 
 # ------- Controller ------- #
-add_executable(ll_controller src/achilles_wbc.cpp)
-target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo Controllers)
+add_executable(ll_controller src/achilles_mpc.cpp)
+target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo Mpc)
 
 # ------- Estimator ------- #
 add_executable(state_estimator 
