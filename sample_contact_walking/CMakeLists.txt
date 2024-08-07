@@ -36,6 +36,8 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(TORC)
 
+message(STATUS TORC_)
+
 # ------- Pinocchio ------- #
 find_package(pinocchio 3.0.0 REQUIRED)
 

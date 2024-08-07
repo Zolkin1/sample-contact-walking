@@ -33,6 +33,7 @@ namespace achilles {
             vectorx_t v_;
 
             torc::models::RobotContactInfo contact_state_;
+            // torc::mpc::
             // torc::controllers::WholeBodyQPController wbc_;
             std::unique_ptr<torc::models::FullOrderRigidBody> model_;
     };
