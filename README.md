@@ -43,10 +43,12 @@ export ROS_HOME=~/sample-contact-walking
 
 Launch the stack:
 ```
-obk-launch config_file_path=${SAMPLE_WALKING_ROOT}/sample_contact_walking/configs/achilles_sim_config.yaml device_name=onboard auto_start=configure
+obk-launch config_file_path=${SAMPLE_WALKING_ROOT}/sample_contact_walking/configs/achilles_sim_config.yaml device_name=onboard auto_start=configure bag=false
 ```
 
 Wait for the viz software to connect then run in a seperate terminal:
 ```
 obk-activate achilles_sim
 ```
+
+If you have issues with others on the ROS network then set `ROS_LOCALHOST_ONLY`.r

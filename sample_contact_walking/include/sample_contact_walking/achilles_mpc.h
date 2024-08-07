@@ -1,7 +1,6 @@
 #include "rclcpp/rclcpp.hpp"
 #include "obelisk_controller.h"
 
-// #include "whole_body_qp_controller.h"
 #include "full_order_mpc.h"
 
 namespace achilles {
@@ -33,8 +32,7 @@ namespace achilles {
             vectorx_t v_;
 
             torc::models::RobotContactInfo contact_state_;
-            // torc::mpc::
-            // torc::controllers::WholeBodyQPController wbc_;
+            std::unique_ptr<torc::mpc::FullOrderMpc> mpc_;
             std::unique_ptr<torc::models::FullOrderRigidBody> model_;
     };
 } // namespace achilles

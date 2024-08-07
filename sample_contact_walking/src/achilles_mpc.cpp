@@ -18,8 +18,7 @@ namespace achilles
         std::string model_name = name + "_model";
         model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path);
 
-        // Update the wbc config file
-        // wbc_.UpdateConfigFile(this->get_parameter("params_path").as_string());
+        mpc_ = std::make_unique<torc::mpc::FullOrderMpc>(this->get_parameter("params_path").as_string(), urdf_path);
     }
 
     void AchillesController::UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) {
