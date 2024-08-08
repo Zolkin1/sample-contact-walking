@@ -15,6 +15,8 @@ namespace achilles {
             obelisk_control_msgs::msg::PDFeedForward ComputeControl() override;
             void UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) override;
 
+            void ComputeMpc();
+
             void ConvertEigenToStd(const vectorx_t& eig_vec, std::vector<double>& std_vec);
 
             vectorx_t ConvertControlToMujocoU(const vectorx_t& pos_target, const vectorx_t& vel_target, const vectorx_t& feed_forward);
@@ -26,12 +28,20 @@ namespace achilles {
 
             // State flags
             bool recieved_first_state_;
+            bool first_mpc_computed_;
+
+            // Mutexes
+            std::mutex est_state_mut_;
+            std::mutex traj_out_mut_;
 
             // Estimated state vectors
             vectorx_t q_;        // position, quat (x, y, z, w), joints
             vectorx_t v_;
 
-            torc::mpc::Trajectory traj_;
+            torc::mpc::Trajectory traj_out_;
+            torc::mpc::Trajectory traj_mpc_;
+
+            double traj_start_time_;
 
             torc::models::RobotContactInfo contact_state_;
             std::unique_ptr<torc::mpc::FullOrderMpc> mpc_;
