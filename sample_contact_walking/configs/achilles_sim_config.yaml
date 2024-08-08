@@ -3,9 +3,9 @@ onboard:
   control:
     - pkg: sample_contact_walking
       executable: ll_controller
-      params_path: ${SAMPLE_WALKING_ROOT}/sample_contact_walking/configs/mpc_config.yaml
+      params_path: /home/zolkin/sample-contact-walking/sample_contact_walking/configs/mpc_config.yaml
       params:
-        urdf_path: ${SAMPLE_WALKING_ROOT}/achilles_model_custom/urdf/achilles.urdf
+        urdf_path: /home/zolkin/sample-contact-walking/achilles_model_custom/urdf/achilles.urdf
       callback_groups: 
         control_cbg: MutuallyExclusiveCallbackGroup
         estimation_cbg: MutuallyExclusiveCallbackGroup
@@ -25,7 +25,7 @@ onboard:
           non_obelisk: False
       timers:
         - ros_parameter: timer_ctrl_setting
-          timer_period_sec: 0.01
+          timer_period_sec: 1 #0.01
           callback_group: control_cbg
   estimation:
     - pkg: sample_contact_walking

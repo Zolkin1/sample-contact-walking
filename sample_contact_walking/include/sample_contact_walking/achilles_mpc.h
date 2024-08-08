@@ -31,6 +31,8 @@ namespace achilles {
             vectorx_t q_;        // position, quat (x, y, z, w), joints
             vectorx_t v_;
 
+            torc::mpc::Trajectory traj_;
+
             torc::models::RobotContactInfo contact_state_;
             std::unique_ptr<torc::mpc::FullOrderMpc> mpc_;
             std::unique_ptr<torc::models::FullOrderRigidBody> model_;

@@ -18,7 +18,36 @@ namespace achilles
         std::string model_name = name + "_model";
         model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path);
 
-        mpc_ = std::make_unique<torc::mpc::FullOrderMpc>(this->get_parameter("params_path").as_string(), urdf_path);
+        mpc_ = std::make_unique<torc::mpc::FullOrderMpc>("achilles_mpc_obk", this->get_parameter("params_path").as_string(), urdf_path);
+        RCLCPP_INFO_STREAM(this->get_logger(), "MPC Created...");
+
+        mpc_->Configure();
+        RCLCPP_INFO_STREAM(this->get_logger(), "MPC Configured...");
+
+        traj_.UpdateSizes(model_->GetConfigDim(), model_->GetVelDim(), model_->GetNumInputs(), mpc_->GetContactFrames(), mpc_->GetNumNodes());
+
+        vectorx_t q_neutral = model_->GetNeutralConfig();
+        q_neutral(2) += 0.321;
+        traj_.SetDefault(q_neutral);
+
+        mpc_->SetWarmStartTrajectory(traj_);
+        RCLCPP_INFO_STREAM(this->get_logger(), "Warm start trajectory created...");
+
+        // TODO: Remove -- add a dummy contact schedule
+        torc::mpc::ContactSchedule cs(mpc_->GetContactFrames());
+        const double contact_time = 0.3;
+        double time = 0;
+        for (int i = 0; i < 3; i++) {
+            if (i % 2 != 0) {
+                cs.InsertContact("right_foot", time, time + contact_time);
+                cs.InsertContact("right_hand", time, time + contact_time);
+            } else {
+                cs.InsertContact("left_foot", time, time + contact_time);
+                cs.InsertContact("left_hand", time, time + contact_time);
+            }
+            time += contact_time;
+        }
+        mpc_->UpdateContactSchedule(cs);
     }
 
     void AchillesController::UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) {
@@ -78,11 +107,13 @@ namespace achilles
             // Create current state
             vectorx_t state = torc::models::FullOrderRigidBody::BuildState(q_, v_);
 
-            // Call QP WBC controller
-            // vectorx_t control = wbc_.ComputeControl(target_state, force_target, state, contact_state_);
+            mpc_->Compute(state, traj_);
+            RCLCPP_INFO_STREAM(this->get_logger(), "MPC Computation Completed!");
+
+            // TODO: Add in trajectory interpolation
 
             // Make the message
-            vectorx_t u_mujoco = ConvertControlToMujocoU(q_target.tail(model_->GetNumInputs()), v_target.tail(model_->GetNumInputs()), feed_forward);
+            vectorx_t u_mujoco = ConvertControlToMujocoU(traj_.GetConfiguration(1).tail(model_->GetNumInputs()), traj_.GetVelocity(1).tail(model_->GetNumInputs()), traj_.GetTau(1));
             ConvertEigenToStd(u_mujoco, msg.u_mujoco);
             ConvertEigenToStd(q_target.tail(model_->GetNumInputs()), msg.pos_target);
             ConvertEigenToStd(v_target.tail(model_->GetNumInputs()), msg.vel_target);
