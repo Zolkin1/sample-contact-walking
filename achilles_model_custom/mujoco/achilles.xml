@@ -80,10 +80,11 @@
     <!-- Ankle Pitch Settings  -->
     <default class="ankle_pitch">
       <default class="ankle_pitch_pos">
-        <position kp="50" ctrllimited="true" ctrlrange="-35 35"/>
+        <position kp="70" ctrllimited="true" ctrlrange="-35 35" forcelimited="true" forcerange="-35 35"/>
       </default>
       <default class="ankle_pitch_vel">
-        <velocity kv="10" ctrllimited="true" ctrlrange="-35 35"/>
+      <!-- NOTE: The kv here causes weird issues with the contact dynamcis -->
+        <velocity kv="0" forcelimited="true" forcerange="0 5"/>
       </default>
       <motor ctrllimited="true" ctrlrange="-35 35"/>
       <joint axis="0 1 0" pos="0 0 0" range="-1.0 1.0" damping="0.1" frictionloss="0.3"/>

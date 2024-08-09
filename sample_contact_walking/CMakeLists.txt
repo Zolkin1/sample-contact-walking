@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 project(sample_contact_walking)
 
+set(CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 20)
+
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 #   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -11,6 +14,7 @@ set(CMAKE_BUILD_TYPE Release)
 find_package(ament_cmake REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(visualization_msgs REQUIRED)
 # find_package(obelisk_estimator_msgs REQUIRED)
 
 # ------- Fetch the Obelisk library ------- #
@@ -48,6 +52,10 @@ ament_export_include_directories(include)
 # ------- Controller ------- #
 add_executable(ll_controller src/achilles_mpc.cpp)
 target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo Mpc)
+
+ament_target_dependencies(ll_controller
+    PUBLIC
+    visualization_msgs)
 
 # ------- Estimator ------- #
 add_executable(state_estimator 
