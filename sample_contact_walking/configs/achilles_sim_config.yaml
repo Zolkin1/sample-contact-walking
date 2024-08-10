@@ -36,7 +36,7 @@ onboard:
           callback_group: control_cbg
         # MPC compute Timer
         - ros_parameter: timer_mpc_setting
-          timer_period_sec: 2
+          timer_period_sec: 0.02
           callback_group: mpc_cbd
   estimation:
     - pkg: sample_contact_walking

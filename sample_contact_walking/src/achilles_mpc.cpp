@@ -17,7 +17,7 @@ namespace achilles
 {
     AchillesController::AchillesController(const std::string& name) 
     : obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState>(name), 
-        recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(0) {
+        recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(0), mpc_comps_(0) {
         // For now model the feet as point contacts
         contact_state_.contacts.emplace("left_ankle_pitch", torc::models::Contact(torc::models::PointContact, false));
         contact_state_.contacts.emplace("right_ankle_pitch", torc::models::Contact(torc::models::PointContact, false));
@@ -53,7 +53,7 @@ namespace achilles
 
         // Setup q and v targets
         q_target_.resize(model_->GetConfigDim());
-        q_target_ << 0, 0, 0.97,    // position
+        q_target_ << 1., 0, 0.97,    // position
                     0, 0, 0, 1,     // quaternion
                     0, 0, -0.26,    // L hips joints
                     0.65, -0.43,    // L knee, ankle
@@ -63,7 +63,7 @@ namespace achilles
                     0, 0, 0, 0;     // R shoulders and elbow
 
         v_target_.resize(model_->GetVelDim());
-        v_target_ << 0, 0, 0,
+        v_target_ << 1, 0, 0,
                     0, 0, 0,
                     0, 0, 0,
                     0, 0, 0, 
@@ -77,7 +77,9 @@ namespace achilles
         // Set initial conditions
         // TODO: Do this from yaml
         q_ic_ = q_target_;
+        q_ic_(0) = 0;
         v_ic_ = v_target_;
+        v_ic_.setZero();
 
         // Setup swing trajectories
 
@@ -91,6 +93,8 @@ namespace achilles
 
         mpc_->SetWarmStartTrajectory(traj_out_);
         RCLCPP_INFO_STREAM(this->get_logger(), "Warm start trajectory created...");
+
+        mpc_->ComputeNLP(q_ic_, v_ic_, traj_mpc_);
         
         // Compute an initial MPC at the initial condition
 
@@ -173,27 +177,36 @@ namespace achilles
             double time = this->get_clock()->now().seconds();
 
             // TODO: remove
-            q = q_target_;
+            // q = q_target_;
             v = v_target_;
 
-            mpc_->Compute(q, v, traj_mpc_);
-            {
-                // Get the traj mutex to protect it
-                std::lock_guard<std::mutex> lock(traj_out_mut_);
-                traj_out_ = traj_mpc_;
+            if (mpc_comps_ < 0) {
 
-                // Assign time time too
-                traj_start_time_ = time;
-            }
-            // RCLCPP_INFO_STREAM(this->get_logger(), "MPC Computation Completed!");
-            if (GetState() != Mpc) {
-                TransitionState(Mpc);
+                mpc_->Compute(q, v, traj_mpc_);
+                mpc_comps_++;
+                {
+                    // Get the traj mutex to protect it
+                    std::lock_guard<std::mutex> lock(traj_out_mut_);
+                    traj_out_ = traj_mpc_;
+
+                    // Assign time time too
+                    traj_start_time_ = time;
+                }
+                // RCLCPP_INFO_STREAM(this->get_logger(), "MPC Computation Completed!");
+                if (GetState() != Mpc) {
+                    TransitionState(Mpc);
+                }
+            } else {
+                static bool printed = false;
+                if (!printed) {
+                    mpc_->PrintStatistics();
+                    printed = true;
+                }
             }
 
             // TODO: If this is slow, then I need to move it
             PublishTrajViz(traj_mpc_, viz_frames_);
 
-            mpc_->PrintStatistics();
         }
     }
 
@@ -312,11 +325,6 @@ namespace achilles
             msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
 
             msg.markers[i].scale.x = 0.01; // Width of the line segments
-
-            msg.markers[i].color.a = 1.0; // Don't forget to set the alpha!
-            msg.markers[i].color.r = 0.0;
-            msg.markers[i].color.g = 1.0;
-            msg.markers[i].color.b = 0.0;
         }
 
 
@@ -331,6 +339,17 @@ namespace achilles
                 point.z = frame_pos(2);
 
                 msg.markers[i].points.emplace_back(point);
+
+                // *** Note *** The color is according to the node number, not necessarily the dt
+                // Color according to node
+                float num_nodes = traj.GetNumNodes();
+                float green_part = (num_nodes - node)/num_nodes;
+                std_msgs::msg::ColorRGBA color;
+                color.r = 1.0 - green_part;
+                color.g = green_part;
+                color.b = 0;
+                color.a = 1;
+                msg.markers[i].colors.push_back(color);
             }
         }
 

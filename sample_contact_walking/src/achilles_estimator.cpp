@@ -106,12 +106,40 @@ namespace achilles {
                 msg.q_base.emplace_back(base_quat_.y());
                 msg.q_base.emplace_back(base_quat_.z());
                 msg.q_base.emplace_back(base_quat_.w());
-
-                
+                            
                 msg.joint_names = joint_names_;
                 msg.base_link_name = base_link_name_;
 
                 msg.v_joints = joint_vels_;
+
+                // TODO: Remove!
+                msg.q_base[0] = 0.0;
+                msg.q_base[1] = 0.0;
+                msg.q_base[2] = 0.97;    // position
+
+                msg.q_base[3] = 0.0;
+                msg.q_base[4] = 0.0;
+                msg.q_base[5] = 0.0;
+                msg.q_base[6] = 1.0;     // quaternion
+
+                msg.q_joints[0] = 0.0;
+                msg.q_joints[1] = 0.0;
+                msg.q_joints[2] = -0.26;    // L hips joints
+                msg.q_joints[3] = 0.65;
+                msg.q_joints[4] = -0.43;
+                msg.q_joints[5] = 0.0;
+                msg.q_joints[6] = 0.0;
+                msg.q_joints[7] = 0.0;
+                msg.q_joints[8] = 0.0;
+                msg.q_joints[9] = 0.0;
+                msg.q_joints[10] = 0.0;
+                msg.q_joints[11] = -0.26;
+                msg.q_joints[12] = 0.65;
+                msg.q_joints[13] = -0.43;
+                msg.q_joints[14] = 0.0;
+                msg.q_joints[15] = 0.0;
+                msg.q_joints[16] = 0.0;
+                msg.q_joints[17] = 0.0;
 
                 // Calculate base velocity via simple euler
                 double d_sec = base_sec_ - prev_base_sec_;

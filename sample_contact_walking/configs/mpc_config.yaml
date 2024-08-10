@@ -3,6 +3,7 @@ general_settings:
   verbose: True
   node_dt: 0.02
   compile_derivatives: True
+  base_frame: "torso"
 solver_settings:
   rel_tol: 1e-6
   abs_tol: 1e-6
@@ -10,24 +11,24 @@ solver_settings:
   polish: False
   rho: 0.02
   #  alpha:
-  adaptive_rho: True
+  adaptive_rho: False
   max_iter: 100
 constraints:
   friction_coef: 0.5
   max_grf: 200
 costs:
+  configuration_tracking_weights: [1, 1, 10,
+                                   0, 0, 0,
+                                   0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                   0, 0, 0, 0, 0, 0, 0, 0, 0]
   # configuration_tracking_weights: [1, 1, 1,
   #                                  0, 0, 0,
-  #                                  0, 0, 0, 0, 0, 0, 0, 0, 0,
-  #                                  0, 0, 0, 0, 0, 0, 0, 0, 0]
-  configuration_tracking_weights: [1, 1, 1,
-                                   0, 0, 0,
-                                   1, 1, 1, 1, 1, 1, 1, 1, 1,
-                                   1, 1, 1, 1, 1, 1, 1, 1, 1]
-  velocity_tracking_weights: [1, 1, 1,
+  #                                  1, 1, 1, 1, 1, 1, 1, 1, 1,
+  #                                  1, 1, 1, 1, 1, 1, 1, 1, 1]
+  velocity_tracking_weights: [10, 10, 10,
                               1, 1, 1,
-                              0, 0, 0, 0, 0, 0, 0, 0, 0,
-                              0, 0, 0, 0, 0, 0, 0, 0, 0]
+                              1, 1, 1, 1, 1, 1, 1, 1, 1,
+                              1, 1, 1, 1, 1, 1, 1, 1, 1]
 contacts:
   num_contact_locations: 2
   # For now, removing hands
