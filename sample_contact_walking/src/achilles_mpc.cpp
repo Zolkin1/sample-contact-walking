@@ -76,7 +76,7 @@ namespace achilles
 
         // TODO: Try to set a swing foot trajectory!
         this->declare_parameter<double>("default_swing_height", 0.2);
-        mpc_->CreateDefaultSwingTraj("right_foot", 0.02, 0.02, 0.02);
+        mpc_->CreateDefaultSwingTraj("right_foot", this->get_parameter("default_swing_height").as_double(), 0.02, 0.02);
         mpc_->CreateDefaultSwingTraj("left_foot", this->get_parameter("default_swing_height").as_double(), 0.02, 0.02);
 
         // Set initial conditions
@@ -90,7 +90,7 @@ namespace achilles
 
         // Create default trajectory
         traj_out_.UpdateSizes(model_->GetConfigDim(), model_->GetVelDim(), model_->GetNumInputs(), mpc_->GetContactFrames(), mpc_->GetNumNodes());
-        std::vector<double> dt(mpc_->GetNumNodes() - 1);
+        std::vector<double> dt(mpc_->GetNumNodes());
         std::fill(dt.begin(), dt.end(), 0.02);
         traj_out_.SetDtVector(dt);
         traj_out_.SetDefault(q_target_);

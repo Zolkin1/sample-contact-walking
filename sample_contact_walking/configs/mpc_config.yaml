@@ -4,15 +4,18 @@ general_settings:
   node_dt: 0.02
   compile_derivatives: True
   base_frame: "torso"
+  scale_cost: False
 solver_settings:
   rel_tol: 1e-6
   abs_tol: 1e-6
   verbose: True
   polish: True
-  rho: 0.02
-  #  alpha:
+  rho: 2e-3 # 0.02
+  alpha: 1.6
+  sigma: 1e-6 # 1e-10
   adaptive_rho: False
-  max_iter: 100
+  max_iter: 5000
+  scaling: 1
 constraints:
   friction_coef: 0.5
   max_grf: 200
@@ -29,10 +32,18 @@ costs:
   #                                  0, 0, 0,
   #                                  100, 100, 100, 100, 100, 100, 100, 100, 100,
   #                                  100, 100, 100, 100, 100, 100, 100, 100, 100]
+  # velocity_tracking_weights: [10, 10, 10,
+  #                             1, 1, 1,
+  #                             1, 1, 1, 1, 1, 1, 1, 1, 1,
+  #                             1, 1, 1, 1, 1, 1, 1, 1, 1]
   velocity_tracking_weights: [10, 10, 10,
                               1, 1, 1,
-                              1, 1, 1, 1, 1, 1, 1, 1, 1,
-                              1, 1, 1, 1, 1, 1, 1, 1, 1]
+                              0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
+                              0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+  # torque_regularization_weights: [1, 1, 1, 1, 1, 1, 1, 1, 1,
+  #                                 1, 1, 1, 1, 1, 1, 1, 1, 1]
+  torque_regularization_weights: [.01, .01, .01, .01, .01, .01, .01, .01, .01,
+                                  .01, .01, .01, .01, .01, .01, .01, .01, .01]
 contacts:
   num_contact_locations: 2
   # For now, removing hands
