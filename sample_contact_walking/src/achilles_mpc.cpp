@@ -48,12 +48,12 @@ namespace achilles
         // Make the feet always in contact for a standing gait
         torc::mpc::ContactSchedule cs(mpc_->GetContactFrames());
         cs.InsertContact("right_foot", 0, 1);
-        cs.InsertContact("left_foot", 0, 1);
+        cs.InsertContact("left_foot", 0.3, 0.7);
         mpc_->UpdateContactSchedule(cs);
 
         // Setup q and v targets
         q_target_.resize(model_->GetConfigDim());
-        q_target_ << 1., 0, 0.97,    // position
+        q_target_ << 0., 0, 0.97,    // position
                     0, 0, 0, 1,     // quaternion
                     0, 0, -0.26,    // L hips joints
                     0.65, -0.43,    // L knee, ankle
@@ -63,7 +63,7 @@ namespace achilles
                     0, 0, 0, 0;     // R shoulders and elbow
 
         v_target_.resize(model_->GetVelDim());
-        v_target_ << 1, 0, 0,
+        v_target_ << 0, 0, 0,
                     0, 0, 0,
                     0, 0, 0,
                     0, 0, 0, 
@@ -73,6 +73,11 @@ namespace achilles
                     0, 0, 0;
         mpc_->SetConstantConfigTarget(q_target_);
         mpc_->SetConstantVelTarget(v_target_);
+
+        // TODO: Try to set a swing foot trajectory!
+        this->declare_parameter<double>("default_swing_height", 0.2);
+        mpc_->CreateDefaultSwingTraj("right_foot", 0.02, 0.02, 0.02);
+        mpc_->CreateDefaultSwingTraj("left_foot", this->get_parameter("default_swing_height").as_double(), 0.02, 0.02);
 
         // Set initial conditions
         // TODO: Do this from yaml
@@ -200,6 +205,7 @@ namespace achilles
                 static bool printed = false;
                 if (!printed) {
                     mpc_->PrintStatistics();
+                    mpc_->PrintContactSchedule();
                     printed = true;
                 }
             }
@@ -332,7 +338,7 @@ namespace achilles
             model_->FirstOrderFK(traj.GetConfiguration(node));
 
             for (int i = 0; i < viz_frames.size(); i++) {
-                vector3_t frame_pos = model_->GetFrameState(viz_frames[i], pinocchio::WORLD).placement.translation();
+                vector3_t frame_pos = model_->GetFrameState(viz_frames[i]).placement.translation();
                 geometry_msgs::msg::Point point;
                 point.x = frame_pos(0);
                 point.y = frame_pos(1);

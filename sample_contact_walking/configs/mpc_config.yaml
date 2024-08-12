@@ -8,7 +8,7 @@ solver_settings:
   rel_tol: 1e-6
   abs_tol: 1e-6
   verbose: True
-  polish: False
+  polish: True
   rho: 0.02
   #  alpha:
   adaptive_rho: False
@@ -21,10 +21,14 @@ costs:
                                    0, 0, 0,
                                    0, 0, 0, 0, 0, 0, 0, 0, 0,
                                    0, 0, 0, 0, 0, 0, 0, 0, 0]
+  # configuration_tracking_weights: [ 1, 1, 10,
+  #                                 0.0, 0.0, 0.0,
+  #                                 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
+  #                                 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 ]
   # configuration_tracking_weights: [1, 1, 1,
   #                                  0, 0, 0,
-  #                                  1, 1, 1, 1, 1, 1, 1, 1, 1,
-  #                                  1, 1, 1, 1, 1, 1, 1, 1, 1]
+  #                                  100, 100, 100, 100, 100, 100, 100, 100, 100,
+  #                                  100, 100, 100, 100, 100, 100, 100, 100, 100]
   velocity_tracking_weights: [10, 10, 10,
                               1, 1, 1,
                               1, 1, 1, 1, 1, 1, 1, 1, 1,

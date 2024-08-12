@@ -7,6 +7,7 @@ onboard:
       params:
         urdf_path: /home/zolkin/sample-contact-walking/achilles_model_custom/urdf/achilles.urdf
         viz_frames: ["torso", "right_foot", "left_foot"]
+        default_swing_height: 0.08
       callback_groups: 
         control_cbg: MutuallyExclusiveCallbackGroup
         mpc_cbg: MutuallyExclusiveCallbackGroup
