@@ -5,6 +5,8 @@ general_settings:
   compile_derivatives: True
   base_frame: "torso"
   scale_cost: False
+  max_initial_solves: 20
+  initial_constraint_tol: 5e-3
 solver_settings:
   rel_tol: 1e-6
   abs_tol: 1e-6
@@ -13,8 +15,8 @@ solver_settings:
   rho: 2e-3 # 0.02
   alpha: 1.6
   sigma: 1e-6 # 1e-10
-  adaptive_rho: False
-  max_iter: 5000
+  adaptive_rho: True
+  max_iter: 5000 # 1000 still seems to provide a decent trajectory
   scaling: 1
 constraints:
   friction_coef: 0.5
@@ -26,8 +28,8 @@ costs:
                                    0, 0, 0, 0, 0, 0, 0, 0, 0]
   # configuration_tracking_weights: [ 1, 1, 10,
   #                                 0.0, 0.0, 0.0,
-  #                                 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-  #                                 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 ]
+  #                                 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001,
+  #                                 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001 ]
   # configuration_tracking_weights: [1, 1, 1,
   #                                  0, 0, 0,
   #                                  100, 100, 100, 100, 100, 100, 100, 100, 100,
@@ -38,8 +40,12 @@ costs:
   #                             1, 1, 1, 1, 1, 1, 1, 1, 1]
   velocity_tracking_weights: [10, 10, 10,
                               1, 1, 1,
-                              0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
-                              0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+                              0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001,
+                              0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
+  # velocity_tracking_weights: [10, 10, 10,
+  #                             1, 1, 1,
+  #                             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  #                             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
   # torque_regularization_weights: [1, 1, 1, 1, 1, 1, 1, 1, 1,
   #                                 1, 1, 1, 1, 1, 1, 1, 1, 1]
   torque_regularization_weights: [.01, .01, .01, .01, .01, .01, .01, .01, .01,

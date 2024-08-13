@@ -45,11 +45,17 @@ namespace achilles
         mpc_->Configure();
         RCLCPP_INFO_STREAM(this->get_logger(), "MPC Configured...");
 
-        // Make the feet always in contact for a standing gait
-        torc::mpc::ContactSchedule cs(mpc_->GetContactFrames());
-        cs.InsertContact("right_foot", 0, 1);
-        cs.InsertContact("left_foot", 0.3, 0.7);
-        mpc_->UpdateContactSchedule(cs);
+        // Make the contact schedule
+        contact_schedule_.SetFrames(mpc_->GetContactFrames());
+        contact_schedule_.InsertContact("right_foot", 0, 0.3);
+        contact_schedule_.InsertContact("right_foot", 0.6, 1);
+        contact_schedule_.InsertContact("left_foot", 0.3, 0.7);
+        this->contact_schedule_.InsertContact("right_foot", 1.3, 1000);
+        this->contact_schedule_.InsertContact("left_foot", 1, 1000);
+
+        this->declare_parameter<double>("default_swing_height", 0.2);
+        mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
+            this->get_parameter("default_swing_height").as_double(), 0.02, 0.5);
 
         // Setup q and v targets
         q_target_.resize(model_->GetConfigDim());
@@ -73,11 +79,6 @@ namespace achilles
                     0, 0, 0;
         mpc_->SetConstantConfigTarget(q_target_);
         mpc_->SetConstantVelTarget(v_target_);
-
-        // TODO: Try to set a swing foot trajectory!
-        this->declare_parameter<double>("default_swing_height", 0.2);
-        mpc_->CreateDefaultSwingTraj("right_foot", this->get_parameter("default_swing_height").as_double(), 0.02, 0.02);
-        mpc_->CreateDefaultSwingTraj("left_foot", this->get_parameter("default_swing_height").as_double(), 0.02, 0.02);
 
         // Set initial conditions
         // TODO: Do this from yaml
@@ -183,10 +184,16 @@ namespace achilles
 
             // TODO: remove
             // q = q_target_;
-            v = v_target_;
+            v = traj_mpc_.GetVelocity(1);
+            q = traj_mpc_.GetConfiguration(1);
+            // Shift the contact schedule
+            contact_schedule_.ShiftContacts(-traj_mpc_.GetDtVec()[0]);    // TODO: Do I need a mutex on this later?
+            mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_, 
+                this->get_parameter("default_swing_height").as_double(), 0.02, 0.5);
 
-            if (mpc_comps_ < 0) {
+            // TODO: Get the new contact schedule
 
+            if (mpc_comps_ < 10) {
                 mpc_->Compute(q, v, traj_mpc_);
                 mpc_comps_++;
                 {

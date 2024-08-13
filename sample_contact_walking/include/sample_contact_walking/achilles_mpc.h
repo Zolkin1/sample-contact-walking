@@ -81,5 +81,6 @@ namespace achilles {
             torc::models::RobotContactInfo contact_state_;
             std::unique_ptr<torc::mpc::FullOrderMpc> mpc_;
             std::unique_ptr<torc::models::FullOrderRigidBody> model_;
+            torc::mpc::ContactSchedule contact_schedule_;
     };
 } // namespace achilles
