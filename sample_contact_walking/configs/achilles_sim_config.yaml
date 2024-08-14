@@ -6,7 +6,7 @@ onboard:
       params_path: /home/zolkin/sample-contact-walking/sample_contact_walking/configs/mpc_config.yaml
       params:
         urdf_path: /home/zolkin/sample-contact-walking/achilles_model_custom/urdf/achilles.urdf
-        viz_frames: ["torso", "right_foot", "left_foot"]
+        viz_frames: ["torso", "foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left", "right_hand", "left_hand"]
         default_swing_height: 0.08
       callback_groups: 
         control_cbg: MutuallyExclusiveCallbackGroup
@@ -23,6 +23,12 @@ onboard:
           topic: /obelisk/achilles/traj_viz
           history_depth: 10
           non_obelisk: True
+        # --- Debug Viz --- #
+        - ros_parameter: state_viz_pub_setting
+          topic: /obelisk/achilles/est_state
+          history_depth: 10
+          callback_group: None
+          non_obelisk: False
       subscribers:
         # Estimated state subscriber
         - ros_parameter: sub_est_setting
@@ -37,8 +43,12 @@ onboard:
           callback_group: control_cbg
         # MPC compute Timer
         - ros_parameter: timer_mpc_setting
-          timer_period_sec: 1
+          timer_period_sec: 0.1
           callback_group: mpc_cbd
+        # --- Debug Viz --- #
+        - ros_parameter: state_viz_timer_setting
+          timer_period_sec: 0.01
+          callback_group: None
   estimation:
     - pkg: sample_contact_walking
       executable: state_estimator

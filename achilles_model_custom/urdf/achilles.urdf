@@ -163,6 +163,22 @@
     <child link="left_foot"/>
   </joint>
 
+  <!-- Left Foot Contact points -->
+  <link name="foot_front_left"/>
+  <joint name="foot_front_left_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0.088 0 -0.018"/>
+    <parent link="left_ankle_pitch"/>
+    <child link="foot_front_left"/>
+  </joint>
+
+  <link name="foot_rear_left"/>
+  <joint name="foot_rear_left_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.02 0 -0.018"/>
+    <parent link="left_ankle_pitch"/>
+    <child link="foot_rear_left"/>
+  </joint>
+  <!--  -->
+
     <!-- Left Arm-->
   <link name="left_shoulder_pitch">
     <inertial>
@@ -416,6 +432,22 @@
     <parent link="right_ankle_pitch"/>
     <child link="right_foot"/>
   </joint>
+
+  <!-- Right Foot Contact points -->
+  <link name="foot_front_right"/>
+  <joint name="foot_front_right_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0.088 0 -0.018"/>
+    <parent link="right_ankle_pitch"/>
+    <child link="foot_front_right"/>
+  </joint>
+
+  <link name="foot_rear_right"/>
+  <joint name="foot_rear_right_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.02 0 -0.018"/>
+    <parent link="right_ankle_pitch"/>
+    <child link="foot_rear_right"/>
+  </joint>
+  <!--  -->
 
 
     <!-- Right Arm-->

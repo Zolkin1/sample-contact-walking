@@ -28,6 +28,7 @@ namespace achilles {
 
             // Viz
             void PublishTrajViz(const torc::mpc::Trajectory& traj, const std::vector<std::string>& viz_frames);
+            void PublishTrajStateViz();
 
             // States
             enum ControllerState {

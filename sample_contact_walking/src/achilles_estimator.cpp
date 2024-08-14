@@ -163,7 +163,8 @@ namespace achilles {
                     msg.v_base.emplace_back(base_vel_.at(i));
                 }
 
-                this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>(this->est_pub_key_)->publish(msg);
+                // TODO: Put back
+                // this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>(this->est_pub_key_)->publish(msg);
             }
         } else {
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Waiting on sensor measurements to publish estimated state.");
