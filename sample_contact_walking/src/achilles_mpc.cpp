@@ -14,6 +14,7 @@
 //  - Check for paths first relative to $SAMPLE_WALKING_ROOT then as a global path
 //  - Add ROS diagonstic messages: https://docs.foxglove.dev/docs/visualization/panels/diagnostics#diagnosticarray
 //  - Update ObeliskNode, line 788 (is msg obelsik to be capical "T")
+//  - Update ObeliskNode sensor data to have a stamped header
 
 
 namespace achilles
@@ -131,8 +132,8 @@ namespace achilles
 
         // TODO: Put back
         // Go to initial condition
-        TransitionState(SeekInitialCond);
-        // TransitionState(Mpc);
+        // TransitionState(SeekInitialCond);
+        TransitionState(Mpc);
 
         // Visualization information
         this->declare_parameter<std::vector<std::string>>("viz_frames", {""});
@@ -161,11 +162,6 @@ namespace achilles
             q_(i) = msg.q_base.at(i);
         }
 
-        // TODO: Investigate more:
-        // double w_temp = q_(6);
-        // q_(6) = q_(5);
-        // q_(5) = w_temp;
-
         for (size_t i = 0; i < msg.q_joints.size(); i++) {
             q_(i + msg.q_base.size()) = msg.q_joints.at(i);
         }
@@ -192,7 +188,9 @@ namespace achilles
             RCLCPP_ERROR_STREAM(this->get_logger(), "received v does not match the size of the model");
         }
 
-        recieved_first_state_ = true;
+        if (!recieved_first_state_ && q_.size() == model_->GetConfigDim() && v_.size() == model_->GetVelDim()) {
+            recieved_first_state_ = true;
+        }
     }
 
     void AchillesController::ComputeMpc() {
@@ -222,8 +220,6 @@ namespace achilles
             contact_schedule_.ShiftContacts(-traj_mpc_.GetDtVec()[0]);    // TODO: Do I need a mutex on this later?
             mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_, 
                 this->get_parameter("default_swing_height").as_double(), 0.0, 0.5);
-
-            // TODO: Get the new contact schedule
 
             if (mpc_comps_ < 1000) {
                 // std::cout << "mpc compute #" << mpc_comps_ << std::endl;
@@ -268,59 +264,61 @@ namespace achilles
         obelisk_control_msgs::msg::PDFeedForward msg;
         if (ctrl_state_ != NoOutput) {
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Publishing first control.");
-            {
-                vectorx_t q, v, tau;
+            
+            vectorx_t q, v, tau;
 
-                if (ctrl_state_ == Mpc) {
-                    // Get the traj mutex to protect it
-                    {
-                        std::lock_guard<std::mutex> lock(traj_out_mut_);
+            if (ctrl_state_ == Mpc) {
+                // Get the traj mutex to protect it
+                {
+                    std::lock_guard<std::mutex> lock(traj_out_mut_);
 
-                        if (traj_start_time_ < 0) {
-                            traj_start_time_ = this->get_clock()->now().seconds();
-                        }
-
-                        double time = this->get_clock()->now().seconds();
-                        // TODO: Do I need to use nanoseconds?
-                        double time_into_traj = time - traj_start_time_;
-                        // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
-
-                        traj_out_.GetConfigInterp(time_into_traj, q);
-                        traj_out_.GetVelocityInterp(time_into_traj, v);
-                        traj_out_.GetTorqueInterp(time_into_traj, tau);
-                    }
-                    // --- TODO: Remove! -- This is a safety in case the interpolation time is too large
-                    if (q.size() == 0) {
-                        // TODO: remove!
-                        throw std::runtime_error("Ending controller!");
-                        q = traj_out_.GetConfiguration(traj_out_.GetNumNodes()-1);
+                    if (traj_start_time_ < 0) {
+                        traj_start_time_ = this->get_clock()->now().seconds();
                     }
 
-                    if (v.size() == 0) {
-                        v = traj_out_.GetVelocity(traj_out_.GetNumNodes()-1);
-                    }
+                    double time = this->get_clock()->now().seconds();
+                    // TODO: Do I need to use nanoseconds?
+                    double time_into_traj = time - traj_start_time_;
+                    // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
 
-                    if (tau.size() == 0) {
-                        tau = traj_out_.GetTau(traj_out_.GetNumNodes()-1);
-                    }
-                    // ---
-                } else if (ctrl_state_ == SeekInitialCond) {
-                    q = q_ic_;
-                    v = v_ic_;
-                    tau = vectorx_t::Zero(model_->GetNumInputs());
+                    traj_out_.GetConfigInterp(time_into_traj, q);
+                    traj_out_.GetVelocityInterp(time_into_traj, v);
+                    traj_out_.GetTorqueInterp(time_into_traj, tau);
+                }
+                // --- TODO: Remove! -- This is a safety in case the interpolation time is too large
+                if (q.size() == 0) {
+                    // TODO: remove!
+                    // throw std::runtime_error("Ending controller!");
+                    q = traj_out_.GetConfiguration(traj_out_.GetNumNodes()-1);
                 }
 
-                // Make the message
-                vectorx_t u_mujoco = ConvertControlToMujocoU(q.tail(model_->GetNumInputs()),
-                    v.tail(model_->GetNumInputs()), tau);
-                ConvertEigenToStd(u_mujoco, msg.u_mujoco);
-                ConvertEigenToStd(q.tail(model_->GetNumInputs()), msg.pos_target);
-                ConvertEigenToStd(v.tail(model_->GetNumInputs()), msg.vel_target);
-                ConvertEigenToStd(tau, msg.feed_forward);
+                if (v.size() == 0) {
+                    v = traj_out_.GetVelocity(traj_out_.GetNumNodes()-1);
+                }
+
+                if (tau.size() == 0) {
+                    tau = traj_out_.GetTau(traj_out_.GetNumNodes()-1);
+                }
+                // ---
+            } else if (ctrl_state_ == SeekInitialCond) {
+                q = q_ic_;
+                v = v_ic_;
+                tau = vectorx_t::Zero(model_->GetNumInputs());
             }
+
+            // Make the message
+            vectorx_t u_mujoco = ConvertControlToMujocoU(q.tail(model_->GetNumInputs()),
+                v.tail(model_->GetNumInputs()), tau);
+            ConvertEigenToStd(u_mujoco, msg.u_mujoco);
+            ConvertEigenToStd(q.tail(model_->GetNumInputs()), msg.pos_target);
+            ConvertEigenToStd(v.tail(model_->GetNumInputs()), msg.vel_target);
+            ConvertEigenToStd(tau, msg.feed_forward);
+            
             if (msg.u_mujoco.size() != 54) {
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Message's u_mujoco is incorrectly sized. Size: " << msg.u_mujoco.size());
             }
+
+            msg.header.stamp = this->now();
 
             this->GetPublisher<obelisk_control_msgs::msg::PDFeedForward>(this->ctrl_key_)->publish(msg);
             

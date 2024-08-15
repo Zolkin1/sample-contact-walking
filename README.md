@@ -51,4 +51,7 @@ Wait for the viz software to connect then run in a seperate terminal:
 obk-activate achilles_sim
 ```
 
-If you have issues with others on the ROS network then set `ROS_LOCALHOST_ONLY`.r
+If you have issues with others on the ROS network then set `ROS_LOCALHOST_ONLY`.
+
+## Random notes
+- Might need to move to the message-stamps obelisk branch.

@@ -2,6 +2,9 @@
 
 #include "obelisk_estimator.h"
 
+// TODO: Remove after debug!
+// #include "obelisk_controller.h"
+
 namespace achilles {
     class AchillesEstimator : public obelisk::ObeliskEstimator<obelisk_estimator_msgs::msg::EstimatedState> {
         public:
@@ -17,6 +20,9 @@ namespace achilles {
             obelisk_estimator_msgs::msg::EstimatedState ComputeStateEstimate() override;
 
             void MakeTorsoMocapTransform();
+
+            // TODO: Remove after testing
+            // void ReceiveControlDebug(const obelisk_control_msgs::msg::PDFeedForward& msg);
 
             // ---------- Member Variables ---------- //
             static constexpr int FLOATING_POS_SIZE = 7;

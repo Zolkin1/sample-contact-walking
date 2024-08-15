@@ -14,7 +14,7 @@
 namespace achilles {
     AchillesEstimator::AchillesEstimator(const std::string& name) 
         : obelisk::ObeliskEstimator<obelisk_estimator_msgs::msg::EstimatedState>(name),
-        recieved_first_encoders_(true), recieved_first_mocap_(true), recieved_first_imu_(true)  {
+        recieved_first_encoders_(false), recieved_first_mocap_(false), recieved_first_imu_(false)  {
         // ---------- Joint Encoder Subscription ---------- /, /
         this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkJointEncoders>(
             "joint_encoders_setting", "jnt_sensor",
@@ -30,6 +30,12 @@ namespace achilles {
             "torso_imu_setting", "torso_imu_sensor",
             std::bind(&AchillesEstimator::TorsoImuCallback, this, std::placeholders::_1));
 
+        // ------ DEBUG ------ //
+        // this->RegisterObkSubscription<obelisk_control_msgs::msg::PDFeedForward>("debug_print_setting",
+        //     "debug_print", std::bind(&AchillesEstimator::ReceiveControlDebug, this, std::placeholders::_1));
+        // this->RegisterObkPublisher<obelisk_control_msgs::msg::PDFeedForward>("debug_pub_setting", "debug_pub");
+        // ------ DEBUG ------ //
+        
         // Create broadcasters to map Mujoco Sites to frames
 
         // Reset values
@@ -96,36 +102,7 @@ namespace achilles {
             double d_nano_sec = base_nanosec_ - prev_base_nanosec_;
             double dt = ((d_sec * 1e9) + d_nano_sec)/1e9;
 
-            if (dt > 0) {   // TODO: Make it publish the last message in this case
-                // TODO: Remove!
-                // msg.q_base[0] = 0.0;
-                // msg.q_base[1] = 0.0;
-                // msg.q_base[2] = 0.97;    // position
-
-                // msg.q_base[3] = 0.0;
-                // msg.q_base[4] = 0.0;
-                // msg.q_base[5] = 0.0;
-                // msg.q_base[6] = 1.0;     // quaternion
-
-                // msg.q_joints[0] = 0.0;
-                // msg.q_joints[1] = 0.0;
-                // msg.q_joints[2] = -0.26;    // L hips joints
-                // msg.q_joints[3] = 0.65;
-                // msg.q_joints[4] = -0.43;
-                // msg.q_joints[5] = 0.0;
-                // msg.q_joints[6] = 0.0;
-                // msg.q_joints[7] = 0.0;
-                // msg.q_joints[8] = 0.0;
-                // msg.q_joints[9] = 0.0;
-                // msg.q_joints[10] = 0.0;
-                // msg.q_joints[11] = -0.26;
-                // msg.q_joints[12] = 0.65;
-                // msg.q_joints[13] = -0.43;
-                // msg.q_joints[14] = 0.0;
-                // msg.q_joints[15] = 0.0;
-                // msg.q_joints[16] = 0.0;
-                // msg.q_joints[17] = 0.0;
-
+            if (dt > 0) {
                 // Calculate base velocity via simple euler
                 for (size_t i = 0; i < POS_VARS; i++) {
                     base_vel_.at(i) = (base_pos_.at(i) - prev_base_pos_.at(i))/dt;
@@ -162,6 +139,7 @@ namespace achilles {
 
             est_state_msg_.v_joints = joint_vels_;
 
+            est_state_msg_.header.stamp = this->now();
 
             // Regardless of state of incoming data (i.e. even if dt <= 0)
             this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>(this->est_pub_key_)->publish(est_state_msg_);
@@ -194,6 +172,15 @@ namespace achilles {
 
         torso_mocap_broadcaster_->sendTransform(t);
     } 
+
+    // TODO: Remove after debug
+    // void AchillesEstimator::ReceiveControlDebug(const obelisk_control_msgs::msg::PDFeedForward& msg) {
+    //     auto time = this->now();
+    //     obelisk_control_msgs::msg::PDFeedForward msg2;
+    //     msg2 = msg;
+    //     msg2.header.stamp = time;
+    //     this->GetPublisher<obelisk_control_msgs::msg::PDFeedForward>("debug_pub")->publish(msg2);
+    // }
 
 } // namespace achilles
 
