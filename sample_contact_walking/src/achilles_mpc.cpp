@@ -13,8 +13,6 @@
 //  - Allow user to set the initial condition in the yaml
 //  - Check for paths first relative to $SAMPLE_WALKING_ROOT then as a global path
 //  - Add ROS diagonstic messages: https://docs.foxglove.dev/docs/visualization/panels/diagnostics#diagnosticarray
-//  - Update ObeliskNode, line 788 (is msg obelsik to be capical "T")
-//  - Update ObeliskNode sensor data to have a stamped header
 
 
 namespace achilles
@@ -124,6 +122,7 @@ namespace achilles
         mpc_->SetWarmStartTrajectory(traj_out_);
         RCLCPP_INFO_STREAM(this->get_logger(), "Warm start trajectory created...");
 
+        // TODO: Verify the initial conditions
         mpc_->ComputeNLP(q_ic_, v_ic_, traj_mpc_);
         traj_out_ = traj_mpc_;
         traj_start_time_ = -1;
@@ -132,8 +131,8 @@ namespace achilles
 
         // TODO: Put back
         // Go to initial condition
-        // TransitionState(SeekInitialCond);
-        TransitionState(Mpc);
+        TransitionState(SeekInitialCond);
+        // TransitionState(Mpc);
 
         // Visualization information
         this->declare_parameter<std::vector<std::string>>("viz_frames", {""});
@@ -206,28 +205,26 @@ namespace achilles
                 v = v_;
             }
 
-            // RCLCPP_INFO_STREAM(this->get_logger(), "q: " << q.transpose());
-            // RCLCPP_INFO_STREAM(this->get_logger(), "v: " << v.transpose());
+            // If in NLP mode, then pause the timer and compute the NLP
+            // Then restart the timer after the NLP is solved.
+            // Change state to normal MPC
+            // This only works if the robot can hold its position for the enough time for the computation
 
             // TODO: Consider putting back
             // Get the current time
             // double time = this->get_clock()->now().seconds();
 
-            // TODO: remove
-            // traj_mpc_.GetVelocityInterp(0.02, v);
-            // traj_mpc_.GetConfigInterp(0.02, q);
             // Shift the contact schedule
             contact_schedule_.ShiftContacts(-traj_mpc_.GetDtVec()[0]);    // TODO: Do I need a mutex on this later?
             mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_, 
-                this->get_parameter("default_swing_height").as_double(), 0.0, 0.5);
+                this->get_parameter("default_swing_height").as_double(), 0.03, 0.5); // TODO: Adjust foot height target
 
-            if (mpc_comps_ < 1000) {
+            if (mpc_comps_ < 100000) {
                 // std::cout << "mpc compute #" << mpc_comps_ << std::endl;
                 // std::cout << "q: " << q.transpose() << std::endl;
                 // std::cout << "v: " << v.transpose() << std::endl;
 
                 mpc_->Compute(q, v, traj_mpc_);
-                // mpc_->Compute(q, v, traj_mpc_); // TODO: Remove
                 mpc_comps_++;
                 {
                     // Get the traj mutex to protect it
@@ -240,6 +237,7 @@ namespace achilles
                 }
                 // RCLCPP_INFO_STREAM(this->get_logger(), "MPC Computation Completed!");
                 if (GetState() != Mpc) {
+                    // TODO: Put back
                     TransitionState(Mpc);
                 }
             } else {
@@ -262,12 +260,12 @@ namespace achilles
         //  setpoints from the trajectory.
 
         obelisk_control_msgs::msg::PDFeedForward msg;
-        if (ctrl_state_ != NoOutput) {
+        if (GetState() != NoOutput) {
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Publishing first control.");
             
             vectorx_t q, v, tau;
 
-            if (ctrl_state_ == Mpc) {
+            if (GetState() == Mpc) {
                 // Get the traj mutex to protect it
                 {
                     std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -284,22 +282,23 @@ namespace achilles
                     traj_out_.GetConfigInterp(time_into_traj, q);
                     traj_out_.GetVelocityInterp(time_into_traj, v);
                     traj_out_.GetTorqueInterp(time_into_traj, tau);
-                }
-                // --- TODO: Remove! -- This is a safety in case the interpolation time is too large
-                if (q.size() == 0) {
-                    // TODO: remove!
-                    // throw std::runtime_error("Ending controller!");
-                    q = traj_out_.GetConfiguration(traj_out_.GetNumNodes()-1);
-                }
+                
+                    // --- TODO: Remove! -- This is a safety in case the interpolation time is too large
+                    if (q.size() == 0) {
+                        // TODO: remove!
+                        // throw std::runtime_error("Ending controller!");
+                        q = traj_out_.GetConfiguration(traj_out_.GetNumNodes()-1);
+                    }
 
-                if (v.size() == 0) {
-                    v = traj_out_.GetVelocity(traj_out_.GetNumNodes()-1);
-                }
+                    if (v.size() == 0) {
+                        v = traj_out_.GetVelocity(traj_out_.GetNumNodes()-1);
+                    }
 
-                if (tau.size() == 0) {
-                    tau = traj_out_.GetTau(traj_out_.GetNumNodes()-1);
+                    if (tau.size() == 0) {
+                        tau = traj_out_.GetTau(traj_out_.GetNumNodes()-1);
+                    }
+                    // ---
                 }
-                // ---
             } else if (ctrl_state_ == SeekInitialCond) {
                 q = q_ic_;
                 v = v_ic_;

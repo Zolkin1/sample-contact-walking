@@ -43,8 +43,8 @@ onboard:
           callback_group: control_cbg
         # MPC compute Timer
         - ros_parameter: timer_mpc_setting
-          timer_period_sec: 100
-          callback_group: mpc_cbd
+          timer_period_sec: 0.03
+          callback_group: mpc_cbg
         # --- Debug Viz --- #
         - ros_parameter: state_viz_timer_setting
           timer_period_sec: 0.01

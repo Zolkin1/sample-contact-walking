@@ -6,6 +6,9 @@
 // #include "obelisk_controller.h"
 
 namespace achilles {
+    using vector3_t = Eigen::Vector3d;
+    using vector6_t = Eigen::Vector<double, 6>;
+
     class AchillesEstimator : public obelisk::ObeliskEstimator<obelisk_estimator_msgs::msg::EstimatedState> {
         public:
             AchillesEstimator(const std::string& name);
@@ -55,7 +58,7 @@ namespace achilles {
             std::vector<double> joint_vels_;
             std::array<double, POS_VARS> base_pos_;
             Eigen::Quaterniond base_quat_;
-            std::array<double, FLOATING_VEL_SIZE> base_vel_;
+            std::array<double, FLOATING_VEL_SIZE> base_vel_;    // In the world frame, from mujoco
 
             // Messages
             obelisk_estimator_msgs::msg::EstimatedState est_state_msg_;

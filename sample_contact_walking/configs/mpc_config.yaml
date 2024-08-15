@@ -7,7 +7,7 @@ general_settings:
   scale_cost: False
   max_initial_solves: 20
   initial_constraint_tol: 5e-3
-  nodes_full_dynamics: 10    # Also determines how many nodes have torque constraints
+  nodes_full_dynamics: 5    # Also determines how many nodes have torque constraints
 solver_settings:
   rel_tol: 1e-6
   abs_tol: 1e-6
@@ -17,7 +17,7 @@ solver_settings:
   alpha: 1.6 # 1.6
   sigma: 1e-6 # 1e-10
   adaptive_rho: False
-  max_iter: 75 # 500 is good
+  max_iter: 100 # 500 is good
   scaling: 10   # More scaling is only helpful when I use less iterations
 constraints:
   friction_coef: 0.5
@@ -35,14 +35,14 @@ costs:
   #                                  0, 0, 0,
   #                                  100, 100, 100, 100, 100, 100, 100, 100, 100,
   #                                  100, 100, 100, 100, 100, 100, 100, 100, 100]
-  # velocity_tracking_weights: [10, 10, 10,
-  #                             1, 1, 1,
-  #                             1, 1, 1, 1, 1, 1, 1, 1, 1,
-  #                             1, 1, 1, 1, 1, 1, 1, 1, 1]
-  velocity_tracking_weights: [1, 1, 1,
+  velocity_tracking_weights: [10, 10, 10,
                               1, 1, 1,
-                              0.001, 0.001, 0.001, 0.001, 0.001, 0.01, 0.01, 0.01, 0.01,
-                              0.001, 0.001, 0.001, 0.001, 0.001, 0.01, 0.01, 0.01, 0.01]
+                              1, 1, 1, 1, 1, 1, 1, 1, 1,
+                              1, 1, 1, 1, 1, 1, 1, 1, 1]
+  # velocity_tracking_weights: [1, 1, 1,
+  #                             1, 1, 1,
+  #                             0.001, 0.001, 0.001, 0.001, 0.001, 0.01, 0.01, 0.01, 0.01,
+  #                             0.001, 0.001, 0.001, 0.001, 0.001, 0.01, 0.01, 0.01, 0.01]
   # velocity_tracking_weights: [10, 10, 10,
   #                             1, 1, 1,
   #                             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,

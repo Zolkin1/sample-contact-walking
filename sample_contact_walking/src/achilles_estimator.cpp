@@ -135,7 +135,7 @@ namespace achilles {
 
             est_state_msg_.q_base.clear();
             for (int i = 0; i < POS_VARS; i++) {
-                est_state_msg_.q_base.emplace_back(base_pos_.at(i));
+                est_state_msg_.q_base.emplace_back(base_pos_[i]);
             }
 
             est_state_msg_.q_base.emplace_back(base_quat_.x());
@@ -149,15 +149,24 @@ namespace achilles {
             est_state_msg_.v_joints = joint_vels_;
 
             // Assign v_base from the true sim state
+            // Need to rotate in to the local frame
+            Eigen::Map<vector3_t> v_world_linear(base_vel_.data());
+            Eigen::Map<vector3_t> v_world_angular(base_vel_.data() + 3);
+
+            vector6_t local_vel;
+
+            Eigen::Quaterniond base_quat(base_quat_.w(), base_quat_.x(), base_quat_.y(), base_quat_.z());
+            local_vel.head<POS_VARS>() = base_quat.toRotationMatrix().transpose() * v_world_linear;
+            local_vel.tail<POS_VARS>() = base_quat.toRotationMatrix().transpose() * v_world_angular;
+
             est_state_msg_.v_base.clear();
             for (int i = 0; i < FLOATING_VEL_SIZE; i++) {
-                est_state_msg_.v_base.emplace_back(base_vel_.at(i));
+                est_state_msg_.v_base.emplace_back(local_vel(i));
             }
 
             est_state_msg_.header.stamp = this->now();
 
             // Regardless of state of incoming data (i.e. even if dt <= 0)
-            // TODO: Put back!
             this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>(this->est_pub_key_)->publish(est_state_msg_);
         } else {
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Waiting on sensor measurements to publish estimated state.");
