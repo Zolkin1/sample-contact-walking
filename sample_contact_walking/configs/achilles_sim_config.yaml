@@ -43,7 +43,7 @@ onboard:
           callback_group: control_cbg
         # MPC compute Timer
         - ros_parameter: timer_mpc_setting
-          timer_period_sec: 0.04
+          timer_period_sec: 100
           callback_group: mpc_cbd
         # --- Debug Viz --- #
         - ros_parameter: state_viz_timer_setting
@@ -95,6 +95,12 @@ onboard:
           # callback_key: sub_callback1
           callback_group: None
           non_obelisk: False
+      # ---------- True Sim State ---------- #
+        - ros_parameter: true_sim_sub_setting
+          topic: /obelisk/achilles/true_sim_state
+          history_depth: 10
+          callback_group: None
+          non_obelisk: False
       # ---- DEBUG ---- #
         # - ros_parameter: debug_print_setting
         #   topic: /obelisk/achilles/low_level_control
@@ -107,7 +113,16 @@ onboard:
       pkg: sample_contact_walking
       executable: simulation
       # callback_groups:
-      # publishers:
+      publishers:
+        - ros_parameter: pub_true_sim_state_setting
+          topic: /obelisk/achilles/true_sim_state
+          history_depth: 10
+          callback_group: None
+      timers:
+        - ros_parameter: timer_true_sim_state_setting
+          history_depth: 10
+          timer_period_sec: 0.01
+          callback_group: None
       subscribers:
         - ros_parameter: sub_ctrl_setting
           # key: sub1

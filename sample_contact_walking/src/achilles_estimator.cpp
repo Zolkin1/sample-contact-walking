@@ -30,6 +30,11 @@ namespace achilles {
             "torso_imu_setting", "torso_imu_sensor",
             std::bind(&AchillesEstimator::TorsoImuCallback, this, std::placeholders::_1));
 
+        // ---------- True Sim State Subscription ---------- //
+        this->RegisterObkSubscription<obelisk_sensor_msgs::msg::TrueSimState>(
+            "true_sim_sub_setting", "true_sim_state",
+            std::bind(&AchillesEstimator::TrueStateCallback, this, std::placeholders::_1));
+
         // ------ DEBUG ------ //
         // this->RegisterObkSubscription<obelisk_control_msgs::msg::PDFeedForward>("debug_print_setting",
         //     "debug_print", std::bind(&AchillesEstimator::ReceiveControlDebug, this, std::placeholders::_1));
@@ -103,24 +108,28 @@ namespace achilles {
             double dt = ((d_sec * 1e9) + d_nano_sec)/1e9;
 
             if (dt > 0) {
+                // TODO: Base velocity is in world frame from mujoco, but the MPC needs it in local frame
+                // TODO: This is quite a bad estimate, need to clean it up
+                // For now, I will just grab the true velocity
+
                 // Calculate base velocity via simple euler
-                for (size_t i = 0; i < POS_VARS; i++) {
-                    base_vel_.at(i) = (base_pos_.at(i) - prev_base_pos_.at(i))/dt;
-                }
+                // for (size_t i = 0; i < POS_VARS; i++) {
+                //     base_vel_.at(i) = (base_pos_.at(i) - prev_base_pos_.at(i))/dt;
+                // }
 
-                base_quat_.normalize();
-                prev_base_quat_.normalize();
+                // base_quat_.normalize();
+                // prev_base_quat_.normalize();
 
-                Eigen::Vector3d tangent_vec = pinocchio::quaternion::log3(base_quat_); // prev_quat.inverse()*
+                // Eigen::Vector3d tangent_vec = pinocchio::quaternion::log3(base_quat_); // prev_quat.inverse()*
 
-                for (size_t i = 0; i < 3; i++) {
-                    base_vel_.at(i + POS_VARS) = tangent_vec(i)/dt;
-                }
+                // for (size_t i = 0; i < 3; i++) {
+                //     base_vel_.at(i + POS_VARS) = tangent_vec(i)/dt;
+                // }
 
-                est_state_msg_.v_base.clear();
-                for (int i = 0; i < FLOATING_VEL_SIZE; i++) {
-                    est_state_msg_.v_base.emplace_back(base_vel_.at(i));
-                }
+                // est_state_msg_.v_base.clear();
+                // for (int i = 0; i < FLOATING_VEL_SIZE; i++) {
+                //     est_state_msg_.v_base.emplace_back(base_vel_.at(i));
+                // }
             }
             est_state_msg_.q_joints = joint_pos_;
 
@@ -139,9 +148,16 @@ namespace achilles {
 
             est_state_msg_.v_joints = joint_vels_;
 
+            // Assign v_base from the true sim state
+            est_state_msg_.v_base.clear();
+            for (int i = 0; i < FLOATING_VEL_SIZE; i++) {
+                est_state_msg_.v_base.emplace_back(base_vel_.at(i));
+            }
+
             est_state_msg_.header.stamp = this->now();
 
             // Regardless of state of incoming data (i.e. even if dt <= 0)
+            // TODO: Put back!
             this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>(this->est_pub_key_)->publish(est_state_msg_);
         } else {
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Waiting on sensor measurements to publish estimated state.");
@@ -172,6 +188,12 @@ namespace achilles {
 
         torso_mocap_broadcaster_->sendTransform(t);
     } 
+
+    void AchillesEstimator::TrueStateCallback(const obelisk_sensor_msgs::msg::TrueSimState& msg) {
+        for (size_t i = 0; i < FLOATING_VEL_SIZE; i++) {
+            base_vel_[i] = msg.v_base[i];
+        }
+    }
 
     // TODO: Remove after debug
     // void AchillesEstimator::ReceiveControlDebug(const obelisk_control_msgs::msg::PDFeedForward& msg) {

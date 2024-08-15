@@ -461,6 +461,8 @@ namespace achilles
         // msg.v_base = torc::utils::EigenToStdVector(v_head);
         // msg.v_joints = torc::utils::EigenToStdVector(v_tail);
 
+        // msg.header.stamp = this->now();
+
         // this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
     }
 

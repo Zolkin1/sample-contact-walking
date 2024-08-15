@@ -7,7 +7,7 @@ general_settings:
   scale_cost: False
   max_initial_solves: 20
   initial_constraint_tol: 5e-3
-  nodes_full_dynamics: 3    # Also determines how many nodes have torque constraints
+  nodes_full_dynamics: 10    # Also determines how many nodes have torque constraints
 solver_settings:
   rel_tol: 1e-6
   abs_tol: 1e-6

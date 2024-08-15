@@ -21,6 +21,9 @@ namespace achilles {
 
             void MakeTorsoMocapTransform();
 
+            // True sim state for debugging
+            void TrueStateCallback(const obelisk_sensor_msgs::msg::TrueSimState& msg);
+
             // TODO: Remove after testing
             // void ReceiveControlDebug(const obelisk_control_msgs::msg::PDFeedForward& msg);
 
