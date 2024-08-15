@@ -68,10 +68,10 @@
     <!-- Knee Pitch Settings  -->
     <default class="knee_pitch">
       <default class="knee_pitch_pos">
-        <position kp="50" ctrllimited="true" ctrlrange="-70  70"/>
+        <position kp="70" ctrllimited="true" ctrlrange="-70  70"/>
       </default>
       <default class="knee_pitch_vel">
-        <velocity kv="10" ctrllimited="true" ctrlrange="-70  70"/>
+        <velocity kv="12" ctrllimited="true" ctrlrange="-70  70"/>
       </default>
       <motor ctrllimited="true" ctrlrange="-70  70"/>
       <joint axis="0 1 0" pos="0 0 0" range="0 2.0" damping="0.1" frictionloss="0.3"/>

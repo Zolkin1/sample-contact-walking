@@ -43,7 +43,7 @@ onboard:
           callback_group: control_cbg
         # MPC compute Timer
         - ros_parameter: timer_mpc_setting
-          timer_period_sec: 0.1
+          timer_period_sec: 100
           callback_group: mpc_cbd
         # --- Debug Viz --- #
         - ros_parameter: state_viz_timer_setting
@@ -52,7 +52,7 @@ onboard:
   estimation:
     - pkg: sample_contact_walking
       executable: state_estimator
-      # callback_groups:
+      # callback_groups: 
       publishers:
         - ros_parameter: pub_est_setting
           topic: /obelisk/achilles/est_state
@@ -210,5 +210,5 @@ onboard:
             callback_group: None
         timers:
           - ros_parameter: timer_viz_joint_setting
-            timer_period_sec: 0.02
+            timer_period_sec: 0.01
             callback_group: None

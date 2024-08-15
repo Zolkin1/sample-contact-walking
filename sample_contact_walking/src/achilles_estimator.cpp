@@ -14,7 +14,7 @@
 namespace achilles {
     AchillesEstimator::AchillesEstimator(const std::string& name) 
         : obelisk::ObeliskEstimator<obelisk_estimator_msgs::msg::EstimatedState>(name),
-        recieved_first_encoders_(false), recieved_first_mocap_(false), recieved_first_imu_(false)  {
+        recieved_first_encoders_(true), recieved_first_mocap_(true), recieved_first_imu_(true)  {
         // ---------- Joint Encoder Subscription ---------- /, /
         this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkJointEncoders>(
             "joint_encoders_setting", "jnt_sensor",
@@ -88,64 +88,45 @@ namespace achilles {
     }
 
     obelisk_estimator_msgs::msg::EstimatedState AchillesEstimator::ComputeStateEstimate() {
-        obelisk_estimator_msgs::msg::EstimatedState msg;
+        
         if (recieved_first_imu_ && recieved_first_encoders_ && recieved_first_mocap_) {
+            RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Starting to publish estimated states.");
+
             double d_sec = base_sec_ - prev_base_sec_;
             double d_nano_sec = base_nanosec_ - prev_base_nanosec_;
             double dt = ((d_sec * 1e9) + d_nano_sec)/1e9;
 
-            if (dt > 0) {
-                RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Starting to publish estimated states.");
-
-                msg.q_joints = joint_pos_;
-                for (int i = 0; i < POS_VARS; i++) {
-                    msg.q_base.emplace_back(base_pos_.at(i));
-                }
-
-                msg.q_base.emplace_back(base_quat_.x());
-                msg.q_base.emplace_back(base_quat_.y());
-                msg.q_base.emplace_back(base_quat_.z());
-                msg.q_base.emplace_back(base_quat_.w());
-                            
-                msg.joint_names = joint_names_;
-                msg.base_link_name = base_link_name_;
-
-                msg.v_joints = joint_vels_;
-
+            if (dt > 0) {   // TODO: Make it publish the last message in this case
                 // TODO: Remove!
-                msg.q_base[0] = 0.0;
-                msg.q_base[1] = 0.0;
-                msg.q_base[2] = 0.97;    // position
+                // msg.q_base[0] = 0.0;
+                // msg.q_base[1] = 0.0;
+                // msg.q_base[2] = 0.97;    // position
 
-                msg.q_base[3] = 0.0;
-                msg.q_base[4] = 0.0;
-                msg.q_base[5] = 0.0;
-                msg.q_base[6] = 1.0;     // quaternion
+                // msg.q_base[3] = 0.0;
+                // msg.q_base[4] = 0.0;
+                // msg.q_base[5] = 0.0;
+                // msg.q_base[6] = 1.0;     // quaternion
 
-                msg.q_joints[0] = 0.0;
-                msg.q_joints[1] = 0.0;
-                msg.q_joints[2] = -0.26;    // L hips joints
-                msg.q_joints[3] = 0.65;
-                msg.q_joints[4] = -0.43;
-                msg.q_joints[5] = 0.0;
-                msg.q_joints[6] = 0.0;
-                msg.q_joints[7] = 0.0;
-                msg.q_joints[8] = 0.0;
-                msg.q_joints[9] = 0.0;
-                msg.q_joints[10] = 0.0;
-                msg.q_joints[11] = -0.26;
-                msg.q_joints[12] = 0.65;
-                msg.q_joints[13] = -0.43;
-                msg.q_joints[14] = 0.0;
-                msg.q_joints[15] = 0.0;
-                msg.q_joints[16] = 0.0;
-                msg.q_joints[17] = 0.0;
+                // msg.q_joints[0] = 0.0;
+                // msg.q_joints[1] = 0.0;
+                // msg.q_joints[2] = -0.26;    // L hips joints
+                // msg.q_joints[3] = 0.65;
+                // msg.q_joints[4] = -0.43;
+                // msg.q_joints[5] = 0.0;
+                // msg.q_joints[6] = 0.0;
+                // msg.q_joints[7] = 0.0;
+                // msg.q_joints[8] = 0.0;
+                // msg.q_joints[9] = 0.0;
+                // msg.q_joints[10] = 0.0;
+                // msg.q_joints[11] = -0.26;
+                // msg.q_joints[12] = 0.65;
+                // msg.q_joints[13] = -0.43;
+                // msg.q_joints[14] = 0.0;
+                // msg.q_joints[15] = 0.0;
+                // msg.q_joints[16] = 0.0;
+                // msg.q_joints[17] = 0.0;
 
                 // Calculate base velocity via simple euler
-                double d_sec = base_sec_ - prev_base_sec_;
-                double d_nano_sec = base_nanosec_ - prev_base_nanosec_;
-                double dt = ((d_sec * 1e9) + d_nano_sec)/1e9;
-
                 for (size_t i = 0; i < POS_VARS; i++) {
                     base_vel_.at(i) = (base_pos_.at(i) - prev_base_pos_.at(i))/dt;
                 }
@@ -159,18 +140,36 @@ namespace achilles {
                     base_vel_.at(i + POS_VARS) = tangent_vec(i)/dt;
                 }
 
+                est_state_msg_.v_base.clear();
                 for (int i = 0; i < FLOATING_VEL_SIZE; i++) {
-                    msg.v_base.emplace_back(base_vel_.at(i));
+                    est_state_msg_.v_base.emplace_back(base_vel_.at(i));
                 }
-
-                // TODO: Put back
-                // this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>(this->est_pub_key_)->publish(msg);
             }
+            est_state_msg_.q_joints = joint_pos_;
+
+            est_state_msg_.q_base.clear();
+            for (int i = 0; i < POS_VARS; i++) {
+                est_state_msg_.q_base.emplace_back(base_pos_.at(i));
+            }
+
+            est_state_msg_.q_base.emplace_back(base_quat_.x());
+            est_state_msg_.q_base.emplace_back(base_quat_.y());
+            est_state_msg_.q_base.emplace_back(base_quat_.z());
+            est_state_msg_.q_base.emplace_back(base_quat_.w());
+
+            est_state_msg_.joint_names = joint_names_;
+            est_state_msg_.base_link_name = base_link_name_;
+
+            est_state_msg_.v_joints = joint_vels_;
+
+
+            // Regardless of state of incoming data (i.e. even if dt <= 0)
+            this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>(this->est_pub_key_)->publish(est_state_msg_);
         } else {
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Waiting on sensor measurements to publish estimated state.");
         }
 
-        return msg;
+        return est_state_msg_;
     }
 
     void AchillesEstimator::MakeTorsoMocapTransform() {

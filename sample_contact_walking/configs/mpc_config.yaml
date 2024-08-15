@@ -1,5 +1,5 @@
 general_settings:
-  nodes: 32
+  nodes: 30
   verbose: True
   node_dt: 0.02
   compile_derivatives: True
@@ -14,23 +14,23 @@ solver_settings:
   verbose: True
   polish: True
   rho: 2e-3 # 0.02
-  alpha: 1.6
+  alpha: 1.6 # 1.6
   sigma: 1e-6 # 1e-10
-  adaptive_rho: True
-  max_iter: 500 # 500 is good
-  scaling: 1
+  adaptive_rho: False
+  max_iter: 75 # 500 is good
+  scaling: 10   # More scaling is only helpful when I use less iterations
 constraints:
   friction_coef: 0.5
   max_grf: 200
 costs:
-  configuration_tracking_weights: [0, 0, 1,
-                                   0, 0, 0,
-                                   0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                   0, 0, 0, 0, 0, 0, 0, 0, 0]
-  # configuration_tracking_weights: [ 1, 1, 10,
-  #                                 0.0, 0.0, 0.0,
-  #                                 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001,
-  #                                 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001 ]
+  # configuration_tracking_weights: [0, 0, 1,
+  #                                  0, 0, 0,
+  #                                  0, 0, 0, 0, 0, 0, 0, 0, 0,
+  #                                  0, 0, 0, 0, 0, 0, 0, 0, 0]
+  configuration_tracking_weights: [ .001, .001, 1,
+                                  0.0, 0.0, 0.0,
+                                  0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001,
+                                  0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001 ]
   # configuration_tracking_weights: [1, 1, 1,
   #                                  0, 0, 0,
   #                                  100, 100, 100, 100, 100, 100, 100, 100, 100,
@@ -49,8 +49,8 @@ costs:
   #                             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
   # torque_regularization_weights: [1, 1, 1, 1, 1, 1, 1, 1, 1,
   #                                 1, 1, 1, 1, 1, 1, 1, 1, 1]
-  torque_regularization_weights: [.03, .01, .01, .01, .01, .1, .1, .1, .1,
-                                  .03, .01, .01, .01, .01, .1, .1, .1, .1]
+  torque_regularization_weights: [.01, .01, .01, .01, .01, .1, .1, .1, .1,
+                                  .01, .01, .01, .01, .01, .1, .1, .1, .1]
 contacts:
   # For now, removing hands
   # contact_frames: ["right_foot", "left_foot"] #, "right_hand", "left_hand"]

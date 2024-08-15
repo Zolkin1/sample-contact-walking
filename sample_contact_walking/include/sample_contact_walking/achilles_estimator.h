@@ -48,6 +48,9 @@ namespace achilles {
             Eigen::Quaterniond base_quat_;
             std::array<double, FLOATING_VEL_SIZE> base_vel_;
 
+            // Messages
+            obelisk_estimator_msgs::msg::EstimatedState est_state_msg_;
+
             // broadcasters
             std::shared_ptr<tf2_ros::StaticTransformBroadcaster> torso_mocap_broadcaster_;
     };
