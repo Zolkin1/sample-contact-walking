@@ -75,13 +75,15 @@ namespace achilles
         // contact_schedule_.InsertContact("foot_front_left", 0.7, 1000);
         // contact_schedule_.InsertContact("foot_rear_left", 0.7, 1000);
 
-        this->declare_parameter<double>("default_swing_height", 0.2);
+        this->declare_parameter<double>("default_swing_height", 0.1);
+        this->declare_parameter<double>("default_stand_foot_height", 0.0);
         mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
-            this->get_parameter("default_swing_height").as_double(), 0.00, 0.5);
+            this->get_parameter("default_swing_height").as_double(),
+            this->get_parameter("default_stand_foot_height").as_double(), 0.5);
 
         // Setup q and v targets
         q_target_.resize(model_->GetConfigDim());
-        q_target_ << 0., 0, 0.97,    // position
+        q_target_ << 0., 0, 0.9,    // position
                     0, 0, 0, 1,     // quaternion
                     0, 0, -0.26,    // L hips joints
                     0.65, -0.43,    // L knee, ankle
@@ -216,10 +218,11 @@ namespace achilles
 
             // Shift the contact schedule
             contact_schedule_.ShiftContacts(-traj_mpc_.GetDtVec()[0]);    // TODO: Do I need a mutex on this later?
-            mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_, 
-                this->get_parameter("default_swing_height").as_double(), 0.03, 0.5); // TODO: Adjust foot height target
+            mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
+                this->get_parameter("default_swing_height").as_double(),
+                this->get_parameter("default_stand_foot_height").as_double(), 0.5);
 
-            if (mpc_comps_ < 100000) {
+            if (mpc_comps_ < 10000) {
                 // std::cout << "mpc compute #" << mpc_comps_ << std::endl;
                 // std::cout << "q: " << q.transpose() << std::endl;
                 // std::cout << "v: " << v.transpose() << std::endl;

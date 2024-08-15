@@ -8,6 +8,7 @@ onboard:
         urdf_path: /home/zolkin/sample-contact-walking/achilles_model_custom/urdf/achilles.urdf
         viz_frames: ["torso", "foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left", "right_hand", "left_hand"]
         default_swing_height: 0.08
+        default_stand_foot_height: 0.01
       callback_groups: 
         control_cbg: MutuallyExclusiveCallbackGroup
         mpc_cbg: MutuallyExclusiveCallbackGroup
@@ -43,7 +44,7 @@ onboard:
           callback_group: control_cbg
         # MPC compute Timer
         - ros_parameter: timer_mpc_setting
-          timer_period_sec: 0.03
+          timer_period_sec: 0.009
           callback_group: mpc_cbg
         # --- Debug Viz --- #
         - ros_parameter: state_viz_timer_setting
@@ -68,7 +69,7 @@ onboard:
       # ---- DEBUG ---- #
       timers:
         - ros_parameter: timer_est_setting
-          timer_period_sec: 0.01
+          timer_period_sec: 0.005
           callback_group: None
       subscribers:
       # ---------- Joint Encoders ---------- #
@@ -121,7 +122,7 @@ onboard:
       timers:
         - ros_parameter: timer_true_sim_state_setting
           history_depth: 10
-          timer_period_sec: 0.01
+          timer_period_sec: 0.0025
           callback_group: None
       subscribers:
         - ros_parameter: sub_ctrl_setting
