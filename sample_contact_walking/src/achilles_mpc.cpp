@@ -20,11 +20,16 @@ namespace achilles
     AchillesController::AchillesController(const std::string& name) 
     : obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState>(name), 
         recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(0), mpc_comps_(0) {
+        // TODO: Remove
+        // std::this_thread::sleep_for (std::chrono::seconds(10));
+
         // For now model the feet as point contacts
         contact_state_.contacts.emplace("left_ankle_pitch", torc::models::Contact(torc::models::PointContact, false));
         contact_state_.contacts.emplace("right_ankle_pitch", torc::models::Contact(torc::models::PointContact, false));
 
-        this->RegisterObkTimer("timer_mpc_setting", "mpc_timer", std::bind(&AchillesController::ComputeMpc, this));
+        // TODO: Removed because it caused serious jitter on the MPC computations, so running in a seperate thread.
+        // this->RegisterObkTimer("timer_mpc_setting", "mpc_timer", std::bind(&AchillesController::ComputeMpc, this));
+        this->declare_parameter<double>("mpc_loop_period_sec", 0.01);
 
         // --- Debug Publisher and Timer --- //
         this->RegisterObkTimer("state_viz_timer_setting", "state_viz_timer", std::bind(&AchillesController::PublishTrajStateViz, this));
@@ -119,9 +124,28 @@ namespace achilles
         std::fill(dt.begin(), dt.end(), 0.02);
         traj_out_.SetDtVector(dt);
         traj_out_.SetDefault(q_target_);
-        traj_mpc_ = traj_out_;
+
+        // Warm start trajectory forces
+        double time = 0;
+        for (int i = 0; i < traj_out_.GetNumNodes(); i++) {
+            int num_contacts = 0;
+            for (const auto& frame : mpc_->GetContactFrames()) {
+                if (contact_schedule_.InContact(frame, time)) {
+                    num_contacts++;
+                }
+            }
+
+            for (const auto& frame : mpc_->GetContactFrames()) {
+                if (contact_schedule_.InContact(frame, time)) {
+                    traj_out_.SetForce(i, frame, {0, 0, 9.81*model_->GetMass()/num_contacts});
+                }
+            }
+
+            time += traj_out_.GetDtVec()[i];
+        }
 
         mpc_->SetWarmStartTrajectory(traj_out_);
+        traj_mpc_ = traj_out_;
         RCLCPP_INFO_STREAM(this->get_logger(), "Warm start trajectory created...");
 
         // TODO: Verify the initial conditions
@@ -148,6 +172,9 @@ namespace achilles
                 RCLCPP_INFO_STREAM(this->get_logger(), "Viz frame: " << frame << " is being used.");
                 return false;
             });
+
+        // TODO: Spin up MPC thread
+        mpc_thread_ = std::thread(&AchillesController::MpcThread, this);
     }
 
     void AchillesController::UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) {
@@ -194,67 +221,153 @@ namespace achilles
         }
     }
 
-    void AchillesController::ComputeMpc() {
-        if (recieved_first_state_) {
-            RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Computing first trajectory.");
-            vectorx_t q, v;
-            {
-                // Get the mutex to protect the states
-                std::lock_guard<std::mutex> lock(est_state_mut_);
+    // Removed because the timing was not consistent
+    // void AchillesController::ComputeMpc() {
+    //     if (recieved_first_state_) {
+    //         RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Computing first trajectory.");
+    //         vectorx_t q, v;
+    //         {
+    //             // Get the mutex to protect the states
+    //             std::lock_guard<std::mutex> lock(est_state_mut_);
 
-                // Create current state
-                q = q_;
-                v = v_;
-            }
+    //             // Create current state
+    //             q = q_;
+    //             v = v_;
+    //         }
 
-            // If in NLP mode, then pause the timer and compute the NLP
-            // Then restart the timer after the NLP is solved.
-            // Change state to normal MPC
-            // This only works if the robot can hold its position for the enough time for the computation
+    //         // If in NLP mode, then pause the timer and compute the NLP
+    //         // Then restart the timer after the NLP is solved.
+    //         // Change state to normal MPC
+    //         // This only works if the robot can hold its position for the enough time for the computation
 
-            // TODO: Consider putting back
-            // Get the current time
-            // double time = this->get_clock()->now().seconds();
+    //         // TODO: Consider putting back
+    //         // Get the current time
+    //         // double time = this->get_clock()->now().seconds();
 
-            // Shift the contact schedule
-            contact_schedule_.ShiftContacts(-traj_mpc_.GetDtVec()[0]);    // TODO: Do I need a mutex on this later?
-            mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
-                this->get_parameter("default_swing_height").as_double(),
-                this->get_parameter("default_stand_foot_height").as_double(), 0.5);
+    //         // Shift the contact schedule
+    //         contact_schedule_.ShiftContacts(-traj_mpc_.GetDtVec()[0]);    // TODO: Do I need a mutex on this later?
+    //         mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
+    //             this->get_parameter("default_swing_height").as_double(),
+    //             this->get_parameter("default_stand_foot_height").as_double(), 0.5);
 
-            if (mpc_comps_ < 10000) {
-                // std::cout << "mpc compute #" << mpc_comps_ << std::endl;
-                // std::cout << "q: " << q.transpose() << std::endl;
-                // std::cout << "v: " << v.transpose() << std::endl;
+    //         if (mpc_comps_ < 20) {
+    //             // std::cout << "mpc compute #" << mpc_comps_ << std::endl;
+    //             // std::cout << "q: " << q.transpose() << std::endl;
+    //             // std::cout << "v: " << v.transpose() << std::endl;
 
-                mpc_->Compute(q, v, traj_mpc_);
-                mpc_comps_++;
+    //             mpc_->Compute(q, v, traj_mpc_);
+    //             mpc_comps_++;
+    //             {
+    //                 // Get the traj mutex to protect it
+    //                 std::lock_guard<std::mutex> lock(traj_out_mut_);
+    //                 traj_out_ = traj_mpc_;
+
+    //                 // Assign time time too
+    //                 double time = this->get_clock()->now().seconds();
+    //                 traj_start_time_ = time;
+    //             }
+    //             // RCLCPP_INFO_STREAM(this->get_logger(), "MPC Computation Completed!");
+    //             if (GetState() != Mpc) {
+    //                 // TODO: Put back
+    //                 TransitionState(Mpc);
+    //             }
+    //         } else {
+    //             static bool printed = false;
+    //             if (!printed) {
+    //                 mpc_->PrintStatistics();
+    //                 mpc_->PrintContactSchedule();
+    //                 printed = true;
+    //             }
+    //         }
+
+    //         // TODO: If this is slow, then I need to move it
+    //         PublishTrajViz(traj_mpc_, viz_frames_);
+
+    //     }
+    // }
+
+    // Running the MPC in its own the thread seems to make the timing more consistent and overall faster
+    // If I still need more, I can try to adjust the thread prio
+    // Experimentally, note that the faster I run it, the more consistent (and faster, up to a limit) it is
+    void AchillesController::MpcThread() {
+        const long mpc_loop_rate_ns = this->get_parameter("mpc_loop_period_sec").as_double()*1e9;
+        RCLCPP_INFO_STREAM(this->get_logger(), "MPC loop period set to: " << mpc_loop_rate_ns << "ns.");
+
+        while (true) {
+            // Start the timer
+            auto start_time = this->now();
+
+            if (recieved_first_state_) {
+                RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Computing first trajectory.");
+                vectorx_t q, v;
                 {
-                    // Get the traj mutex to protect it
-                    std::lock_guard<std::mutex> lock(traj_out_mut_);
-                    traj_out_ = traj_mpc_;
+                    // Get the mutex to protect the states
+                    std::lock_guard<std::mutex> lock(est_state_mut_);
 
-                    // Assign time time too
-                    double time = this->get_clock()->now().seconds();
-                    traj_start_time_ = time;
+                    // Create current state
+                    q = q_;
+                    v = v_;
                 }
-                // RCLCPP_INFO_STREAM(this->get_logger(), "MPC Computation Completed!");
-                if (GetState() != Mpc) {
-                    // TODO: Put back
-                    TransitionState(Mpc);
+
+                // If in NLP mode, then pause the timer and compute the NLP
+                // Then restart the timer after the NLP is solved.
+                // Change state to normal MPC
+                // This only works if the robot can hold its position for the enough time for the computation
+
+                // TODO: Consider putting back
+                // Get the current time
+                // double time = this->get_clock()->now().seconds();
+
+                // Shift the contact schedule
+                contact_schedule_.ShiftContacts(-traj_mpc_.GetDtVec()[0]);    // TODO: Do I need a mutex on this later?
+                mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
+                    this->get_parameter("default_swing_height").as_double(),
+                    this->get_parameter("default_stand_foot_height").as_double(), 0.5);
+
+                if (mpc_comps_ < 200) {
+                    // std::cout << "mpc compute #" << mpc_comps_ << std::endl;
+                    // std::cout << "q: " << q.transpose() << std::endl;
+                    // std::cout << "v: " << v.transpose() << std::endl;
+
+                    mpc_->Compute(q, v, traj_mpc_);
+                    mpc_comps_++;
+                    {
+                        // Get the traj mutex to protect it
+                        std::lock_guard<std::mutex> lock(traj_out_mut_);
+                        traj_out_ = traj_mpc_;
+
+                        // Assign time time too
+                        double time = this->get_clock()->now().seconds();
+                        traj_start_time_ = time;
+                    }
+                    // RCLCPP_INFO_STREAM(this->get_logger(), "MPC Computation Completed!");
+                    if (GetState() != Mpc) {
+                        // TODO: Put back
+                        TransitionState(Mpc);
+                    }
+                } else {
+                    static bool printed = false;
+                    if (!printed) {
+                        mpc_->PrintStatistics();
+                        mpc_->PrintContactSchedule();
+                        printed = true;
+                    }
                 }
-            } else {
-                static bool printed = false;
-                if (!printed) {
-                    mpc_->PrintStatistics();
-                    mpc_->PrintContactSchedule();
-                    printed = true;
-                }
+
+                // TODO: If this is slow, then I need to move it
+                PublishTrajViz(traj_mpc_, viz_frames_);
             }
 
-            // TODO: If this is slow, then I need to move it
-            PublishTrajViz(traj_mpc_, viz_frames_);
+            // Stop timer
+            auto stop_time = this->now(); 
 
+            // Compute difference
+            const long time_left = mpc_loop_rate_ns - (stop_time - start_time).nanoseconds();
+            if (time_left > 0) {
+                std::this_thread::sleep_for(std::chrono::nanoseconds(time_left));
+            } else {
+                RCLCPP_WARN_STREAM(this->get_logger(), "MPC computation took longer than loop rate allowed for. " << std::abs(time_left)/1e-6 << "ms over time.");
+            }
         }
     }
 

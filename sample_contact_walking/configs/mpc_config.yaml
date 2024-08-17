@@ -1,5 +1,5 @@
 general_settings:
-  nodes: 10
+  nodes: 32
   verbose: True
   node_dt: 0.02
   compile_derivatives: True
@@ -17,7 +17,7 @@ solver_settings:
   alpha: 1.6 # 1.6
   sigma: 1e-6 # 1e-10
   adaptive_rho: False
-  max_iter: 75 # 500 is good
+  max_iter: 25 # 500 is good
   scaling: 10   # More scaling is only helpful when I use less iterations
 constraints:
   friction_coef: 0.5
@@ -41,3 +41,11 @@ contacts:
 # Weights notes:
 # - More weight on keeping the arm velocity and torques down since for now they are unconstrained
 # - Slightly more weight on hip yaw torque to keep the feet straight
+
+line_search:
+  alpha_min: 1e-3
+  large_constraint_vio: 1e-2
+  small_constraint_vio: 1e-6
+  constraint_reduction_mult: 1e-6
+  alpha_step: 0.5
+  armijo_constant: 1e-4

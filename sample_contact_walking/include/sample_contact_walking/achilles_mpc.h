@@ -17,7 +17,10 @@ namespace achilles {
         private:
             // Control functions
             obelisk_control_msgs::msg::PDFeedForward ComputeControl() override;
-            void ComputeMpc();
+            // void ComputeMpc();
+
+            // MPC Thread function
+            void MpcThread();
 
             // State functions
             void UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) override;
@@ -83,5 +86,8 @@ namespace achilles {
             std::unique_ptr<torc::mpc::FullOrderMpc> mpc_;
             std::unique_ptr<torc::models::FullOrderRigidBody> model_;
             torc::mpc::ContactSchedule contact_schedule_;
+
+            // Threads
+            std::thread mpc_thread_;
     };
 } // namespace achilles

@@ -9,9 +9,9 @@ onboard:
         viz_frames: ["torso", "foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left", "right_hand", "left_hand"]
         default_swing_height: 0.08
         default_stand_foot_height: 0.01
+        mpc_loop_period_sec: 0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
       callback_groups: 
         control_cbg: MutuallyExclusiveCallbackGroup
-        mpc_cbg: MutuallyExclusiveCallbackGroup
         estimation_cbg: MutuallyExclusiveCallbackGroup
       publishers:
         # Low level controller publisher
@@ -42,10 +42,10 @@ onboard:
         - ros_parameter: timer_ctrl_setting
           timer_period_sec: 0.001
           callback_group: control_cbg
-        # MPC compute Timer
-        - ros_parameter: timer_mpc_setting
-          timer_period_sec: 0.009
-          callback_group: mpc_cbg
+        # MPC compute Timer - removed due to ros timing issues.
+        # - ros_parameter: timer_mpc_setting
+        #   timer_period_sec: 0.009
+        #   callback_group: mpc_cbg
         # --- Debug Viz --- #
         - ros_parameter: state_viz_timer_setting
           timer_period_sec: 0.01
