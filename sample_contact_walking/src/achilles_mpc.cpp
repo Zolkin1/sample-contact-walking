@@ -317,10 +317,6 @@ namespace achilles
                 // Change state to normal MPC
                 // This only works if the robot can hold its position for the enough time for the computation
 
-                // TODO: Consider putting back
-                // Get the current time
-                // double time = this->get_clock()->now().seconds();
-
                 // Shift the contact schedule
                 contact_schedule_.ShiftContacts(-traj_mpc_.GetDtVec()[0]);    // TODO: Do I need a mutex on this later?
                 mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
@@ -329,9 +325,6 @@ namespace achilles
 
 
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
-                    // std::cout << "mpc compute #" << mpc_comps_ << std::endl;
-                    // std::cout << "q: " << q.transpose() << std::endl;
-                    // std::cout << "v: " << v.transpose() << std::endl;
 
                     mpc_->Compute(q, v, traj_mpc_);
                     {
@@ -340,13 +333,10 @@ namespace achilles
                         traj_out_ = traj_mpc_;
 
                         // Assign time time too
-                        // TODO: Consider putting the time to back before the MPC!
                         double time = this->get_clock()->now().seconds();
                         traj_start_time_ = time;
                     }
-                    // RCLCPP_INFO_STREAM(this->get_logger(), "MPC Computation Completed!");
                     if (GetState() != Mpc) {
-                        // TODO: Put back
                         TransitionState(Mpc);
                     }
                 } else {
