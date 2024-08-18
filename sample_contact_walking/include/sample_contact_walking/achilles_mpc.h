@@ -58,8 +58,6 @@ namespace achilles {
 
             ControllerState ctrl_state_;
 
-            long mpc_comps_;
-
             // Mutexes
             std::mutex est_state_mut_;
             std::mutex traj_out_mut_;

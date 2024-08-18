@@ -19,7 +19,7 @@ namespace achilles
 {
     AchillesController::AchillesController(const std::string& name) 
     : obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState>(name), 
-        recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(0), mpc_comps_(0) {
+        recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(0) {
         // TODO: Remove
         // std::this_thread::sleep_for (std::chrono::seconds(10));
 
@@ -30,6 +30,7 @@ namespace achilles
         // TODO: Removed because it caused serious jitter on the MPC computations, so running in a seperate thread.
         // this->RegisterObkTimer("timer_mpc_setting", "mpc_timer", std::bind(&AchillesController::ComputeMpc, this));
         this->declare_parameter<double>("mpc_loop_period_sec", 0.01);
+        this->declare_parameter<long>("max_mpc_solves", -1);
 
         // --- Debug Publisher and Timer --- //
         this->RegisterObkTimer("state_viz_timer_setting", "state_viz_timer", std::bind(&AchillesController::PublishTrajStateViz, this));
@@ -293,6 +294,8 @@ namespace achilles
         const long mpc_loop_rate_ns = this->get_parameter("mpc_loop_period_sec").as_double()*1e9;
         RCLCPP_INFO_STREAM(this->get_logger(), "MPC loop period set to: " << mpc_loop_rate_ns << "ns.");
 
+        const long max_mpc_solves = this->get_parameter("max_mpc_solves").as_int();
+
         while (true) {
             // Start the timer
             auto start_time = this->now();
@@ -324,19 +327,20 @@ namespace achilles
                     this->get_parameter("default_swing_height").as_double(),
                     this->get_parameter("default_stand_foot_height").as_double(), 0.5);
 
-                if (mpc_comps_ < 200) {
+
+                if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
                     // std::cout << "mpc compute #" << mpc_comps_ << std::endl;
                     // std::cout << "q: " << q.transpose() << std::endl;
                     // std::cout << "v: " << v.transpose() << std::endl;
 
                     mpc_->Compute(q, v, traj_mpc_);
-                    mpc_comps_++;
                     {
                         // Get the traj mutex to protect it
                         std::lock_guard<std::mutex> lock(traj_out_mut_);
                         traj_out_ = traj_mpc_;
 
                         // Assign time time too
+                        // TODO: Consider putting the time to back before the MPC!
                         double time = this->get_clock()->now().seconds();
                         traj_start_time_ = time;
                     }
@@ -348,8 +352,9 @@ namespace achilles
                 } else {
                     static bool printed = false;
                     if (!printed) {
-                        mpc_->PrintStatistics();
-                        mpc_->PrintContactSchedule();
+                        // mpc_->PrintStatistics();
+                        // mpc_->PrintContactSchedule();
+                        mpc_->PrintAggregateStats();
                         printed = true;
                     }
                 }
@@ -366,7 +371,7 @@ namespace achilles
             if (time_left > 0) {
                 std::this_thread::sleep_for(std::chrono::nanoseconds(time_left));
             } else {
-                RCLCPP_WARN_STREAM(this->get_logger(), "MPC computation took longer than loop rate allowed for. " << std::abs(time_left)/1e-6 << "ms over time.");
+                RCLCPP_WARN_STREAM(this->get_logger(), "MPC computation took longer than loop rate allowed for. " << std::abs(time_left)*1e-6 << "ms over time.");
             }
         }
     }
