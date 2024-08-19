@@ -13,7 +13,7 @@ solver_settings:
   abs_tol: 1e-6
   verbose: True
   polish: False
-  rho: 3e-3 # 0.02
+  rho: 6e-2 # 0.02
   alpha: 1.6 # 1.6
   sigma: 1e-6 # 1e-10
   adaptive_rho: False
@@ -23,16 +23,21 @@ constraints:
   friction_coef: 0.5  # TODO: Tune this
   max_grf: 200
 costs:
+  terminal_cost_weight: 1000
   configuration_tracking_weights: [ .01, .01, .5,
-                                  0.0, 0.0, 0.0,
-                                  0.01, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001, 0.001,
-                                  0.01, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001, 0.001 ]
-  velocity_tracking_weights: [10, 10, 10,
-                              .1, .1, .1,
-                              .01, .1, .1, .01, .5, .1, .1, .1, .1,
-                              .01, .1, .1, .01, .5, .1, .1, .1, .1]
-  torque_regularization_weights: [.001, .01, .01, .001, .02, .5, .5, .5, .1,
-                                  .001, .01, .01, .001, .02, .5, .5, .5, .1]
+                                    0., 0., 0.,
+                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.001, 0.001, 0.001, 0.001,
+                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.001, 0.001, 0.001, 0.001 ]
+  # configuration_tracking_weights: [ .1, .1, .5,
+  #                                 0.1, 0.1, 0.1,
+  #                                 0.01, 0.01, 0.01, 0.01, 0.01, 0.001, 0.001, 0.001, 0.001,
+  #                                 0.01, 0.01, 0.01, 0.01, 0.01, 0.001, 0.001, 0.001, 0.001 ]
+  velocity_tracking_weights: [.5, .5, .5,
+                              0.1, 0.1, 0.1,
+                              .001, .05, .001, .001, .5, .1, .1, .1, .1,
+                              .001, .05, .001, .001, .5, .1, .1, .1, .1]
+  torque_regularization_weights: [.001, .001, .001, .001, .02, .5, .5, .5, .1,
+                                  .001, .001, .001, .001, .02, .5, .5, .5, .1]
   force_regularization_weights: [0.00001, 0.00001, 0.00001] # Note that these are small because the force in general is quite large
 contacts:
   # For now, removing hands
@@ -48,5 +53,5 @@ line_search:
   large_constraint_vio: 1e-2
   small_constraint_vio: 1e-6
   constraint_reduction_mult: 1e-6
-  alpha_step: 0.25 # Since the line search is high variance, lowering this helps
+  alpha_step: 0.5 # Since the line search is high variance, lowering this helps
   armijo_constant: 1e-4
