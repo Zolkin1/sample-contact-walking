@@ -7,10 +7,13 @@ onboard:
       params:
         urdf_path: /home/zolkin/sample-contact-walking/achilles_model_custom/urdf/achilles.urdf
         viz_frames: ["torso", "foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left", "right_hand", "left_hand"]
+        viz_forces: True
+        viz_force_scale: 0.01
+        force_frames: ["foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left"]
         default_swing_height: 0.08
         default_stand_foot_height: 0.01
-        mpc_loop_period_sec: 0.02 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
-        max_mpc_solves: 1000
+        mpc_loop_period_sec: 0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
+        max_mpc_solves: -1000
       callback_groups: 
         control_cbg: MutuallyExclusiveCallbackGroup
         estimation_cbg: MutuallyExclusiveCallbackGroup

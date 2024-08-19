@@ -56,6 +56,10 @@ namespace achilles {
             bool recieved_first_state_;
             bool first_mpc_computed_;
 
+            bool viz_forces_;
+            double scale_forces_;
+            std::vector<std::string> force_frames_;
+
             ControllerState ctrl_state_;
 
             // Mutexes
