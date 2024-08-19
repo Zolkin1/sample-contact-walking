@@ -13,7 +13,7 @@ onboard:
         default_swing_height: 0.08
         default_stand_foot_height: 0.01
         mpc_loop_period_sec: 0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
-        max_mpc_solves: -1000
+        max_mpc_solves: -100
       callback_groups: 
         control_cbg: MutuallyExclusiveCallbackGroup
         estimation_cbg: MutuallyExclusiveCallbackGroup

@@ -61,14 +61,14 @@ namespace achilles
 
         contact_schedule_.InsertContact("foot_front_left", 0, 1000);
         contact_schedule_.InsertContact("foot_rear_left", 0, 1000);
-        contact_schedule_.InsertContact("foot_front_right", 0, 1000);
-        contact_schedule_.InsertContact("foot_rear_right", 0, 1000);
+        // contact_schedule_.InsertContact("foot_front_right", 0, 1000);
+        // contact_schedule_.InsertContact("foot_rear_right", 0, 1000);
 
-        // contact_schedule_.InsertContact("foot_front_right", 0.6, 1000);
-        // contact_schedule_.InsertContact("foot_rear_right", 0.6, 1000);
+        contact_schedule_.InsertContact("foot_front_right", 1.6, 1000);
+        contact_schedule_.InsertContact("foot_rear_right", 1.6, 1000);
 
-        // contact_schedule_.InsertContact("foot_front_right", 0, 0.3);
-        // contact_schedule_.InsertContact("foot_rear_right", 0, 0.3);
+        contact_schedule_.InsertContact("foot_front_right", 0, 1.3);
+        contact_schedule_.InsertContact("foot_rear_right", 0, 1.3);
 
         // contact_schedule_.InsertContact("foot_front_left", 0, 0.3);
         // contact_schedule_.InsertContact("foot_rear_left", 0, 0.3);
@@ -85,7 +85,7 @@ namespace achilles
         // TODO: Check the quaternion reference, it might be wrong
         // Setup q and v targets
         q_target_.resize(model_->GetConfigDim());
-        q_target_ << 0., 0, 0.97,    // position
+        q_target_ << 0., 0, 0.94,    // position
                     0, 0, 0, 1,     // quaternion
                     0, 0, -0.26,    // L hips joints
                     0.65, -0.43,    // L knee, ankle
