@@ -20,10 +20,10 @@ solver_settings:
   max_iter: 20
   scaling: 10
 constraints:
-  friction_coef: 0.5  # TODO: Tune this
+  friction_coef: 0.4  # TODO: Tune this
   max_grf: 200
 costs:
-  terminal_cost_weight: 50
+  terminal_cost_weight: 500
   configuration_tracking_weights: [ .01, .01, 1,
                                     0.01, 0.01, 0.01,
                                     0.01, 0.01, 0.00, 0.0, 0.1, 0.001, 0.001, 0.001, 0.001,

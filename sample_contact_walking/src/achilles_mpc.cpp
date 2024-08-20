@@ -15,7 +15,7 @@
 //  - Add ROS diagonstic messages: https://docs.foxglove.dev/docs/visualization/panels/diagnostics#diagnosticarray
 //  - Try plotting just the first MPC solve and see what the trajectory is. Why does it swing its leg really far out
 //  - Try tuning the weights to make the leg not swing so far to the side. Maybe up some configuration weights
-//  - Change the force z reference to be better
+//  - Clean up code
 
 namespace achilles
 {
@@ -88,9 +88,11 @@ namespace achilles
 
         this->declare_parameter<double>("default_swing_height", 0.1);
         this->declare_parameter<double>("default_stand_foot_height", 0.0);
+        this->declare_parameter<double>("apex_time", 0.5);
         mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
             this->get_parameter("default_swing_height").as_double(),
-            this->get_parameter("default_stand_foot_height").as_double(), 0.5);
+            this->get_parameter("default_stand_foot_height").as_double(),
+            this->get_parameter("apex_time").as_double());
 
         // TODO: Check the quaternion reference, it might be wrong
         // Setup q and v targets
@@ -308,6 +310,9 @@ namespace achilles
         RCLCPP_INFO_STREAM(this->get_logger(), "MPC loop period set to: " << mpc_loop_rate_ns << "ns.");
 
         const long max_mpc_solves = this->get_parameter("max_mpc_solves").as_int();
+        
+        static bool first_loop = true;
+        auto prev_time = this->now();
 
         while (true) {
             // Start the timer
@@ -315,6 +320,12 @@ namespace achilles
 
             if (recieved_first_state_) {
                 RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Computing first trajectory.");
+
+                if (first_loop) {
+                    prev_time = this->now();
+                    first_loop = false;
+                }
+
                 vectorx_t q, v;
                 {
                     // Get the mutex to protect the states
@@ -331,10 +342,13 @@ namespace achilles
                 // This only works if the robot can hold its position for the enough time for the computation
 
                 // Shift the contact schedule
-                contact_schedule_.ShiftContacts(-mpc_loop_rate_ns/1e9);    // TODO: Do I need a mutex on this later?
+                auto current_time = this->now();
+                contact_schedule_.ShiftContacts(-(current_time - prev_time).nanoseconds()/1e9);    // TODO: Do I need a mutex on this later?
+                prev_time = this->now();
                 mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
                     this->get_parameter("default_swing_height").as_double(),
-                    this->get_parameter("default_stand_foot_height").as_double(), 0.5);
+                    this->get_parameter("default_stand_foot_height").as_double(),
+                    this->get_parameter("apex_time").as_double());
 
                 AddPeriodicContacts();
 

@@ -14,12 +14,13 @@ onboard:
         # Swing trajectory
         default_swing_height: 0.08
         default_stand_foot_height: 0.01
+        apex_time: 0.7
         # MPC Loop
-        mpc_loop_period_sec: 0.012 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
-        max_mpc_solves: -300
+        mpc_loop_period_sec: 0.011 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
+        max_mpc_solves: -100
         # Contact schedule
-        swing_time: 0.5
-        first_swing_time: 1.0
+        swing_time: 0.3
+        first_swing_time: 0.5
         double_stance_time: 0.0
         right_foot_first: True
       callback_groups: 
@@ -150,8 +151,8 @@ onboard:
           robot_pkg: achilles_model_custom
           model_xml_path: achilles.xml
           n_u: 54
-          time_step: 0.002
-          num_steps_per_viz: 5
+          time_step: 0.001
+          num_steps_per_viz: 16
           sensor_settings:
           # ---------- Joint Encoders ---------- #
           - topic: /obelisk/achilles/joint_encoders
