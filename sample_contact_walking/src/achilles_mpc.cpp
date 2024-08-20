@@ -13,7 +13,9 @@
 //  - Allow user to set the initial condition in the yaml
 //  - Check for paths first relative to $SAMPLE_WALKING_ROOT then as a global path
 //  - Add ROS diagonstic messages: https://docs.foxglove.dev/docs/visualization/panels/diagnostics#diagnosticarray
-
+//  - Try plotting just the first MPC solve and see what the trajectory is. Why does it swing its leg really far out
+//  - Try tuning the weights to make the leg not swing so far to the side. Maybe up some configuration weights
+//  - Change the force z reference to be better
 
 namespace achilles
 {
@@ -57,24 +59,32 @@ namespace achilles
         RCLCPP_INFO_STREAM(this->get_logger(), "MPC Configured...");
 
         // Make the contact schedule
+        this->declare_parameter<double>("swing_time", 0.3);
+        this->declare_parameter<double>("first_swing_time", 1);
+        this->declare_parameter<double>("double_stance_time", 0.0);
+        this->declare_parameter<bool>("right_foot_first", true);
+
+        this->get_parameter("swing_time", swing_time_);
+        this->get_parameter("first_swing_time", first_swing_time_);
+        this->get_parameter("double_stance_time", double_stance_time_);
+        this->get_parameter("right_foot_first", right_foot_first_);
+
+
         contact_schedule_.SetFrames(mpc_->GetContactFrames());
 
-        // contact_schedule_.InsertContact("foot_front_left", 0, 1000);
-        // contact_schedule_.InsertContact("foot_rear_left", 0, 1000);
-        // contact_schedule_.InsertContact("foot_front_right", 0, 1000);
-        // contact_schedule_.InsertContact("foot_rear_right", 0, 1000);
+        AddPeriodicContacts();
 
-        contact_schedule_.InsertContact("foot_front_right", 1.6, 1000);
-        contact_schedule_.InsertContact("foot_rear_right", 1.6, 1000);
-
-        contact_schedule_.InsertContact("foot_front_right", 0, 1.3);
-        contact_schedule_.InsertContact("foot_rear_right", 0, 1.3);
-
-        contact_schedule_.InsertContact("foot_front_left", 0, 1.6);
-        contact_schedule_.InsertContact("foot_rear_left", 0, 1.6);
-
-        contact_schedule_.InsertContact("foot_front_left", 1.9, 1000);
-        contact_schedule_.InsertContact("foot_rear_left", 1.9, 1000);
+        if (right_foot_first_) {
+            contact_schedule_.InsertContact("foot_front_left", 0, first_swing_time_ + swing_time_);
+            contact_schedule_.InsertContact("foot_rear_left", 0, first_swing_time_ + swing_time_);
+            contact_schedule_.InsertContact("foot_front_right", 0, first_swing_time_);
+            contact_schedule_.InsertContact("foot_rear_right", 0, first_swing_time_);
+        } else {
+            contact_schedule_.InsertContact("foot_front_left", 0, first_swing_time_);
+            contact_schedule_.InsertContact("foot_rear_left", 0, first_swing_time_);
+            contact_schedule_.InsertContact("foot_front_right", 0, first_swing_time_ + swing_time_);
+            contact_schedule_.InsertContact("foot_rear_right", 0, first_swing_time_ + swing_time_);
+        }
 
         this->declare_parameter<double>("default_swing_height", 0.1);
         this->declare_parameter<double>("default_stand_foot_height", 0.0);
@@ -325,6 +335,8 @@ namespace achilles
                 mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
                     this->get_parameter("default_swing_height").as_double(),
                     this->get_parameter("default_stand_foot_height").as_double(), 0.5);
+
+                AddPeriodicContacts();
 
 
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
@@ -635,6 +647,17 @@ namespace achilles
         // msg.header.stamp = this->now();
 
         // this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
+    }
+
+    void AchillesController::AddPeriodicContacts() {
+        // For each contact determine last contact
+        // If the last contact is within 1 second, then add another contact swing_time_ seconds later that lasts for swing_time_ + double_stance_time_
+        for (const auto& frame : mpc_->GetContactFrames()) {
+            const double last_contact_time = contact_schedule_.GetLastContactTime(frame);
+            if (last_contact_time < 1) {
+                contact_schedule_.InsertContact(frame, last_contact_time + swing_time_,  last_contact_time + 2*swing_time_ + double_stance_time_);
+            }
+        } 
     }
 
 } // namespace achilles

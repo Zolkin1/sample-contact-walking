@@ -22,6 +22,9 @@ namespace achilles {
             // MPC Thread function
             void MpcThread();
 
+            // Contact schedule
+            void AddPeriodicContacts();
+
             // State functions
             void UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) override;
 
@@ -83,6 +86,12 @@ namespace achilles {
             torc::mpc::Trajectory traj_mpc_;
 
             double traj_start_time_;
+
+            // Contact schedule
+            double swing_time_;
+            double first_swing_time_;
+            double double_stance_time_;
+            bool right_foot_first_;
 
             torc::models::RobotContactInfo contact_state_;
             std::unique_ptr<torc::mpc::FullOrderMpc> mpc_;

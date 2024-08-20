@@ -34,10 +34,10 @@ costs:
   #                                 0.01, 0.01, 0.01, 0.01, 0.01, 0.001, 0.001, 0.001, 0.001 ]
   velocity_tracking_weights: [100, 100, 100,
                               1, 1, 1,
-                              0.01, .001, .01, .00, .5, .1, .1, .1, .1,
-                              0.01, .001, .01, .00, .5, .1, .1, .1, .1]
-  torque_regularization_weights: [.0001, .0001, .0001, .0001, .002, .5, .5, .5, .1,
-                                  .0001, .0001, .0001, .0001, .002, .5, .5, .5, .1]
+                              0.01, .001, 0.01, .00, .5, .1, .1, .1, .1,
+                              0.01, .001, 0.01, .00, .5, .1, .1, .1, .1]
+  torque_regularization_weights: [.1, .0001, .1, .0001, .002, .5, .5, .5, .1,
+                                  .1, .0001, .1, .0001, .002, .5, .5, .5, .1]
   force_regularization_weights: [0.0001, 0.0001, 0.0001] # Note that these are small because the force in general is quite large
 contacts:
   # For now, removing hands
