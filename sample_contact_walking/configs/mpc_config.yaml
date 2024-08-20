@@ -1,5 +1,5 @@
 general_settings:
-  nodes: 32
+  nodes: 25 # Note the smaller node count!
   verbose: True
   node_dt: 0.025 
   compile_derivatives: True
@@ -13,31 +13,31 @@ solver_settings:
   abs_tol: 1e-6
   verbose: True
   polish: False
-  rho: 8e-4 #2e-4 # Having this small (like 1e-4) seems to help remove oscillations
+  rho: 8e-5 #2e-4 # Having this small (like 1e-4) seems to help remove oscillations
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6 # 1e-10
   adaptive_rho: False
   max_iter: 20
   scaling: 10
 constraints:
-  friction_coef: 0.4  # TODO: Tune this
+  friction_coef: 0.3  # TODO: Tune this
   max_grf: 200
 costs:
   terminal_cost_weight: 500
-  configuration_tracking_weights: [ .01, .01, 1,
+  configuration_tracking_weights: [ 0.0, 0.0, 1,  # Having x and y weights appears to be bad
                                     0.01, 0.01, 0.01,
-                                    0.01, 0.01, 0.00, 0.0, 0.1, 0.001, 0.001, 0.001, 0.001,
-                                    0.01, 0.01, 0.00, 0.0, 0.1, 0.001, 0.001, 0.001, 0.001 ]
+                                    0.01, 1, 0.00, 0.0, 0.1, 0.001, 0.001, 0.001, 0.001,
+                                    0.01, 1, 0.00, 0.0, 0.1, 0.001, 0.001, 0.001, 0.001 ]
   # configuration_tracking_weights: [ .1, .1, .5,
   #                                 0.1, 0.1, 0.1,
   #                                 0.01, 0.01, 0.01, 0.01, 0.01, 0.001, 0.001, 0.001, 0.001,
   #                                 0.01, 0.01, 0.01, 0.01, 0.01, 0.001, 0.001, 0.001, 0.001 ]
-  velocity_tracking_weights: [100, 100, 100,
+  velocity_tracking_weights: [1, 1, 10,
                               1, 1, 1,
-                              0.01, .001, 0.01, .00, .5, .1, .1, .1, .1,
-                              0.01, .001, 0.01, .00, .5, .1, .1, .1, .1]
-  torque_regularization_weights: [.1, .0001, .1, .0001, .002, .5, .5, .5, .1,
-                                  .1, .0001, .1, .0001, .002, .5, .5, .5, .1]
+                              1, 2, 0.01, .00, .05, .1, .1, .1, .1,
+                              1, 2, 0.01, .00, .05, .1, .1, .1, .1]
+  torque_regularization_weights: [.000, .000, .000, .000, .001, .5, .5, .5, .1,
+                                  .000, .000, .000, .000, .001, .5, .5, .5, .1]
   force_regularization_weights: [0.0001, 0.0001, 0.0001] # Note that these are small because the force in general is quite large
 contacts:
   # For now, removing hands
