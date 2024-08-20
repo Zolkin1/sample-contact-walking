@@ -385,7 +385,7 @@ namespace achilles
             ConvertEigenToStd(u_mujoco, msg.u_mujoco);
             ConvertEigenToStd(q.tail(model_->GetNumInputs()), msg.pos_target);
             ConvertEigenToStd(v.tail(model_->GetNumInputs()), msg.vel_target);
-            ConvertEigenToStd(tau, msg.feed_forward);  // TODO: Remove negative
+            ConvertEigenToStd(tau, msg.feed_forward);
             
             if (msg.u_mujoco.size() != 54) {
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Message's u_mujoco is incorrectly sized. Size: " << msg.u_mujoco.size());

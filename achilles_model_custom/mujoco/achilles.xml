@@ -33,7 +33,7 @@
     <!-- Hip Pitch Settings -->
     <default class="hip_pitch">
       <default class="hip_pitch_pos">
-        <position kp="280" ctrllimited="true" ctrlrange="-35 35"/>
+        <position kp="480" ctrllimited="true" ctrlrange="-35 35"/>
       </default>
       <default class="hip_pitch_vel">
         <velocity kv="30" ctrllimited="true" ctrlrange="-35 35"/>
@@ -58,7 +58,7 @@
     <!-- Hip Roll Settings  -->
     <default class="hip_roll">
       <default class="hip_roll_pos">
-        <position kp="280" ctrllimited="true" ctrlrange="-70  70"/>
+        <position kp="480" ctrllimited="true" ctrlrange="-70  70"/>
       </default>
       <default class="hip_roll_vel">
         <velocity kv="30" ctrllimited="true" ctrlrange="-70  70"/>
@@ -83,12 +83,12 @@
     <!-- Ankle Pitch Settings  -->
     <default class="ankle_pitch">
       <default class="ankle_pitch_pos">
-        <position kp="75" kv="2" ctrllimited="true" ctrlrange="-35 35" forcelimited="true" forcerange="-35 35"/>
+        <position kp="75" kv="2.0" ctrllimited="true" ctrlrange="-35 35" forcelimited="true" forcerange="-35 35"/>
       </default>
       <default class="ankle_pitch_vel">
       <!-- NOTE: The kv here causes weird issues with the contact dynamcis -->
       <!-- TODO: Be careful with this! -->
-        <velocity kv="0" forcelimited="true" forcerange="0 5"/>
+        <velocity kv="0.0" forcelimited="true" forcerange="0 5"/>
       </default>
       <motor ctrllimited="true" ctrlrange="-35 35"/>
       <joint axis="0 1 0" pos="0 0 0" range="-1.0 1.0" damping="0.1" frictionloss="0.3"/>
@@ -97,7 +97,7 @@
     <!-- Shoulder Pitch Settings  -->
     <default class="shoulder_pitch">
       <default class="shoulder_pitch_pos">
-        <position kp="150" ctrllimited="true" ctrlrange="-35 35"/>
+        <position kp="100" ctrllimited="true" ctrlrange="-35 35"/>
       </default>
       <default class="shoulder_pitch_vel">
         <velocity kv="20" ctrllimited="true" ctrlrange="-35 35"/>
