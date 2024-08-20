@@ -15,22 +15,17 @@
 //  - Add ROS diagonstic messages: https://docs.foxglove.dev/docs/visualization/panels/diagnostics#diagnosticarray
 //  - Try plotting just the first MPC solve and see what the trajectory is. Why does it swing its leg really far out
 //  - Try tuning the weights to make the leg not swing so far to the side. Maybe up some configuration weights
-//  - Clean up code
 
 namespace achilles
 {
     AchillesController::AchillesController(const std::string& name) 
     : obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState>(name), 
         recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(0) {
-        // TODO: Remove
-        // std::this_thread::sleep_for (std::chrono::seconds(10));
 
         // For now model the feet as point contacts
         contact_state_.contacts.emplace("left_ankle_pitch", torc::models::Contact(torc::models::PointContact, false));
         contact_state_.contacts.emplace("right_ankle_pitch", torc::models::Contact(torc::models::PointContact, false));
 
-        // TODO: Removed because it caused serious jitter on the MPC computations, so running in a seperate thread.
-        // this->RegisterObkTimer("timer_mpc_setting", "mpc_timer", std::bind(&AchillesController::ComputeMpc, this));
         this->declare_parameter<double>("mpc_loop_period_sec", 0.01);
         this->declare_parameter<long>("max_mpc_solves", -1);
 
@@ -236,71 +231,6 @@ namespace achilles
             recieved_first_state_ = true;
         }
     }
-
-    // Removed because the timing was not consistent
-    // void AchillesController::ComputeMpc() {
-    //     if (recieved_first_state_) {
-    //         RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Computing first trajectory.");
-    //         vectorx_t q, v;
-    //         {
-    //             // Get the mutex to protect the states
-    //             std::lock_guard<std::mutex> lock(est_state_mut_);
-
-    //             // Create current state
-    //             q = q_;
-    //             v = v_;
-    //         }
-
-    //         // If in NLP mode, then pause the timer and compute the NLP
-    //         // Then restart the timer after the NLP is solved.
-    //         // Change state to normal MPC
-    //         // This only works if the robot can hold its position for the enough time for the computation
-
-    //         // TODO: Consider putting back
-    //         // Get the current time
-    //         // double time = this->get_clock()->now().seconds();
-
-    //         // Shift the contact schedule
-    //         contact_schedule_.ShiftContacts(-traj_mpc_.GetDtVec()[0]);    // TODO: Do I need a mutex on this later?
-    //         mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
-    //             this->get_parameter("default_swing_height").as_double(),
-    //             this->get_parameter("default_stand_foot_height").as_double(), 0.5);
-
-    //         if (mpc_comps_ < 20) {
-    //             // std::cout << "mpc compute #" << mpc_comps_ << std::endl;
-    //             // std::cout << "q: " << q.transpose() << std::endl;
-    //             // std::cout << "v: " << v.transpose() << std::endl;
-
-    //             mpc_->Compute(q, v, traj_mpc_);
-    //             mpc_comps_++;
-    //             {
-    //                 // Get the traj mutex to protect it
-    //                 std::lock_guard<std::mutex> lock(traj_out_mut_);
-    //                 traj_out_ = traj_mpc_;
-
-    //                 // Assign time time too
-    //                 double time = this->get_clock()->now().seconds();
-    //                 traj_start_time_ = time;
-    //             }
-    //             // RCLCPP_INFO_STREAM(this->get_logger(), "MPC Computation Completed!");
-    //             if (GetState() != Mpc) {
-    //                 // TODO: Put back
-    //                 TransitionState(Mpc);
-    //             }
-    //         } else {
-    //             static bool printed = false;
-    //             if (!printed) {
-    //                 mpc_->PrintStatistics();
-    //                 mpc_->PrintContactSchedule();
-    //                 printed = true;
-    //             }
-    //         }
-
-    //         // TODO: If this is slow, then I need to move it
-    //         PublishTrajViz(traj_mpc_, viz_frames_);
-
-    //     }
-    // }
 
     // Running the MPC in its own the thread seems to make the timing more consistent and overall faster
     // If I still need more, I can try to adjust the thread prio
