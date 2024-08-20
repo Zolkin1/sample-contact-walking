@@ -15,7 +15,8 @@
 
   <!-- Fix simulation options -->
   <!-- Note: Using RK4 causes weird simulation instability when also using the PD controller. Suggesting implicfast.  -->
-  <option timestep="0.002" integrator = "implicitfast"/>
+  <!-- TODO: How fine of a time step can I get? -->
+  <option timestep="0.001" integrator = "implicitfast"/>
 
   <!-- Specify the light settings -->
   <visual>
@@ -32,7 +33,7 @@
     <!-- Hip Pitch Settings -->
     <default class="hip_pitch">
       <default class="hip_pitch_pos">
-        <position kp="220" ctrllimited="true" ctrlrange="-35 35"/>
+        <position kp="260" ctrllimited="true" ctrlrange="-35 35"/>
       </default>
       <default class="hip_pitch_vel">
         <velocity kv="20" ctrllimited="true" ctrlrange="-35 35"/>
@@ -44,7 +45,7 @@
     <!-- Hip Yaw Settings  -->
     <default class="hip_yaw">
       <default class="hip_yaw_pos">
-        <position kp="220" ctrllimited="true" ctrlrange="-35 35"/>
+        <position kp="260" ctrllimited="true" ctrlrange="-35 35"/>
       </default>
       <default class="hip_yaw_vel">
         <velocity kv="20" ctrllimited="true" ctrlrange="-35 35"/>
@@ -56,7 +57,7 @@
     <!-- Hip Roll Settings  -->
     <default class="hip_roll">
       <default class="hip_roll_pos">
-        <position kp="220" ctrllimited="true" ctrlrange="-70  70"/>
+        <position kp="260" ctrllimited="true" ctrlrange="-70  70"/>
       </default>
       <default class="hip_roll_vel">
         <velocity kv="20" ctrllimited="true" ctrlrange="-70  70"/>
@@ -69,7 +70,7 @@
     <default class="knee_pitch">
       <default class="knee_pitch_pos">
       <!-- TODO: Bring this gain back down -->
-        <position kp="180" ctrllimited="true" ctrlrange="-70  70"/>
+        <position kp="220" ctrllimited="true" ctrlrange="-70  70"/>
       </default>
       <default class="knee_pitch_vel">
         <velocity kv="20" ctrllimited="true" ctrlrange="-70  70"/>
@@ -430,10 +431,10 @@
     <pair name="torso_to_plane" geom1="torso_collision_box" geom2="plane" friction="1 1 0.001 0.001 0.001"/>
 
     <!-- Contacts using sphere approximations -->
-    <pair name="foot_front_left_to_plane" geom1="foot_front_left" geom2="plane" friction="1 1 0.001 0.001 0.001"/>
-    <pair name="foot_rear_left_to_plane" geom1="foot_rear_left" geom2="plane" friction="1 1 0.001 0.001 0.001"/>
-    <pair name="foot_front_right_to_plane" geom1="foot_front_right" geom2="plane" friction="1 1 0.001 0.001 0.001"/>
-    <pair name="foot_rear_right_to_plane" geom1="foot_rear_right" geom2="plane" friction="1 1 0.001 0.001 0.001"/>
+    <pair name="foot_front_left_to_plane" geom1="foot_front_left" geom2="plane" friction="1 1 0.001 0.1 0.1"/>
+    <pair name="foot_rear_left_to_plane" geom1="foot_rear_left" geom2="plane" friction="1 1 0.001 0.1 0.1"/>
+    <pair name="foot_front_right_to_plane" geom1="foot_front_right" geom2="plane" friction="1 1 0.001 0.1 0.1"/>
+    <pair name="foot_rear_right_to_plane" geom1="foot_rear_right" geom2="plane" friction="1 1 0.001 0.1 0.1"/>
   </contact>
 
   <sensor>

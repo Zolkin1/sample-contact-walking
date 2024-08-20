@@ -59,8 +59,8 @@ namespace achilles
         // Make the contact schedule
         contact_schedule_.SetFrames(mpc_->GetContactFrames());
 
-        contact_schedule_.InsertContact("foot_front_left", 0, 1000);
-        contact_schedule_.InsertContact("foot_rear_left", 0, 1000);
+        // contact_schedule_.InsertContact("foot_front_left", 0, 1000);
+        // contact_schedule_.InsertContact("foot_rear_left", 0, 1000);
         // contact_schedule_.InsertContact("foot_front_right", 0, 1000);
         // contact_schedule_.InsertContact("foot_rear_right", 0, 1000);
 
@@ -70,11 +70,11 @@ namespace achilles
         contact_schedule_.InsertContact("foot_front_right", 0, 1.3);
         contact_schedule_.InsertContact("foot_rear_right", 0, 1.3);
 
-        // contact_schedule_.InsertContact("foot_front_left", 0, 0.3);
-        // contact_schedule_.InsertContact("foot_rear_left", 0, 0.3);
+        contact_schedule_.InsertContact("foot_front_left", 0, 1.6);
+        contact_schedule_.InsertContact("foot_rear_left", 0, 1.6);
 
-        // contact_schedule_.InsertContact("foot_front_left", 0.7, 1000);
-        // contact_schedule_.InsertContact("foot_rear_left", 0.7, 1000);
+        contact_schedule_.InsertContact("foot_front_left", 1.9, 1000);
+        contact_schedule_.InsertContact("foot_rear_left", 1.9, 1000);
 
         this->declare_parameter<double>("default_swing_height", 0.1);
         this->declare_parameter<double>("default_stand_foot_height", 0.0);
@@ -85,7 +85,7 @@ namespace achilles
         // TODO: Check the quaternion reference, it might be wrong
         // Setup q and v targets
         q_target_.resize(model_->GetConfigDim());
-        q_target_ << 0., 0, 0.94,    // position
+        q_target_ << 0., 0, 0.9,    // position
                     0, 0, 0, 1,     // quaternion
                     0, 0, -0.26,    // L hips joints
                     0.65, -0.43,    // L knee, ankle

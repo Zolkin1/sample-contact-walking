@@ -12,8 +12,8 @@ onboard:
         force_frames: ["foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left"]
         default_swing_height: 0.08
         default_stand_foot_height: 0.01
-        mpc_loop_period_sec: 0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
-        max_mpc_solves: -100
+        mpc_loop_period_sec: 0.012 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
+        max_mpc_solves: -300
       callback_groups: 
         control_cbg: MutuallyExclusiveCallbackGroup
         estimation_cbg: MutuallyExclusiveCallbackGroup
