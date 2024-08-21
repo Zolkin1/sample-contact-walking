@@ -13,29 +13,29 @@ solver_settings:
   abs_tol: 1e-6
   verbose: True
   polish: False
-  rho: 9e-5 #2e-4 # Having this small (like 1e-4) seems to help remove oscillations
+  rho: 9e-3 #2e-4 # Having this small (like 1e-4) seems to help remove oscillations
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6 # 1e-10
   adaptive_rho: False
   max_iter: 20
   scaling: 10
 constraints:
-  friction_coef: 0.3  # TODO: Tune this
+  friction_coef: 0.5  # TODO: Tune this
   max_grf: 200
 costs:
   terminal_cost_weight: 500
-  configuration_tracking_weights: [ 0.0, 0.0, 1,  # Having x and y weights appears to be bad
-                                    0.01, 0.01, 0.01,
-                                    0.01, 1, 0.00, 0.0, 0.1, 0.001, 0.001, 0.001, 0.001,
-                                    0.01, 1, 0.00, 0.0, 0.1, 0.001, 0.001, 0.001, 0.001 ]
+  configuration_tracking_weights: [ 0.0, 0.0, 5,  # Having x and y weights appears to be bad
+                                    5, 5, 5,
+                                    0.01, 1, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001,
+                                    0.01, 1, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001 ]
   # configuration_tracking_weights: [ .1, .1, .5,
   #                                 0.1, 0.1, 0.1,
   #                                 0.01, 0.01, 0.01, 0.01, 0.01, 0.001, 0.001, 0.001, 0.001,
   #                                 0.01, 0.01, 0.01, 0.01, 0.01, 0.001, 0.001, 0.001, 0.001 ]
-  velocity_tracking_weights: [1, 1, 10,
+  velocity_tracking_weights: [5, 2, 10,
                               1, 1, 1,
-                              1, 2, 0.01, .00, .05, .1, .1, .1, .1,
-                              1, 2, 0.01, .00, .05, .1, .1, .1, .1]
+                              1, 1, 0.05, .001, .05, 4, 4, 4, 1,
+                              1, 1, 0.05, .001, .05, 4, 4, 4, 1]
   torque_regularization_weights: [.000, .000, .000, .000, .001, .5, .5, .5, .1,
                                   .000, .000, .000, .000, .001, .5, .5, .5, .1]
   force_regularization_weights: [0.00001, 0.00001, 0.00001] # Note that these are small because the force in general is quite large

@@ -17,10 +17,10 @@ onboard:
         apex_time: 0.5
         # MPC Loop
         mpc_loop_period_sec: 0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
-        max_mpc_solves: -100
+        max_mpc_solves: -40
         # Contact schedule
         swing_time: 0.4
-        first_swing_time: 1.0
+        first_swing_time: 10.0
         double_stance_time: 0.0
         right_foot_first: True
       callback_groups: 
@@ -135,7 +135,7 @@ onboard:
       timers:
         - ros_parameter: timer_true_sim_state_setting
           history_depth: 10
-          timer_period_sec: 0.0025
+          timer_period_sec: 0.002
           callback_group: None
       subscribers:
         - ros_parameter: sub_ctrl_setting
@@ -152,7 +152,7 @@ onboard:
           model_xml_path: achilles.xml
           n_u: 54
           time_step: 0.001
-          num_steps_per_viz: 16
+          num_steps_per_viz: 16 # No longer used
           sensor_settings:
           # ---------- Joint Encoders ---------- #
           - topic: /obelisk/achilles/joint_encoders

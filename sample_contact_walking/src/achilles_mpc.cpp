@@ -103,6 +103,7 @@ namespace achilles
                     0.65, -0.43,    // R knee ankle
                     0, 0, 0, 0;     // R shoulders and elbow
 
+        // TODO: Make sure the target and weights are in the correct frame!
         v_target_.resize(model_->GetVelDim());
         v_target_ << 0, 0, 0,
                     0, 0, 0,
@@ -299,6 +300,10 @@ namespace achilles
                         double time = this->get_clock()->now().seconds();
                         traj_start_time_ = time;
                     }
+
+                    RCLCPP_INFO_STREAM(this->get_logger(), "Config IC Error: " << (traj_out_.GetConfiguration(0) - q).norm());
+                    RCLCPP_INFO_STREAM(this->get_logger(), "Vel IC Error: " << (traj_out_.GetVelocity(0) - v).norm());
+
                     if (GetState() != Mpc) {
                         TransitionState(Mpc);
                     }

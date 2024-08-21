@@ -54,4 +54,4 @@ obk-activate achilles_sim
 If you have issues with others on the ROS network then set `ROS_LOCALHOST_ONLY`.
 
 ## Random notes
-- Might need to move to the message-stamps obelisk branch.
+- Might need to move to the `cpp-sim-time` obelisk branch.
