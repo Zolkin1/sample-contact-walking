@@ -23,7 +23,7 @@ onboard:
         swing_time: 0.3
         first_swing_time: 0.10
         double_stance_time: 0.0
-        right_foot_first: False
+        right_foot_first: True
       callback_groups: 
         control_cbg: MutuallyExclusiveCallbackGroup
         estimation_cbg: MutuallyExclusiveCallbackGroup
