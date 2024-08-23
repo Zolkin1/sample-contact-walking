@@ -8,6 +8,7 @@ general_settings:
   max_initial_solves: 20
   initial_constraint_tol: 5e-3
   nodes_full_dynamics: 2   # Also determines how many nodes have torque constraints
+  delay_prediction_dt: 0 # TODO: Tune or disable
 solver_settings:
   rel_tol: 1e-6
   abs_tol: 1e-6
@@ -23,22 +24,27 @@ constraints:
   friction_coef: 0.5  # TODO: Tune this
   max_grf: 200
 costs:
-  terminal_cost_weight: 500
-  configuration_tracking_weights: [ 0.0, 0.0, 5,  # Having x and y weights appears to be bad
-                                    5, 5, 5,
+  using_config_tracking: True
+  using_velocity_tracking: True
+  using_torque_regularization: True
+  using_force_regularization: True
+
+  terminal_cost_weight: 50
+  configuration_tracking_weights: [ 0.0, 0.0, 0,  # Having x and y weights appears to be bad
+                                    .01, .01, .01,
                                     0.01, 1, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001,
                                     0.01, 1, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001 ]
   # configuration_tracking_weights: [ .1, .1, .5,
   #                                 0.1, 0.1, 0.1,
   #                                 0.01, 0.01, 0.01, 0.01, 0.01, 0.001, 0.001, 0.001, 0.001,
   #                                 0.01, 0.01, 0.01, 0.01, 0.01, 0.001, 0.001, 0.001, 0.001 ]
-  velocity_tracking_weights: [5, 2, 10,
-                              1, 1, 1,
-                              1, 1, 0.05, .001, .05, 4, 4, 4, 1,
-                              1, 1, 0.05, .001, .05, 4, 4, 4, 1]
+  velocity_tracking_weights: [5, 2, 5,
+                              0.5, 0.5, 0.5,
+                              1, 1, 0.05, .002, .05, 4, 4, 4, 1,
+                              1, 1, 0.05, .002, .05, 4, 4, 4, 1]
   torque_regularization_weights: [.000, .000, .000, .000, .001, .5, .5, .5, .1,
                                   .000, .000, .000, .000, .001, .5, .5, .5, .1]
-  force_regularization_weights: [0.00001, 0.00001, 0.00001] # Note that these are small because the force in general is quite large
+  force_regularization_weights: [0.0001, 0.0001, 0.002] # Note that these are small because the force in general is quite large
 contacts:
   # For now, removing hands
   # contact_frames: ["right_foot", "left_foot"] #, "right_hand", "left_hand"]

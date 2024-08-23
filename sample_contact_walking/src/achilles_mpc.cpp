@@ -94,7 +94,7 @@ namespace achilles
         // TODO: Check the quaternion reference, it might be wrong
         // Setup q and v targets
         q_target_.resize(model_->GetConfigDim());
-        q_target_ << 0., 0, 0.9,    // position
+        q_target_ << 0., 0, 0.95,    // position
                     0, 0, 0, 1,     // quaternion
                     0, 0, -0.26,    // L hips joints
                     0.65, -0.43,    // L knee, ankle
@@ -105,7 +105,7 @@ namespace achilles
 
         // TODO: Make sure the target and weights are in the correct frame!
         v_target_.resize(model_->GetVelDim());
-        v_target_ << 0, 0, 0,
+        v_target_ << 0.2, 0, 0,
                     0, 0, 0,
                     0, 0, 0,
                     0, 0, 0, 
@@ -289,15 +289,32 @@ namespace achilles
 
 
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
-
+                    double time = this->get_clock()->now().seconds();
                     mpc_->Compute(q, v, traj_mpc_);
+                    
+                    // std::cout << "q start: " << q.transpose() << std::endl;
+                    // std::cout << "v start: " << v.transpose() << std::endl;
+
+                    // // TODO: Remove!
+                    // {
+                    //     // Get the mutex to protect the states
+                    //     std::lock_guard<std::mutex> lock(est_state_mut_);
+
+                    //     // Create current state
+                    //     q = q_;
+                    //     v = v_;
+                    // }
+
+                    // std::cout << "q end: " << q.transpose() << std::endl;
+                    // std::cout << "v end: " << v.transpose() << std::endl;
+
                     {
                         // Get the traj mutex to protect it
                         std::lock_guard<std::mutex> lock(traj_out_mut_);
                         traj_out_ = traj_mpc_;
 
                         // Assign time time too
-                        double time = this->get_clock()->now().seconds();
+                        // double time = this->get_clock()->now().seconds();
                         traj_start_time_ = time;
                     }
 
