@@ -8,14 +8,19 @@ general_settings:
   max_initial_solves: 20
   initial_constraint_tol: 5e-3
   nodes_full_dynamics: 2   # Also determines how many nodes have torque constraints
-  integrate_velocity_targets: True
-  delay_prediction_dt: 0 #5e-3 # TODO: Tune or disable
+  integrate_velocity_targets: False
+  delay_prediction_dt: 0 #-1e-2 #5e-3 # TODO: Tune or disable
+  terminal_cost_weight: 5 #50 Having a smaller terminal weight seems to help for now
 solver_settings:
   rel_tol: 1e-6
   abs_tol: 1e-6
   verbose: True
   polish: False
-  rho: 9e-3 #2e-4 # Having this small (like 1e-4) seems to help remove oscillations
+  # When rho = 0.1 I seem to follow the trajectory better (i.e. better open loop performance), but I have more oscillations and drift
+  # When rho = 0.02 almost all of the drift and oscillations are removed but the open loop tracking is significantly worse.
+  # In reality I think the better open loop performance is probably due to have better constraint satisfaction on the dynamics (but that needs confirmation)
+  # Also unclear if it is just that the natural osciallations of the rho somehow help to stabilize
+  rho: 0.01
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6 # 1e-10
   adaptive_rho: False
@@ -23,29 +28,43 @@ solver_settings:
   scaling: 10
 constraints:
   friction_coef: 0.5  # TODO: Tune this
-  max_grf: 200
+  max_grf: 400
 costs:
-  using_config_tracking: True
-  using_velocity_tracking: True
-  using_torque_regularization: True
-  using_force_regularization: True
-
-  terminal_cost_weight: 50
-  configuration_tracking_weights: [ 0.0, 0.0, 1,  # Having x and y weights appears to be bad
-                                    .01, .01, .01,
-                                    0.01, 1, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001,
-                                    0.01, 1, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001 ]
-  # configuration_tracking_weights: [ .1, .1, .5,
-  #                                 0.1, 0.1, 0.1,
-  #                                 0.01, 0.01, 0.01, 0.01, 0.01, 0.001, 0.001, 0.001, 0.001,
-  #                                 0.01, 0.01, 0.01, 0.01, 0.01, 0.001, 0.001, 0.001, 0.001 ]
-  velocity_tracking_weights: [5, 2, 5,
-                              0.5, 0.5, 0.5,
-                              1, 1, 0.05, .002, .05, 4, 4, 4, 1,
-                              1, 1, 0.05, .002, .05, 4, 4, 4, 1]
-  torque_regularization_weights: [.000, .000, .000, .000, .001, .5, .5, .5, .1,
-                                  .000, .000, .000, .000, .001, .5, .5, .5, .1]
-  force_regularization_weights: [0.0001, 0.0001, 0.01] # Note that these are small because the force in general is quite large
+  - type: ConfigurationTracking
+    name: "ConfigTracking"
+    weight:  [ 0.0, 0.0, 10,  # Having x and y weights appears to be bad
+              .01, .01, .01,
+              0.01, 1, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001,
+              0.01, 1, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001 ]
+  - type: VelocityTracking
+    name: "VelocityTracking"
+    weight: [5, 2, 5,
+            0.5, 0.5, 0.5,
+            1, 1, 0.05, .002, .05, 4, 4, 4, 1,
+            1, 1, 0.05, .002, .05, 4, 4, 4, 1]
+  - type: TorqueRegularization
+    name: "TorqueReg"
+    weight: [.000, .000, .000, .000, .001, .5, .5, .5, .1,
+            .000, .000, .000, .000, .001, .5, .5, .5, .1]
+  - type: ForceRegularization
+    name: "ForceReg"
+    weight: [0.0001, 0.0001, 0.01]
+  - type: ForwardKinematics
+    name: "LeftToe"
+    weight: [0.1, 0.1, 0.0]
+    frame: "foot_front_left"
+  - type: ForwardKinematics
+    name: "LeftHeel"
+    weight: [0.1, 0.1, 0.0]
+    frame: "foot_rear_left"
+  - type: ForwardKinematics
+    name: "RightToe"
+    weight: [0.1, 0.1, 0.0]
+    frame: "foot_front_right"
+  - type: ForwardKinematics
+    name: "RightHeel"
+    weight: [0.1, 0.1, 0.0]
+    frame: "foot_rear_right"
 contacts:
   # For now, removing hands
   # contact_frames: ["right_foot", "left_foot"] #, "right_hand", "left_hand"]

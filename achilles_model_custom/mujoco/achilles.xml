@@ -58,7 +58,7 @@
     <!-- Hip Roll Settings  -->
     <default class="hip_roll">
       <default class="hip_roll_pos">
-        <position kp="780" ctrllimited="true" ctrlrange="-70  70"/>
+        <position kp="680" ctrllimited="true" ctrlrange="-70  70"/>
       </default>
       <default class="hip_roll_vel">
         <velocity kv="70" ctrllimited="true" ctrlrange="-70  70"/>

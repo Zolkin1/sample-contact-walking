@@ -7,23 +7,39 @@ onboard:
       params:
         urdf_path: /home/zolkin/sample-contact-walking/achilles_model_custom/urdf/achilles.urdf
         # Viz
-        # viz_frames: ["torso", "foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left", "right_hand", "left_hand"]
-        viz_frames: ["torso", "foot_front_right", "foot_front_left"]
+        viz_frames: ["torso", "foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left", "right_hand", "left_hand"]
+        # viz_frames: ["torso", "foot_front_right", "foot_front_left"]
         viz_forces: True
         viz_force_scale: 0.01
         force_frames: ["foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left"]
         # Swing trajectory
-        default_swing_height: 0.08
+        default_swing_height: 0.1 #0.08
         default_stand_foot_height: 0.01
         apex_time: 0.5
         # MPC Loop
         mpc_loop_period_sec: 0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
-        max_mpc_solves: -75
+        max_mpc_solves: 100
         # Contact schedule
-        swing_time: 0.3
-        first_swing_time: 0.10
+        swing_time: 0.3 
+        first_swing_time: 1.0 # TODO: When this is set to 2, I don't get a step -- why??
         double_stance_time: 0.0
         right_foot_first: True
+        target_config: [0., 0, 0.95,
+                    0., 0., 0., 1,
+                    0., 0., -0.26,
+                    0.65, -0.43,
+                    0., 0., 0., 0.,
+                    0., 0., -0.26,
+                    0.65, -0.43,
+                    0., 0., 0., 0.]
+        target_vel: [0., 0., 0.,
+                    0., 0., 0.,
+                    0., 0., 0.,
+                    0., 0.,
+                    0., 0., 0., 0.,
+                    0., 0., 0.,
+                    0., 0.,
+                    0., 0., 0., 0.]
       callback_groups: 
         control_cbg: MutuallyExclusiveCallbackGroup
         estimation_cbg: MutuallyExclusiveCallbackGroup
