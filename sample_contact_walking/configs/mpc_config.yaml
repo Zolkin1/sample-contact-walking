@@ -83,7 +83,7 @@ line_search:
   armijo_constant: 1e-4
 
 cem_settings:
-  sample_variance: 0.5
+  sample_variance: 0.0
   num_finalists: 1
 #*** Note *** These must be in the same order!
   pos_actuator_names: ["left_hip_yaw_pos", "left_hip_roll_pos", "left_hip_pitch_pos",

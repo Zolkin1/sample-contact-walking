@@ -18,7 +18,6 @@
 //  - Make sleeps only occur if > 3ms or else busy weight
 //  - Sample planner causes an error eventually
 
-
 namespace achilles
 {
     AchillesController::AchillesController(const std::string& name) 
@@ -94,7 +93,6 @@ namespace achilles
 
         mpc_->PrintContactSchedule();
 
-        // TODO: Check the quaternion reference, it might be wrong
         // Setup q and v targets
         q_target_.resize(model_->GetConfigDim());
         this->declare_parameter<std::vector<double>>("target_config");
@@ -160,7 +158,6 @@ namespace achilles
 
         // Compute an initial MPC at the initial condition
 
-        // TODO: Put back
         // Go to initial condition
         TransitionState(SeekInitialCond);
         // TransitionState(Mpc);
@@ -201,7 +198,10 @@ namespace achilles
 
         this->declare_parameter("sample_loop_period_sec", 0.05);
 
-        sample_thread_ = std::thread(&AchillesController::SampleThread, this);
+        // ----------- DEBUG ----------- //
+        // TODO: Put back! Make changes in the thread!
+        // sample_thread_ = std::thread(&AchillesController::SampleThread, this);
+        // ----------- DEBUG ----------- //
     }
 
     void AchillesController::UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) {
@@ -303,16 +303,14 @@ namespace achilles
                     double delay_start_time = this->now().seconds() - traj_start_time_;
                     mpc_->Compute(q, v, traj_mpc_, delay_start_time);
                     
-                    // TODO: Put back!
-                    // {
-                    //     // Get the traj mutex to protect it
-                    //     std::lock_guard<std::mutex> lock(traj_out_mut_);
-                    //     traj_out_ = traj_mpc_;
+                    {
+                        // Get the traj mutex to protect it
+                        std::lock_guard<std::mutex> lock(traj_out_mut_);
+                        traj_out_ = traj_mpc_;
 
-                    //     // Assign time time too
-                    //     // double time = this->get_clock()->now().seconds();
-                    //     traj_start_time_ = time;
-                    // }
+                        // Assign time time too
+                        traj_start_time_ = time;
+                    }
 
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Config IC Error: " << (traj_out_.GetConfiguration(0) - q).norm());
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Vel IC Error: " << (traj_out_.GetVelocity(0) - v).norm());
@@ -331,8 +329,7 @@ namespace achilles
                 }
 
                 // TODO: If this is slow, then I need to move it
-                // TODO: Put back!
-                // PublishTrajViz(traj_mpc_, viz_frames_);
+                PublishTrajViz(traj_mpc_, viz_frames_);
             }
 
             // Stop timer
@@ -401,6 +398,7 @@ namespace achilles
                     cem_->Plan(traj_ref, traj_plan, cs_out, {"ConfigTracking", "VelocityTracking"});
                     num_plans++;
                 
+                    // ----------- DEBUG ----------- //
                     // TODO: Remove this
                     // Set the planned trajectory as the desired trajectory
                     {
@@ -411,10 +409,19 @@ namespace achilles
                         // Assign time time too
                         traj_start_time_ = time;
                     }
+                    // ----------- DEBUG ----------- //
+                }
+                
+                // ----------- DEBUG ----------- //
+                // TODO: Remove!
+                if (GetState() != Mpc) {
+                    TransitionState(Mpc);
                 }
 
                 // TODO: If this is slow, then I need to move it
                 PublishTrajViz(traj_plan, viz_frames_);
+                // ----------- DEBUG ----------- //
+
             }
 
             // Stop timer
@@ -459,10 +466,9 @@ namespace achilles
                     traj_out_.GetVelocityInterp(time_into_traj, v);
                     traj_out_.GetTorqueInterp(time_into_traj, tau);
                 
-                    // --- TODO: Remove! -- This is a safety in case the interpolation time is too large
+                    // This is a safety in case the interpolation time is too large
                     if (q.size() == 0) {
-                        // TODO: remove!
-                        // throw std::runtime_error("Ending controller!");
+                        RCLCPP_WARN_STREAM(this->get_logger(), "Trajectory interpolation time is after the trajectory ends!");
                         q = traj_out_.GetConfiguration(traj_out_.GetNumNodes()-1);
                     }
 

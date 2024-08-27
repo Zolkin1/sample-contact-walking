@@ -18,7 +18,7 @@ onboard:
         apex_time: 0.5
 # ---------- MPC Loop ---------- #
         mpc_loop_period_sec: 0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
-        max_mpc_solves: 140 
+        max_mpc_solves: -140 
 # ---------- Contact schedule ---------- #
         swing_time: 0.3 
         first_swing_time: 1.0 # TODO: When this is set to 2, I don't get a step -- why??
@@ -43,7 +43,7 @@ onboard:
 # ---------- Sample Planner ---------- #
         simulation_samples: 100
         xml_path:  /home/zolkin/sample-contact-walking/achilles_model_custom/mujoco/sample_sim.xml
-        sample_loop_period_sec: 0.25
+        sample_loop_period_sec: 0.1
         max_sample_plans: -1
       callback_groups: 
         control_cbg: MutuallyExclusiveCallbackGroup
