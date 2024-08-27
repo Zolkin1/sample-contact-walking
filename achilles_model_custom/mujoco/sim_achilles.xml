@@ -1,0 +1,4 @@
+<mujoco model="sim_achilles">
+  <option timestep="0.001" integrator = "implicitfast"/>
+  <include file="achilles.xml"/>
+</mujoco>

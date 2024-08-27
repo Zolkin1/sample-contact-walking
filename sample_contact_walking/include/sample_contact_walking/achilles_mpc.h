@@ -4,6 +4,7 @@
 #include "obelisk_controller.h"
 
 #include "full_order_mpc.h"
+#include "cross_entropy.h"
 
 namespace achilles {
     using torc::mpc::vectorx_t;
@@ -21,6 +22,9 @@ namespace achilles {
 
             // MPC Thread function
             void MpcThread();
+
+            // Sample planning thread function
+            void SampleThread();
 
             // Contact schedule
             void AddPeriodicContacts();
@@ -94,11 +98,15 @@ namespace achilles {
             bool right_foot_first_;
 
             torc::models::RobotContactInfo contact_state_;
-            std::unique_ptr<torc::mpc::FullOrderMpc> mpc_;
+            std::shared_ptr<torc::mpc::FullOrderMpc> mpc_;
             std::unique_ptr<torc::models::FullOrderRigidBody> model_;
             torc::mpc::ContactSchedule contact_schedule_;
 
+            // Sample planning
+            std::unique_ptr<torc::sample::CrossEntropy> cem_;
+
             // Threads
             std::thread mpc_thread_;
+            std::thread sample_thread_;
     };
 } // namespace achilles

@@ -15,6 +15,9 @@
 //  - Try plotting just the first MPC solve and see what the trajectory is. Why does it swing its leg really far out
 //  - Add whole stack pausing
 //  - The line search should accept most steps with alpha = 1, why does it make so many of them small?
+//  - Make sleeps only occur if > 3ms or else busy weight
+//  - Sample planner causes an error eventually
+
 
 namespace achilles
 {
@@ -47,7 +50,7 @@ namespace achilles
         model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path);
 
         // Create and configure MPC
-        mpc_ = std::make_unique<torc::mpc::FullOrderMpc>("achilles_mpc_obk", this->get_parameter("params_path").as_string(), urdf_path);
+        mpc_ = std::make_shared<torc::mpc::FullOrderMpc>("achilles_mpc_obk", this->get_parameter("params_path").as_string(), urdf_path);
         RCLCPP_INFO_STREAM(this->get_logger(), "MPC Created...");
 
         mpc_->Configure();
@@ -183,8 +186,22 @@ namespace achilles
         scale_forces_ = this->get_parameter("viz_force_scale").as_double();
         this->get_parameter("force_frames", force_frames_);
 
-        // TODO: Spin up MPC thread
+        // Spin up MPC thread
         mpc_thread_ = std::thread(&AchillesController::MpcThread, this);
+
+        // Sample planning
+        this->declare_parameter("simulation_samples", 50);
+        this->declare_parameter<std::string>("xml_path");
+
+        std::string xml_path_str = this->get_parameter("xml_path").as_string();
+        std::filesystem::path xml_path(xml_path_str);
+
+        cem_ = std::make_unique<torc::sample::CrossEntropy>(xml_path, this->get_parameter("simulation_samples").as_int(),
+            this->get_parameter("params_path").as_string(), mpc_);
+
+        this->declare_parameter("sample_loop_period_sec", 0.05);
+
+        sample_thread_ = std::thread(&AchillesController::SampleThread, this);
     }
 
     void AchillesController::UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) {
@@ -286,31 +303,16 @@ namespace achilles
                     double delay_start_time = this->now().seconds() - traj_start_time_;
                     mpc_->Compute(q, v, traj_mpc_, delay_start_time);
                     
-                    // std::cout << "q start: " << q.transpose() << std::endl;
-                    // std::cout << "v start: " << v.transpose() << std::endl;
-
-                    // // TODO: Remove!
+                    // TODO: Put back!
                     // {
-                    //     // Get the mutex to protect the states
-                    //     std::lock_guard<std::mutex> lock(est_state_mut_);
+                    //     // Get the traj mutex to protect it
+                    //     std::lock_guard<std::mutex> lock(traj_out_mut_);
+                    //     traj_out_ = traj_mpc_;
 
-                    //     // Create current state
-                    //     q = q_;
-                    //     v = v_;
+                    //     // Assign time time too
+                    //     // double time = this->get_clock()->now().seconds();
+                    //     traj_start_time_ = time;
                     // }
-
-                    // std::cout << "q end: " << q.transpose() << std::endl;
-                    // std::cout << "v end: " << v.transpose() << std::endl;
-
-                    {
-                        // Get the traj mutex to protect it
-                        std::lock_guard<std::mutex> lock(traj_out_mut_);
-                        traj_out_ = traj_mpc_;
-
-                        // Assign time time too
-                        // double time = this->get_clock()->now().seconds();
-                        traj_start_time_ = time;
-                    }
 
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Config IC Error: " << (traj_out_.GetConfiguration(0) - q).norm());
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Vel IC Error: " << (traj_out_.GetVelocity(0) - v).norm());
@@ -329,7 +331,8 @@ namespace achilles
                 }
 
                 // TODO: If this is slow, then I need to move it
-                PublishTrajViz(traj_mpc_, viz_frames_);
+                // TODO: Put back!
+                // PublishTrajViz(traj_mpc_, viz_frames_);
             }
 
             // Stop timer
@@ -338,9 +341,92 @@ namespace achilles
             // Compute difference
             const long time_left = mpc_loop_rate_ns - (stop_time - start_time).nanoseconds();
             if (time_left > 0) {
+                // TODO: Only sleep if I have at least 3ms left or else busy weight
                 std::this_thread::sleep_for(std::chrono::nanoseconds(time_left));
             } else {
                 RCLCPP_WARN_STREAM(this->get_logger(), "MPC computation took longer than loop rate allowed for. " << std::abs(time_left)*1e-6 << "ms over time.");
+            }
+        }
+    }
+
+    void AchillesController::SampleThread() {
+        // TODO: Change parameter
+        const long sample_loop_rate_ns = this->get_parameter("sample_loop_period_sec").as_double()*1e9;
+        RCLCPP_INFO_STREAM(this->get_logger(), "Sample loop period set to: " << sample_loop_rate_ns << "ns.");
+        
+        static bool first_loop = true;
+        auto prev_time = this->now();
+
+        torc::mpc::Trajectory traj_ref;
+        torc::mpc::Trajectory traj_plan;
+
+        int num_plans = 0;
+        this->declare_parameter<int>("max_sample_plans", -1);
+        const int max_plans = this->get_parameter("max_sample_plans").as_int();
+
+        while (true) {
+            // Start the timer
+            auto start_time = this->now();
+
+            if (recieved_first_state_) {
+                RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Computing first trajectory.");
+
+                if (first_loop) {
+                    prev_time = this->now();
+                    first_loop = false;
+                }
+
+                torc::mpc::ContactSchedule cs_out;
+                {
+                    // Get the traj mutex to protect it
+                    std::lock_guard<std::mutex> lock(traj_out_mut_);
+                    traj_ref = traj_out_;
+                }
+
+                vectorx_t q, v;
+                {
+                    // Get the mutex to protect the states
+                    std::lock_guard<std::mutex> lock(est_state_mut_);
+
+                    // Create current state
+                    q = q_;
+                    v = v_;
+                }
+
+                traj_ref.SetConfiguration(0, q);
+                traj_ref.SetVelocity(0, v);
+
+                if (max_plans < 0 || num_plans < max_plans) {
+                    double time = this->get_clock()->now().seconds();
+                    cem_->Plan(traj_ref, traj_plan, cs_out, {"ConfigTracking", "VelocityTracking"});
+                    num_plans++;
+                
+                    // TODO: Remove this
+                    // Set the planned trajectory as the desired trajectory
+                    {
+                        // Get the traj mutex to protect it
+                        std::lock_guard<std::mutex> lock(traj_out_mut_);
+                        traj_out_ = traj_plan;
+
+                        // Assign time time too
+                        traj_start_time_ = time;
+                    }
+                }
+
+                // TODO: If this is slow, then I need to move it
+                PublishTrajViz(traj_plan, viz_frames_);
+            }
+
+            // Stop timer
+            auto stop_time = this->now(); 
+
+            // Compute difference
+            const long time_left = sample_loop_rate_ns - (stop_time - start_time).nanoseconds();
+            if (time_left > 0) {
+                // TODO: Only sleep if I have at least 3ms left or else busy weight
+                std::this_thread::sleep_for(std::chrono::nanoseconds(time_left));
+            } else {
+                RCLCPP_WARN_STREAM(this->get_logger(), "Sample planner took longer than loop rate allowed for. " << std::abs(time_left)*1e-6 << "ms over time.");
             }
         }
     }
@@ -555,62 +641,62 @@ namespace achilles
     }
 
     void AchillesController::PublishTrajStateViz() {
-        std::lock_guard<std::mutex> lock(traj_out_mut_);
+        // std::lock_guard<std::mutex> lock(traj_out_mut_);
 
-        if (traj_start_time_ < 0) {
-            traj_start_time_ = this->get_clock()->now().seconds();
-        }
+        // if (traj_start_time_ < 0) {
+        //     traj_start_time_ = this->get_clock()->now().seconds();
+        // }
 
-        double time = this->get_clock()->now().seconds();
-        // TODO: Do I need to use nanoseconds?
-        double time_into_traj = time - traj_start_time_;
-        // double time_into_traj = 0;
+        // double time = this->get_clock()->now().seconds();
+        // // TODO: Do I need to use nanoseconds?
+        // double time_into_traj = time - traj_start_time_;
+        // // double time_into_traj = 0;
 
-        // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
-        vectorx_t q;
-        vectorx_t v;
-        traj_out_.GetConfigInterp(time_into_traj, q);
-        traj_out_.GetVelocityInterp(time_into_traj, v);
+        // // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
+        // vectorx_t q;
+        // vectorx_t v;
+        // traj_out_.GetConfigInterp(time_into_traj, q);
+        // traj_out_.GetVelocityInterp(time_into_traj, v);
 
-        // traj_out_.GetConfigInterp(0.01, q);
-        obelisk_estimator_msgs::msg::EstimatedState msg;
-        msg.base_link_name = "torso";
-        vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
-        vectorx_t q_tail = q.tail(model_->GetNumInputs());
-        msg.q_base = torc::utils::EigenToStdVector(q_head);
-        msg.q_joints = torc::utils::EigenToStdVector(q_tail);
+        // // traj_out_.GetConfigInterp(0.01, q);
+        // obelisk_estimator_msgs::msg::EstimatedState msg;
+        // msg.base_link_name = "torso";
+        // vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
+        // vectorx_t q_tail = q.tail(model_->GetNumInputs());
+        // msg.q_base = torc::utils::EigenToStdVector(q_head);
+        // msg.q_joints = torc::utils::EigenToStdVector(q_tail);
 
-        msg.joint_names.resize(q_tail.size());
-        msg.joint_names[0] = "left_hip_yaw_joint";
-        msg.joint_names[1] = "left_hip_roll_joint";
-        msg.joint_names[2] = "left_hip_pitch_joint";
-        msg.joint_names[3] = "left_knee_pitch_joint";
-        msg.joint_names[4] = "left_ankle_pitch_joint";
-        msg.joint_names[5] = "left_shoulder_pitch_joint";
-        msg.joint_names[6] = "left_shoulder_roll_joint";
-        msg.joint_names[7] = "left_shoulder_yaw_joint";
-        msg.joint_names[8] = "left_elbow_pitch_joint";
-        msg.joint_names[9] = "right_hip_yaw_joint";
-        msg.joint_names[10] = "right_hip_roll_joint";
-        msg.joint_names[11] = "right_hip_pitch_joint";
-        msg.joint_names[12] = "right_knee_pitch_joint";
-        msg.joint_names[13] = "right_ankle_pitch_joint";
-        msg.joint_names[14] = "right_shoulder_pitch_joint";
-        msg.joint_names[15] = "right_shoulder_roll_joint";
-        msg.joint_names[16] = "right_shoulder_yaw_joint";
-        msg.joint_names[17] = "right_elbow_pitch_joint";
+        // msg.joint_names.resize(q_tail.size());
+        // msg.joint_names[0] = "left_hip_yaw_joint";
+        // msg.joint_names[1] = "left_hip_roll_joint";
+        // msg.joint_names[2] = "left_hip_pitch_joint";
+        // msg.joint_names[3] = "left_knee_pitch_joint";
+        // msg.joint_names[4] = "left_ankle_pitch_joint";
+        // msg.joint_names[5] = "left_shoulder_pitch_joint";
+        // msg.joint_names[6] = "left_shoulder_roll_joint";
+        // msg.joint_names[7] = "left_shoulder_yaw_joint";
+        // msg.joint_names[8] = "left_elbow_pitch_joint";
+        // msg.joint_names[9] = "right_hip_yaw_joint";
+        // msg.joint_names[10] = "right_hip_roll_joint";
+        // msg.joint_names[11] = "right_hip_pitch_joint";
+        // msg.joint_names[12] = "right_knee_pitch_joint";
+        // msg.joint_names[13] = "right_ankle_pitch_joint";
+        // msg.joint_names[14] = "right_shoulder_pitch_joint";
+        // msg.joint_names[15] = "right_shoulder_roll_joint";
+        // msg.joint_names[16] = "right_shoulder_yaw_joint";
+        // msg.joint_names[17] = "right_elbow_pitch_joint";
 
-        // traj_out_.GetVelocityInterp(0.01, v);
-        vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
-        vectorx_t v_tail = v.tail(model_->GetNumInputs());
+        // // traj_out_.GetVelocityInterp(0.01, v);
+        // vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
+        // vectorx_t v_tail = v.tail(model_->GetNumInputs());
 
-        // vectorx_t temp = vectorx_t::Zero(6);
-        msg.v_base = torc::utils::EigenToStdVector(v_head);
-        msg.v_joints = torc::utils::EigenToStdVector(v_tail);
+        // // vectorx_t temp = vectorx_t::Zero(6);
+        // msg.v_base = torc::utils::EigenToStdVector(v_head);
+        // msg.v_joints = torc::utils::EigenToStdVector(v_tail);
 
-        msg.header.stamp = this->now();
+        // msg.header.stamp = this->now();
 
-        this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
+        // this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
     }
 
     void AchillesController::AddPeriodicContacts() {

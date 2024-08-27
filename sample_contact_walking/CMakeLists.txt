@@ -51,7 +51,7 @@ ament_export_include_directories(include)
 
 # ------- Controller ------- #
 add_executable(ll_controller src/achilles_mpc.cpp)
-target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo Mpc)
+target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo Mpc SamplePlanner)
 
 ament_target_dependencies(ll_controller
     PUBLIC
