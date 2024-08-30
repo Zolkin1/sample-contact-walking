@@ -320,9 +320,24 @@ namespace achilles
                     }
 
                     // TODO: Remove
-                    // for (int node = 0; node < traj_mpc_.GetNumNodes(); node++) {
-
-                    // }
+                    // TODO: Fix!
+                    double temp_time = 0;
+                    for (int node = 0; node < traj_mpc_.GetNumNodes(); node++) {
+                        for (const auto& frame : traj_mpc_.GetContactFrames()) {
+                            if (!contact_schedule_.InContact(frame, temp_time)) {
+                                vector3_t force_out;
+                                traj_mpc_.GetForceInterp(temp_time, frame, force_out);
+                                if (force_out.norm() > 1e-4) {
+                                    mpc_->PrintContactSchedule();
+                                    RCLCPP_ERROR_STREAM(this->get_logger(), "Node: " << node << ", time: " << temp_time);
+                                    RCLCPP_ERROR_STREAM(this->get_logger(), "Force: " << force_out.transpose());
+                                    RCLCPP_ERROR_STREAM(this->get_logger(), "Force norm: " << force_out.norm());
+                                    throw std::runtime_error("Force norm too large!");
+                                } 
+                            }
+                        }
+                        temp_time += traj_mpc_.GetDtVec()[node];
+                    }
 
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Config IC Error: " << (traj_out_.GetConfiguration(0) - q).norm());
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Vel IC Error: " << (traj_out_.GetVelocity(0) - v).norm());

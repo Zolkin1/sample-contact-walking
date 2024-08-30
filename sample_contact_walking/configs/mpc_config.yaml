@@ -1,7 +1,7 @@
 general_settings:
   nodes: 32
   verbose: True
-  node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
+  node_dt_type: Even # Even, SmallFirst, Adaptive
   node_dt: 0.025
   first_node_dt: 0.01
   compile_derivatives: True
@@ -16,7 +16,7 @@ general_settings:
 solver_settings:
   rel_tol: 1e-6
   abs_tol: 1e-6
-  verbose: True
+  verbose: False
   polish: False
   rho: 0.1
   alpha: 1.6 # 1.6, 1.1
