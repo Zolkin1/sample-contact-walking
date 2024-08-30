@@ -30,7 +30,7 @@ constraints:
 costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    weight:  [ 0.0, 0.0, 3,  # Having x and y weights appears to be bad
+    weight:  [ 0.0, 0.0, 1,  # Having x and y weights appears to be bad
               .1, .1, .1,
               0.01, 1, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001,
               0.01, 1, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001 ]

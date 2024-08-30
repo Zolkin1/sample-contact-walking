@@ -18,6 +18,7 @@
 //  - Make sleeps only occur if > 3ms or else busy weight
 //  - Sample planner causes an error eventually
 //  - I think the swing height constraint seems very sensitive now, need to add in the controller in the optimization
+//  - Forces seem to still be positive when the foot is in the air
 
 namespace achilles
 {
@@ -306,11 +307,9 @@ namespace achilles
                 AddPeriodicContacts();
 
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
-                    double delay_start_time = this->now().seconds() - traj_start_time_;
-                    mpc_->Compute(q, v, traj_mpc_, delay_start_time);
-                    // TODO: Put the time above the compute call!
                     double time = this->get_clock()->now().seconds();
-                    
+                    double delay_start_time = this->now().seconds() - traj_start_time_;
+                    mpc_->Compute(q, v, traj_mpc_, delay_start_time);                    
                     {
                         // Get the traj mutex to protect it
                         std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -319,6 +318,11 @@ namespace achilles
                         // Assign time time too
                         traj_start_time_ = time;
                     }
+
+                    // TODO: Remove
+                    // for (int node = 0; node < traj_mpc_.GetNumNodes(); node++) {
+
+                    // }
 
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Config IC Error: " << (traj_out_.GetConfiguration(0) - q).norm());
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Vel IC Error: " << (traj_out_.GetVelocity(0) - v).norm());
