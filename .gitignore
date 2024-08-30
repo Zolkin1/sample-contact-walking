@@ -41,4 +41,4 @@ obk_logs/
 
 deriv_libs/
 
-MUJOCO_LOG.txt
+MUJOCO_LOG.*

@@ -17,6 +17,7 @@
 //  - The line search should accept most steps with alpha = 1, why does it make so many of them small?
 //  - Make sleeps only occur if > 3ms or else busy weight
 //  - Sample planner causes an error eventually
+//  - I think the swing height constraint seems very sensitive now, need to add in the controller in the optimization
 
 namespace achilles
 {
@@ -112,13 +113,18 @@ namespace achilles
         mpc_->SetConstantVelTarget(v_target_);
 
         // Set initial conditions
-        // TODO: Do this from yaml
-        // TODO: Fix to match real initial condition
-        q_ic_ = q_target_;
-        q_ic_(0) = 0;
-        q_ic_(2) = 0.97;
-        v_ic_ = v_target_;
-        v_ic_.setZero();
+        this->declare_parameter<std::vector<double>>("mpc_ic_config");
+        this->declare_parameter<std::vector<double>>("mpc_ic_vel");
+
+        std::vector<double> q_ic_temp, v_ic_temp;
+        q_ic_temp = this->get_parameter("mpc_ic_config").as_double_array();
+        v_ic_temp = this->get_parameter("mpc_ic_vel").as_double_array();
+
+        q_ic_ = torc::utils::StdToEigenVector(q_ic_temp);
+        v_ic_ = torc::utils::StdToEigenVector(v_ic_temp);
+
+        std::cout << "q ic: " << q_ic_.transpose() << std::endl;
+        std::cout << "v ic: " << v_ic_.transpose() << std::endl;
 
         // Setup swing trajectories
 
@@ -153,6 +159,7 @@ namespace achilles
 
         // TODO: Verify the initial conditions
         mpc_->ComputeNLP(q_ic_, v_ic_, traj_mpc_);
+        mpc_->PrintStatistics();
         traj_out_ = traj_mpc_;
         traj_start_time_ = -1;
 
@@ -299,9 +306,10 @@ namespace achilles
                 AddPeriodicContacts();
 
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
-                    double time = this->get_clock()->now().seconds();
                     double delay_start_time = this->now().seconds() - traj_start_time_;
                     mpc_->Compute(q, v, traj_mpc_, delay_start_time);
+                    // TODO: Put the time above the compute call!
+                    double time = this->get_clock()->now().seconds();
                     
                     {
                         // Get the traj mutex to protect it
@@ -647,62 +655,62 @@ namespace achilles
     }
 
     void AchillesController::PublishTrajStateViz() {
-        // std::lock_guard<std::mutex> lock(traj_out_mut_);
+        std::lock_guard<std::mutex> lock(traj_out_mut_);
 
-        // if (traj_start_time_ < 0) {
-        //     traj_start_time_ = this->get_clock()->now().seconds();
-        // }
+        if (traj_start_time_ < 0) {
+            traj_start_time_ = this->get_clock()->now().seconds();
+        }
 
-        // double time = this->get_clock()->now().seconds();
-        // // TODO: Do I need to use nanoseconds?
-        // double time_into_traj = time - traj_start_time_;
-        // // double time_into_traj = 0;
+        double time = this->get_clock()->now().seconds();
+        // TODO: Do I need to use nanoseconds?
+        double time_into_traj = time - traj_start_time_;
+        // double time_into_traj = 0;
 
-        // // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
-        // vectorx_t q;
-        // vectorx_t v;
-        // traj_out_.GetConfigInterp(time_into_traj, q);
-        // traj_out_.GetVelocityInterp(time_into_traj, v);
+        // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
+        vectorx_t q;
+        vectorx_t v;
+        traj_out_.GetConfigInterp(time_into_traj, q);
+        traj_out_.GetVelocityInterp(time_into_traj, v);
 
-        // // traj_out_.GetConfigInterp(0.01, q);
-        // obelisk_estimator_msgs::msg::EstimatedState msg;
-        // msg.base_link_name = "torso";
-        // vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
-        // vectorx_t q_tail = q.tail(model_->GetNumInputs());
-        // msg.q_base = torc::utils::EigenToStdVector(q_head);
-        // msg.q_joints = torc::utils::EigenToStdVector(q_tail);
+        // traj_out_.GetConfigInterp(0.01, q);
+        obelisk_estimator_msgs::msg::EstimatedState msg;
+        msg.base_link_name = "torso";
+        vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
+        vectorx_t q_tail = q.tail(model_->GetNumInputs());
+        msg.q_base = torc::utils::EigenToStdVector(q_head);
+        msg.q_joints = torc::utils::EigenToStdVector(q_tail);
 
-        // msg.joint_names.resize(q_tail.size());
-        // msg.joint_names[0] = "left_hip_yaw_joint";
-        // msg.joint_names[1] = "left_hip_roll_joint";
-        // msg.joint_names[2] = "left_hip_pitch_joint";
-        // msg.joint_names[3] = "left_knee_pitch_joint";
-        // msg.joint_names[4] = "left_ankle_pitch_joint";
-        // msg.joint_names[5] = "left_shoulder_pitch_joint";
-        // msg.joint_names[6] = "left_shoulder_roll_joint";
-        // msg.joint_names[7] = "left_shoulder_yaw_joint";
-        // msg.joint_names[8] = "left_elbow_pitch_joint";
-        // msg.joint_names[9] = "right_hip_yaw_joint";
-        // msg.joint_names[10] = "right_hip_roll_joint";
-        // msg.joint_names[11] = "right_hip_pitch_joint";
-        // msg.joint_names[12] = "right_knee_pitch_joint";
-        // msg.joint_names[13] = "right_ankle_pitch_joint";
-        // msg.joint_names[14] = "right_shoulder_pitch_joint";
-        // msg.joint_names[15] = "right_shoulder_roll_joint";
-        // msg.joint_names[16] = "right_shoulder_yaw_joint";
-        // msg.joint_names[17] = "right_elbow_pitch_joint";
+        msg.joint_names.resize(q_tail.size());
+        msg.joint_names[0] = "left_hip_yaw_joint";
+        msg.joint_names[1] = "left_hip_roll_joint";
+        msg.joint_names[2] = "left_hip_pitch_joint";
+        msg.joint_names[3] = "left_knee_pitch_joint";
+        msg.joint_names[4] = "left_ankle_pitch_joint";
+        msg.joint_names[5] = "left_shoulder_pitch_joint";
+        msg.joint_names[6] = "left_shoulder_roll_joint";
+        msg.joint_names[7] = "left_shoulder_yaw_joint";
+        msg.joint_names[8] = "left_elbow_pitch_joint";
+        msg.joint_names[9] = "right_hip_yaw_joint";
+        msg.joint_names[10] = "right_hip_roll_joint";
+        msg.joint_names[11] = "right_hip_pitch_joint";
+        msg.joint_names[12] = "right_knee_pitch_joint";
+        msg.joint_names[13] = "right_ankle_pitch_joint";
+        msg.joint_names[14] = "right_shoulder_pitch_joint";
+        msg.joint_names[15] = "right_shoulder_roll_joint";
+        msg.joint_names[16] = "right_shoulder_yaw_joint";
+        msg.joint_names[17] = "right_elbow_pitch_joint";
 
-        // // traj_out_.GetVelocityInterp(0.01, v);
-        // vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
-        // vectorx_t v_tail = v.tail(model_->GetNumInputs());
+        // traj_out_.GetVelocityInterp(0.01, v);
+        vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
+        vectorx_t v_tail = v.tail(model_->GetNumInputs());
 
-        // // vectorx_t temp = vectorx_t::Zero(6);
-        // msg.v_base = torc::utils::EigenToStdVector(v_head);
-        // msg.v_joints = torc::utils::EigenToStdVector(v_tail);
+        // vectorx_t temp = vectorx_t::Zero(6);
+        msg.v_base = torc::utils::EigenToStdVector(v_head);
+        msg.v_joints = torc::utils::EigenToStdVector(v_tail);
 
-        // msg.header.stamp = this->now();
+        msg.header.stamp = this->now();
 
-        // this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
+        this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
     }
 
     void AchillesController::AddPeriodicContacts() {

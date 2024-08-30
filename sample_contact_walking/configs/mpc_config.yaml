@@ -1,12 +1,14 @@
 general_settings:
   nodes: 32
   verbose: True
-  node_dt: 0.025 
+  node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
+  node_dt: 0.025
+  first_node_dt: 0.01
   compile_derivatives: True
   base_frame: "torso"
   scale_cost: False
   max_initial_solves: 20
-  initial_constraint_tol: 5e-3
+  initial_constraint_tol: 5e-4
   nodes_full_dynamics: 2   # Also determines how many nodes have torque constraints
   integrate_velocity_targets: False
   delay_prediction_dt: 0 #-1e-2 #5e-3 # TODO: Tune or disable
@@ -16,10 +18,6 @@ solver_settings:
   abs_tol: 1e-6
   verbose: True
   polish: False
-  # When rho = 0.1 I seem to follow the trajectory better (i.e. better open loop performance), but I have more oscillations and drift
-  # When rho = 0.02 almost all of the drift and oscillations are removed but the open loop tracking is significantly worse.
-  # In reality I think the better open loop performance is probably due to have better constraint satisfaction on the dynamics (but that needs confirmation)
-  # Also unclear if it is just that the natural osciallations of the rho somehow help to stabilize
   rho: 0.1
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6 # 1e-10
@@ -32,13 +30,13 @@ constraints:
 costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    weight:  [ 0.0, 0.0, 10,  # Having x and y weights appears to be bad
+    weight:  [ 0.0, 0.0, 3,  # Having x and y weights appears to be bad
               .1, .1, .1,
               0.01, 1, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001,
               0.01, 1, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001 ]
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [5, 2, 5,
+    weight: [2, 2, 5,
             0.5, 0.5, 0.5,
             1, 1, 0.05, .002, .05, 4, 4, 4, 1,
             1, 1, 0.05, .002, .05, 4, 4, 4, 1]
@@ -48,23 +46,23 @@ costs:
             .000, .000, .000, .000, .001, .5, .5, .5, .1]
   - type: ForceRegularization
     name: "ForceReg"
-    weight: [0.0001, 0.0001, 0.01]
-  - type: ForwardKinematics
-    name: "LeftToe"
-    weight: [100, 100, 0.0]   # Having a highter weight (like 10000) does seem to help keep the feet in place
-    frame: "foot_front_left"
-  - type: ForwardKinematics
-    name: "LeftHeel"
-    weight: [100, 100, 0.0]
-    frame: "foot_rear_left"
-  - type: ForwardKinematics
-    name: "RightToe"
-    weight: [100, 100, 0.0]
-    frame: "foot_front_right"
-  - type: ForwardKinematics
-    name: "RightHeel"
-    weight: [100, 100, 0.0]
-    frame: "foot_rear_right"
+    weight: [0.0001, 0.0001, 0.001]
+  # - type: ForwardKinematics
+  #   name: "LeftToe"
+  #   weight: [100, 100, 0.0]   # Having a highter weight (like 10000) does seem to help keep the feet in place
+  #   frame: "foot_front_left"
+  # - type: ForwardKinematics
+  #   name: "LeftHeel"
+  #   weight: [100, 100, 0.0]
+  #   frame: "foot_rear_left"
+  # - type: ForwardKinematics
+  #   name: "RightToe"
+  #   weight: [100, 100, 0.0]
+  #   frame: "foot_front_right"
+  # - type: ForwardKinematics
+  #   name: "RightHeel"
+  #   weight: [100, 100, 0.0]
+  #   frame: "foot_rear_right"
 contacts:
   # For now, removing hands
   # contact_frames: ["right_foot", "left_foot"] #, "right_hand", "left_hand"]
@@ -115,3 +113,10 @@ cem_settings:
   ]
   actuator_idxs: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]          # Indexes into the trajectory configuration vector
   sample_type: "Position"
+
+
+  # Misc notes:
+  # When rho = 0.1 I seem to follow the trajectory better (i.e. better open loop performance), but I have more oscillations and drift
+  # When rho = 0.02 almost all of the drift and oscillations are removed but the open loop tracking is significantly worse.
+  # In reality I think the better open loop performance is probably due to have better constraint satisfaction on the dynamics (but that needs confirmation)
+  # Also unclear if it is just that the natural osciallations of the rho somehow help to stabilize

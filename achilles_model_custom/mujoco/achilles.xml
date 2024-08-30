@@ -15,7 +15,7 @@
   <!-- Fix simulation options -->
   <!-- Note: Using RK4 causes weird simulation instability when also using the PD controller. Suggesting implicfast.  -->
   <!-- TODO: How fine of a time step can I get? -->
-  <option timestep="0.001" integrator = "implicitfast"/>
+  <!-- <option timestep="0.001" integrator = "implicitfast"/> -->
 
   <!-- Specify the light settings -->
   <visual>
@@ -32,10 +32,10 @@
     <!-- Hip Pitch Settings -->
     <default class="hip_pitch">
       <default class="hip_pitch_pos">
-        <position kp="680" ctrllimited="true" ctrlrange="-35 35"/>
+        <position kp="480" ctrllimited="true" ctrlrange="-35 35"/>
       </default>
       <default class="hip_pitch_vel">
-        <velocity kv="70" ctrllimited="true" ctrlrange="-35 35"/>
+        <velocity kv="40" ctrllimited="true" ctrlrange="-35 35"/>
       </default>
       <motor ctrllimited="true" ctrlrange="-35 35"/>
       <!-- TODO: The right joint in the URDF had the wrong joint limit, it had a max of 1.5, which is right? -->
@@ -45,7 +45,7 @@
     <!-- Hip Yaw Settings  -->
     <default class="hip_yaw">
       <default class="hip_yaw_pos">
-        <position kp="580" ctrllimited="true" ctrlrange="-35 35"/>
+        <position kp="480" ctrllimited="true" ctrlrange="-35 35"/>
       </default>
       <default class="hip_yaw_vel">
         <velocity kv="30" ctrllimited="true" ctrlrange="-35 35"/>
@@ -57,10 +57,10 @@
     <!-- Hip Roll Settings  -->
     <default class="hip_roll">
       <default class="hip_roll_pos">
-        <position kp="680" ctrllimited="true" ctrlrange="-70  70"/>
+        <position kp="480" ctrllimited="true" ctrlrange="-70  70"/>
       </default>
       <default class="hip_roll_vel">
-        <velocity kv="70" ctrllimited="true" ctrlrange="-70  70"/>
+        <velocity kv="40" ctrllimited="true" ctrlrange="-70  70"/>
       </default>
       <motor ctrllimited="true" ctrlrange="-70  70"/>
       <joint axis="1 0 0" pos="0 0 0" range="-1.0 1.0" damping="0.1" frictionloss="0.3"/>
@@ -71,10 +71,10 @@
       <default class="knee_pitch_pos">
       <!-- TODO: Bring this gain back down -->
       <!-- 120, 35 -->
-        <position kp="370" ctrllimited="true" ctrlrange="-70  70"/> 
+        <position kp="470" ctrllimited="true" ctrlrange="-70  70"/> 
       </default>
       <default class="knee_pitch_vel">
-        <velocity kv="40" ctrllimited="true" ctrlrange="-70  70"/>
+        <velocity kv="70" ctrllimited="true" ctrlrange="-70  70"/>
       </default>
       <motor ctrllimited="true" ctrlrange="-70  70"/>
       <joint axis="0 1 0" pos="0 0 0" range="0 2.0" damping="0.1" frictionloss="0.3"/>
@@ -83,12 +83,12 @@
     <!-- Ankle Pitch Settings  -->
     <default class="ankle_pitch">
       <default class="ankle_pitch_pos">
-        <position kp="75" kv="2.0" ctrllimited="true" ctrlrange="-35 35" forcelimited="true" forcerange="-35 35"/>
+        <position kp="50" kv="2.0" ctrllimited="true" ctrlrange="-35 35" forcelimited="true" forcerange="-35 35"/>
       </default>
       <default class="ankle_pitch_vel">
       <!-- NOTE: The kv here causes weird issues with the contact dynamcis -->
       <!-- TODO: Be careful with this! -->
-        <velocity kv="3.0" forcelimited="true" forcerange="0 5"/>
+        <velocity kv="1.0" forcelimited="true" forcerange="0 5"/>
       </default>
       <motor ctrllimited="true" ctrlrange="-35 35"/>
       <joint axis="0 1 0" pos="0 0 0" range="-1.0 1.0" damping="0.1" frictionloss="0.3"/>
