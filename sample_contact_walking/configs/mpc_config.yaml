@@ -1,10 +1,10 @@
 general_settings:
   nodes: 32
   verbose: True
-  node_dt_type: Even # Even, SmallFirst, Adaptive
+  node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
   node_dt: 0.025
   first_node_dt: 0.01
-  compile_derivatives: True
+  compile_derivatives: False #True
   base_frame: "torso"
   scale_cost: False
   max_initial_solves: 20
@@ -12,13 +12,13 @@ general_settings:
   nodes_full_dynamics: 2   # Also determines how many nodes have torque constraints
   integrate_velocity_targets: False
   delay_prediction_dt: 0 #-1e-2 #5e-3 # TODO: Tune or disable
-  terminal_cost_weight: 5 #50 Having a smaller terminal weight seems to help for now
+  terminal_cost_weight: 1 #50 Having a smaller terminal weight seems to help for now
 solver_settings:
   rel_tol: 1e-6
   abs_tol: 1e-6
   verbose: False
   polish: False
-  rho: 0.1
+  rho: 0.05
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6 # 1e-10
   adaptive_rho: False
@@ -26,27 +26,31 @@ solver_settings:
   scaling: 10
 constraints:
   friction_coef: 0.5  # TODO: Tune this
-  max_grf: 400
+  max_grf: 800
 costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    weight:  [ 0.0, 0.0, 1,  # Having x and y weights appears to be bad
-              .1, .1, .1,
-              0.01, 1, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001,
-              0.01, 1, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001 ]
+    # weight:  [ 0.0, 0.0, 10.0,  # Having x and y weights appears to be bad
+    #           3, 3, 3,
+    #           0., 0., 0.0, 0.0, 0., 0.0, 0.0, 0.0, 0.0,
+    #           0., 0., 0.0, 0.0, 0., 0.0, 0.0, 0.0, 0.0]
+    weight:  [ 0.0, 0.0, 1.0,  # Having x and y weights appears to be bad
+              1, 1, 1,
+              1, 1, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001,
+              1, 1, 0.001, 0.001, 0.1, 0.001, 0.001, 0.001, 0.001 ]
   - type: VelocityTracking
     name: "VelocityTracking"
     weight: [2, 2, 5,
             0.5, 0.5, 0.5,
-            1, 1, 0.05, .002, .05, 4, 4, 4, 1,
-            1, 1, 0.05, .002, .05, 4, 4, 4, 1]
+            1, 0.1, 0.0, .0, .05, 4, 4, 4, 1,
+            1, 0.1, 0.0, .0, .05, 4, 4, 4, 1]
   - type: TorqueRegularization
     name: "TorqueReg"
     weight: [.000, .000, .000, .000, .001, .5, .5, .5, .1,
             .000, .000, .000, .000, .001, .5, .5, .5, .1]
   - type: ForceRegularization
     name: "ForceReg"
-    weight: [0.0001, 0.0001, 0.001]
+    weight: [0.000001, 0.000001, 0.0001]
   # - type: ForwardKinematics
   #   name: "LeftToe"
   #   weight: [100, 100, 0.0]   # Having a highter weight (like 10000) does seem to help keep the feet in place

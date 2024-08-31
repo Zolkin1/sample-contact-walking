@@ -131,7 +131,7 @@ namespace achilles
 
         // Create default trajectory
         traj_out_.UpdateSizes(model_->GetConfigDim(), model_->GetVelDim(), model_->GetNumInputs(), mpc_->GetContactFrames(), mpc_->GetNumNodes());
-        traj_out_.SetDefault(q_target_);
+        traj_out_.SetDefault(q_ic_);
         traj_out_.SetDtVector(mpc_->GetDtVector());
 
 
@@ -319,26 +319,6 @@ namespace achilles
                         traj_start_time_ = time;
                     }
 
-                    // TODO: Remove
-                    // TODO: Fix!
-                    double temp_time = 0;
-                    for (int node = 0; node < traj_mpc_.GetNumNodes(); node++) {
-                        for (const auto& frame : traj_mpc_.GetContactFrames()) {
-                            if (!contact_schedule_.InContact(frame, temp_time)) {
-                                vector3_t force_out;
-                                traj_mpc_.GetForceInterp(temp_time, frame, force_out);
-                                if (force_out.norm() > 1e-4) {
-                                    mpc_->PrintContactSchedule();
-                                    RCLCPP_ERROR_STREAM(this->get_logger(), "Node: " << node << ", time: " << temp_time);
-                                    RCLCPP_ERROR_STREAM(this->get_logger(), "Force: " << force_out.transpose());
-                                    RCLCPP_ERROR_STREAM(this->get_logger(), "Force norm: " << force_out.norm());
-                                    throw std::runtime_error("Force norm too large!");
-                                } 
-                            }
-                        }
-                        temp_time += traj_mpc_.GetDtVec()[node];
-                    }
-
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Config IC Error: " << (traj_out_.GetConfiguration(0) - q).norm());
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Vel IC Error: " << (traj_out_.GetVelocity(0) - v).norm());
 
@@ -365,8 +345,7 @@ namespace achilles
             // Compute difference
             const long time_left = mpc_loop_rate_ns - (stop_time - start_time).nanoseconds();
             if (time_left > 0) {
-                // TODO: Only sleep if I have at least 3ms left or else busy weight
-                std::this_thread::sleep_for(std::chrono::nanoseconds(time_left));
+                while ((-(this->now() - start_time).nanoseconds() + mpc_loop_rate_ns) > 0) {}
             } else {
                 RCLCPP_WARN_STREAM(this->get_logger(), "MPC computation took longer than loop rate allowed for. " << std::abs(time_left)*1e-6 << "ms over time.");
             }
