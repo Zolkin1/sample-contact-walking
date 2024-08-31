@@ -20,11 +20,11 @@ onboard:
         mpc_loop_period_sec: 0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
         max_mpc_solves: -340 
 # ---------- Contact schedule ---------- #
-        swing_time: 0.3 
+        swing_time: 0.4 
         first_swing_time: 5.0 # TODO: When this is set to 2, I don't get a step -- why??
         double_stance_time: 0.0
         right_foot_first: True
-        target_config: [0., 0, 0.95,
+        target_config: [0., 0, 0.96,
                     0., 0., 0., 1,
                     0., 0., -0.26,
                     0.65, -0.43,
