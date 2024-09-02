@@ -14,11 +14,8 @@
 //  - Add ROS diagonstic messages: https://docs.foxglove.dev/docs/visualization/panels/diagnostics#diagnosticarray
 //  - Try plotting just the first MPC solve and see what the trajectory is. Why does it swing its leg really far out
 //  - Add whole stack pausing
-//  - The line search should accept most steps with alpha = 1, why does it make so many of them small?
-//  - Make sleeps only occur if > 3ms or else busy weight
 //  - Sample planner causes an error eventually
-//  - I think the swing height constraint seems very sensitive now, need to add in the controller in the optimization
-//  - Forces seem to still be positive when the foot is in the air
+//  - Implement velocity integration for config and vel targets
 
 namespace achilles
 {
@@ -111,7 +108,6 @@ namespace achilles
         }
 
         // Setup q and v targets
-        q_target_.resize(model_->GetConfigDim());
         this->declare_parameter<std::vector<double>>("target_config");
         this->declare_parameter<std::vector<double>>("target_vel");
         std::vector<double> q_targ_temp, v_targ_temp;
@@ -119,14 +115,15 @@ namespace achilles
         this->get_parameter("target_config", q_targ_temp);
         this->get_parameter("target_vel", v_targ_temp);
 
-        q_target_ = torc::utils::StdToEigenVector(q_targ_temp);
-        v_target_ = torc::utils::StdToEigenVector(v_targ_temp);
+        vectorx_t q_target_eig = torc::utils::StdToEigenVector(q_targ_temp);
+        vectorx_t v_target_eig = torc::utils::StdToEigenVector(v_targ_temp);
+        q_target_ = torc::mpc::SimpleTrajectory(model_->GetConfigDim(), mpc_->GetNumNodes());
+        v_target_ = torc::mpc::SimpleTrajectory(model_->GetVelDim(), mpc_->GetNumNodes());
+        q_target_->SetAllData(q_target_eig);
+        v_target_->SetAllData(v_target_eig);
 
-        std::cout << "q target: " << q_target_.transpose() << std::endl;
-        std::cout << "v target: " << v_target_.transpose() << std::endl;
-
-        mpc_->SetConstantConfigTarget(q_target_);
-        mpc_->SetConstantVelTarget(v_target_);
+        mpc_->SetConfigTarget(q_target_.value());
+        mpc_->SetVelTarget(v_target_.value());
 
         // Set initial conditions
         this->declare_parameter<std::vector<double>>("mpc_ic_config");
@@ -323,6 +320,10 @@ namespace achilles
                     this->get_parameter("apex_time").as_double());
 
                 AddPeriodicContacts();
+
+                UpdateMpcTargets(q);
+                mpc_->SetConfigTarget(q_target_.value());
+                mpc_->SetVelTarget(v_target_.value());
 
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
                     double time = this->get_clock()->now().seconds();
@@ -569,6 +570,29 @@ namespace achilles
     AchillesController::ControllerState AchillesController::GetState() {
         std::lock_guard<std::mutex> lock(ctrl_state_mut_);
         return ctrl_state_;
+    }
+
+    void AchillesController::UpdateMpcTargets(const vectorx_t& q) {
+        // For now, only update the desired x and y positions based on the x, y target vel
+
+        const std::vector<double>& dt_vec = mpc_->GetDtVector();
+
+        q_target_.value()[0](0) = q(0);
+        q_target_.value()[0](1) = q(1);
+
+        for (int i = 1; i < q_target_->GetNumNodes(); i++) {
+            // TODO: Rotate the velocity into the world frame
+            const quat_t quat(q_target_.value()[i-1].segment<QUAT_VARS>(POS_VARS));
+            const matrix3_t R = quat.toRotationMatrix();
+            const vector3_t v = R*v_target_.value()[i].head<POS_VARS>();
+
+            q_target_.value()[i](0) = q_target_.value()[i - 1](0) + dt_vec[i-1]*v(0);
+            q_target_.value()[i](1) = q_target_.value()[i - 1](1) + dt_vec[i-1]*v(1);
+        }
+        
+
+        // In the future, we will want to be able to update the z height, and orientation
+        // Also in the future we will get inputs from the joystick
     }
 
     void AchillesController::PublishTrajViz(const torc::mpc::Trajectory& traj, const std::vector<std::string>& viz_frames) {

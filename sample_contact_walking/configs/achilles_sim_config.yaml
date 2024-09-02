@@ -21,7 +21,7 @@ onboard:
         max_mpc_solves: -340 
 # ---------- Contact schedule ---------- #
         swing_time: 1.
-        first_swing_time: 2.0
+        first_swing_time: 0.10
         double_stance_time: 0.0
         right_foot_first: True
         right_frames: ["foot_front_right", "foot_rear_right"]
@@ -34,7 +34,7 @@ onboard:
                     0., 0., -0.26,
                     0.65, -0.43,
                     0., 0., 0., 0.]
-        target_vel: [0.0, 0., 0.,
+        target_vel: [0.5, 0.0, 0.,
                     0., 0., 0.,
                     0., 0., 0.,
                     0., 0.,

@@ -9,6 +9,8 @@
 namespace achilles {
     using torc::mpc::vectorx_t;
     using torc::mpc::vector3_t;
+    using torc::mpc::quat_t;
+    using torc::mpc::matrix3_t;
 
     class AchillesController : public obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState> {
         public:
@@ -22,6 +24,10 @@ namespace achilles {
 
             // MPC Thread function
             void MpcThread();
+
+            // MPC Targets
+            // TODO: Update when I have joystick access
+            void UpdateMpcTargets(const vectorx_t& q);
 
             // Sample planning thread function
             void SampleThread();
@@ -79,8 +85,10 @@ namespace achilles {
             vectorx_t v_;
 
             // Target vectors
-            vectorx_t q_target_;
-            vectorx_t v_target_;
+            std::optional<torc::mpc::SimpleTrajectory> q_target_;
+            std::optional<torc::mpc::SimpleTrajectory> v_target_;
+            // vectorx_t q_target_;
+            // vectorx_t v_target_;
 
             vectorx_t q_ic_;
             vectorx_t v_ic_;
