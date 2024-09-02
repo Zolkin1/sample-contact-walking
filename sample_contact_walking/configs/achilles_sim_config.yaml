@@ -17,13 +17,15 @@ onboard:
         default_stand_foot_height: 0.015
         apex_time: 0.5
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
+        mpc_loop_period_sec: 0.009 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
         max_mpc_solves: -340 
 # ---------- Contact schedule ---------- #
-        swing_time: 0.4 
-        first_swing_time: 5.0 # TODO: When this is set to 2, I don't get a step -- why??
+        swing_time: 1.
+        first_swing_time: 2.0
         double_stance_time: 0.0
         right_foot_first: True
+        right_frames: ["foot_front_right", "foot_rear_right"]
+        left_frames: ["foot_front_left", "foot_rear_left"]
         target_config: [0., 0, 0.96,
                     0., 0., 0., 1,
                     0., 0., -0.26,
@@ -32,7 +34,7 @@ onboard:
                     0., 0., -0.26,
                     0.65, -0.43,
                     0., 0., 0., 0.]
-        target_vel: [0., 0., 0.,
+        target_vel: [0.0, 0., 0.,
                     0., 0., 0.,
                     0., 0., 0.,
                     0., 0.,

@@ -62,25 +62,37 @@ namespace achilles
         this->declare_parameter<double>("first_swing_time", 1);
         this->declare_parameter<double>("double_stance_time", 0.0);
         this->declare_parameter<bool>("right_foot_first", true);
+        this->declare_parameter<std::vector<std::string>>("right_frames");
+        this->declare_parameter<std::vector<std::string>>("left_frames");
 
         this->get_parameter("swing_time", swing_time_);
         this->get_parameter("first_swing_time", first_swing_time_);
         this->get_parameter("double_stance_time", double_stance_time_);
         this->get_parameter("right_foot_first", right_foot_first_);
+        this->get_parameter("right_frames", right_frames_);
+        this->get_parameter("left_frames", left_frames_);
+
+        if (right_frames_.empty()) {
+            throw std::runtime_error("No right foot frames provided!");
+        }
+
+        if (left_frames_.empty()) {
+            throw std::runtime_error("No left foot frames provided!");
+        }
 
 
         contact_schedule_.SetFrames(mpc_->GetContactFrames());
 
         if (right_foot_first_) {
-            contact_schedule_.InsertContact("foot_front_left", 0, first_swing_time_ + swing_time_);
-            contact_schedule_.InsertContact("foot_rear_left", 0, first_swing_time_ + swing_time_);
-            contact_schedule_.InsertContact("foot_front_right", 0, first_swing_time_);
-            contact_schedule_.InsertContact("foot_rear_right", 0, first_swing_time_);
+            contact_schedule_.InsertSwingByDuration(right_frames_[0], first_swing_time_, swing_time_);
+            contact_schedule_.InsertSwingByDuration(right_frames_[1], first_swing_time_, swing_time_);
+            next_right_insertion_time_ = first_swing_time_ + 2*swing_time_;
+            next_left_insertion_time_ = first_swing_time_ + swing_time_;
         } else {
-            contact_schedule_.InsertContact("foot_front_left", 0, first_swing_time_);
-            contact_schedule_.InsertContact("foot_rear_left", 0, first_swing_time_);
-            contact_schedule_.InsertContact("foot_front_right", 0, first_swing_time_ + swing_time_);
-            contact_schedule_.InsertContact("foot_rear_right", 0, first_swing_time_ + swing_time_);
+            contact_schedule_.InsertSwingByDuration(left_frames_[0], first_swing_time_, swing_time_);
+            contact_schedule_.InsertSwingByDuration(left_frames_[1], first_swing_time_, swing_time_);
+            next_left_insertion_time_ = first_swing_time_ + 2*swing_time_;
+            next_right_insertion_time_ = first_swing_time_ + swing_time_;
         }
 
         AddPeriodicContacts();
@@ -94,6 +106,9 @@ namespace achilles
             this->get_parameter("apex_time").as_double());
 
         mpc_->PrintContactSchedule();
+        for (const auto& frame : mpc_->GetContactFrames()) {
+            mpc_->PrintSwingTraj(frame);
+        }
 
         // Setup q and v targets
         q_target_.resize(model_->GetConfigDim());
@@ -297,7 +312,10 @@ namespace achilles
 
                 // Shift the contact schedule
                 auto current_time = this->now();
-                contact_schedule_.ShiftContacts(-(current_time - prev_time).nanoseconds()/1e9);    // TODO: Do I need a mutex on this later?
+                double time_shift_sec = (current_time - prev_time).nanoseconds()/1e9;
+                contact_schedule_.ShiftSwings(-time_shift_sec);    // TODO: Do I need a mutex on this later?
+                next_left_insertion_time_ -= time_shift_sec;
+                next_right_insertion_time_ -= time_shift_sec;
                 prev_time = this->now();
                 mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
                     this->get_parameter("default_swing_height").as_double(),
@@ -712,18 +730,33 @@ namespace achilles
     }
 
     void AchillesController::AddPeriodicContacts() {
+
+        while (next_right_insertion_time_ < 1) {
+            for (const auto& frame : right_frames_) {
+                contact_schedule_.InsertSwingByDuration(frame, next_right_insertion_time_,  swing_time_);
+            }
+
+            next_right_insertion_time_ += 2*swing_time_;
+        }
+
+        while (next_left_insertion_time_ < 1) {
+            for (const auto& frame : left_frames_) {
+                contact_schedule_.InsertSwingByDuration(frame, next_left_insertion_time_,  swing_time_);
+            }
+
+            next_left_insertion_time_ += 2*swing_time_;
+        }
+
         // For each contact determine last contact
         // If the last contact is within 1 second, then add another contact swing_time_ seconds later that lasts for swing_time_ + double_stance_time_
-        for (const auto& frame : mpc_->GetContactFrames()) {
-            const double last_contact_time = contact_schedule_.GetLastContactTime(frame);
-            // RCLCPP_INFO_STREAM(this->get_logger(), "Last contact time: " << last_contact_time);
-            if (last_contact_time < 1) {
-                if (!contact_schedule_.InContact(frame, last_contact_time + swing_time_) && !contact_schedule_.InContact(frame, last_contact_time + 2*swing_time_ + double_stance_time_)) {
-                    // RCLCPP_INFO_STREAM(this->get_logger(), "Adding a contact for " << frame << " at time: " << last_contact_time + swing_time_ << " until time: " << last_contact_time + 2*swing_time_ + double_stance_time_);
-                    contact_schedule_.InsertContact(frame, last_contact_time + swing_time_,  last_contact_time + 2*swing_time_ + double_stance_time_);
-                }
-            }
-        } 
+        // for (const auto& frame : mpc_->GetContactFrames()) {
+        //     const double last_swing_time = contact_schedule_.GetLastSwingTime(frame);
+        //     // RCLCPP_INFO_STREAM(this->get_logger(), "Last contact time: " << last_contact_time);
+        //     if (last_swing_time < 1) {
+        //         // RCLCPP_INFO_STREAM(this->get_logger(), "Adding a contact for " << frame << " at time: " << last_contact_time + swing_time_ << " until time: " << last_contact_time + 2*swing_time_ + double_stance_time_);
+        //         contact_schedule_.InsertSwingByDuration(frame, last_swing_time + swing_time_ + double_stance_time_,  swing_time_);
+        //     }
+        // } 
     }
 
 } // namespace achilles

@@ -10,7 +10,7 @@ general_settings:
   max_initial_solves: 20
   initial_constraint_tol: 5e-4
   nodes_full_dynamics: 2   # Also determines how many nodes have torque constraints
-  integrate_velocity_targets: False
+  integrate_velocity_targets: False #False
   delay_prediction_dt: 0 #-1e-2 #5e-3 # TODO: Tune or disable
   terminal_cost_weight: 1 #50 Having a smaller terminal weight seems to help for now
 solver_settings:
@@ -34,10 +34,10 @@ costs:
     #           3, 3, 3,
     #           0., 0., 0.0, 0.0, 0., 0.0, 0.0, 0.0, 0.0,
     #           0., 0., 0.0, 0.0, 0., 0.0, 0.0, 0.0, 0.0]
-    weight:  [ 0.0, 0.0, 2.0,  # Having x and y weights appears to be bad
-              1, 1, 1,
-              1, 1, 0.00, 0.00, 0.1, 0.001, 0.001, 0.001, 0.001,
-              1, 1, 0.00, 0.00, 0.1, 0.001, 0.001, 0.001, 0.001 ]
+    weight:  [ 0.0, 0.0, 5.0,  # Having x and y weights appears to be bad
+              2.5, 2.5, 2.5,
+              1, 2, 0.00, 0.00, 0.1, 0.001, 0.001, 0.001, 0.001,
+              1, 2, 0.00, 0.00, 0.1, 0.001, 0.001, 0.001, 0.001 ]
   - type: VelocityTracking
     name: "VelocityTracking"
     weight: [2, 2, 5,
@@ -50,7 +50,7 @@ costs:
             .000, .000, .000, .000, .001, .5, .5, .5, .1]
   - type: ForceRegularization
     name: "ForceReg"
-    weight: [0.000001, 0.000001, 0.0001]
+    weight: [0.000001, 0.000001, 0.01]
   # - type: ForwardKinematics
   #   name: "LeftToe"
   #   weight: [100, 100, 0.0]   # Having a highter weight (like 10000) does seem to help keep the feet in place

@@ -96,6 +96,10 @@ namespace achilles {
             double first_swing_time_;
             double double_stance_time_;
             bool right_foot_first_;
+            std::vector<std::string> right_frames_;
+            std::vector<std::string> left_frames_;
+            double next_right_insertion_time_;
+            double next_left_insertion_time_;
 
             torc::models::RobotContactInfo contact_state_;
             std::shared_ptr<torc::mpc::FullOrderMpc> mpc_;
