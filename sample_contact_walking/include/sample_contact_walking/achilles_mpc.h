@@ -89,6 +89,7 @@ namespace achilles {
             std::optional<torc::mpc::SimpleTrajectory> v_target_;
             // vectorx_t q_target_;
             // vectorx_t v_target_;
+            bool fixed_target_;
 
             vectorx_t q_ic_;
             vectorx_t v_ic_;

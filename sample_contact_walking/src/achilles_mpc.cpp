@@ -140,7 +140,9 @@ namespace achilles
         std::cout << "q ic: " << q_ic_.transpose() << std::endl;
         std::cout << "v ic: " << v_ic_.transpose() << std::endl;
 
-        // Setup swing trajectories
+
+        this->declare_parameter<bool>("fixed_target", true);
+        this->get_parameter("fixed_target", fixed_target_);
 
         // Create default trajectory
         traj_out_.UpdateSizes(model_->GetConfigDim(), model_->GetVelDim(), model_->GetNumInputs(), mpc_->GetContactFrames(), mpc_->GetNumNodes());
@@ -339,10 +341,12 @@ namespace achilles
 
                 AddPeriodicContacts();
 
-                UpdateMpcTargets(q);
-                mpc_->SetConfigTarget(q_target_.value());
-                mpc_->SetVelTarget(v_target_.value());
-
+                if (!fixed_target_) {
+                    UpdateMpcTargets(q);
+                    mpc_->SetConfigTarget(q_target_.value());
+                    mpc_->SetVelTarget(v_target_.value());
+                }
+                
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
                     double time = this->get_clock()->now().seconds();
                     double delay_start_time = this->now().seconds() - traj_start_time_;
