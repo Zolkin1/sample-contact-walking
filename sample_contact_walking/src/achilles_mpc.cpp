@@ -1,4 +1,5 @@
 #include <vector>
+#include <pthread.h>
 
 #include "obelisk_node.h"
 #include "obelisk_ros_utils.h"
@@ -205,6 +206,23 @@ namespace achilles
 
         // Spin up MPC thread
         mpc_thread_ = std::thread(&AchillesController::MpcThread, this);
+        // sched_param sch;
+        // int policy;
+        // pthread_getschedparam(mpc_thread_.native_handle(), &policy, &sch);
+        // RCLCPP_WARN_STREAM(this->get_logger(), "Sched prio: " << sch.sched_priority);
+        // sch.sched_priority = 20;
+        // if (int error = pthread_setschedparam(mpc_thread_.native_handle(), SCHED_FIFO, &sch)) {
+        //     RCLCPP_ERROR_STREAM(this->get_logger(), "Failed to set MPC thread prio!");
+        //     if (error == ESRCH) {
+        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Error: ESRCH");
+        //     } else if (error == EINVAL) {
+        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Error: EINVAL");
+        //     } else if (error == EPERM) {
+        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Error: EPERM");
+        //     } else {
+        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Error: not found!");
+        //     }
+        // }
 
         // Sample planning
         this->declare_parameter("simulation_samples", 50);

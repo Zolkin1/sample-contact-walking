@@ -17,7 +17,7 @@ solver_settings:
   abs_tol: 1e-6
   verbose: False
   polish: False
-  rho: 0.05
+  rho: 0.05 #notably better than 0.1
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6 # 1e-10
   adaptive_rho: False
@@ -51,16 +51,16 @@ costs:
     #           3, 3, 3,
     #           0., 0., 0.0, 0.0, 0., 0.0, 0.0, 0.0, 0.0,
     #           0., 0., 0.0, 0.0, 0., 0.0, 0.0, 0.0, 0.0]
-    weight:  [ 0.0, 0.0, 5.0,  # Having x and y weights appears to be bad
+    weight:  [ 1.0, 1.0, 5.0,  # Having x and y weights appears to be bad
               1.5, 1.5, 1.5,
-              1, 2, 0.00, 0.00, 0.1, 0.1, 0.1, 0.1, 0.1,
-              1, 2, 0.00, 0.00, 0.1, 0.1, 0.1, 0.1, 0.1 ]
+              1, 2, 0.00, 0.00, 0.1, 1, 1, 1, 1,
+              1, 2, 0.00, 0.00, 0.1, 1, 1, 1, 1 ]
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [2, 2, 5,
+    weight: [1, 1, 5,
             0.5, 0.5, 0.5,
-            1, 0.1, 0.0, .0, .05, 4, 4, 4, 1,
-            1, 0.1, 0.0, .0, .05, 4, 4, 4, 1]
+            1, 0.1, 0.0, .0, .05, 1, 1, 1, 1,
+            1, 0.1, 0.0, .0, .05, 1, 1, 1, 1]
   - type: TorqueRegularization
     name: "TorqueReg"
     weight: [.000, .000, .000, .000, .001, .5, .5, .5, .1,
