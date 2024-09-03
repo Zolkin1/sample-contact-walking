@@ -26,6 +26,24 @@ solver_settings:
 constraints:
   friction_coef: 0.5  # TODO: Tune this
   max_grf: 800
+  collisions:
+    - frame1: "foot_front_left"
+      frame2: "foot_front_right"
+      radius1: 0.06
+      radius2: 0.06
+    - frame1: "foot_rear_left"
+      frame2: "foot_rear_right"
+      radius1: 0.06
+      radius2: 0.06
+    - frame1: "foot_front_left"
+      frame2: "foot_rear_right"
+      radius1: 0.06
+      radius2: 0.06
+    - frame1: "foot_rear_left"
+      frame2: "foot_front_right"
+      radius1: 0.06
+      radius2: 0.06
+  # TODO: Add hand and knee collisions
 costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
@@ -34,9 +52,9 @@ costs:
     #           0., 0., 0.0, 0.0, 0., 0.0, 0.0, 0.0, 0.0,
     #           0., 0., 0.0, 0.0, 0., 0.0, 0.0, 0.0, 0.0]
     weight:  [ 0.0, 0.0, 5.0,  # Having x and y weights appears to be bad
-              2.5, 2.5, 2.5,
-              1, 2, 0.00, 0.00, 0.1, 0.001, 0.001, 0.001, 0.001,
-              1, 2, 0.00, 0.00, 0.1, 0.001, 0.001, 0.001, 0.001 ]
+              1.5, 1.5, 1.5,
+              1, 2, 0.00, 0.00, 0.1, 0.1, 0.1, 0.1, 0.1,
+              1, 2, 0.00, 0.00, 0.1, 0.1, 0.1, 0.1, 0.1 ]
   - type: VelocityTracking
     name: "VelocityTracking"
     weight: [2, 2, 5,
@@ -49,7 +67,7 @@ costs:
             .000, .000, .000, .000, .001, .5, .5, .5, .1]
   - type: ForceRegularization
     name: "ForceReg"
-    weight: [0.000001, 0.000001, 0.01]
+    weight: [0.0001, 0.0001, 0.01]
   # - type: ForwardKinematics
   #   name: "LeftToe"
   #   weight: [100, 100, 0.0]   # Having a highter weight (like 10000) does seem to help keep the feet in place
