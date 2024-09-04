@@ -15,13 +15,13 @@ onboard:
 # ---------- Swing trajectory ---------- #
         default_swing_height: 0.08
         default_stand_foot_height: 0.015
-        apex_time: 0.5
+        apex_time: 0.5 # 0.7
 # ---------- MPC Loop ---------- #
         mpc_loop_period_sec: 0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
         max_mpc_solves: -540 
 # ---------- Contact schedule ---------- #
         swing_time: 0.6 #1.
-        first_swing_time: 0.10
+        first_swing_time: 100.
         double_stance_time: 0.0
         right_foot_first: True
         right_frames: ["foot_front_right", "foot_rear_right"]
@@ -34,7 +34,7 @@ onboard:
                     0., 0., -0.26,
                     0.65, -0.43,
                     0., 0., 0., 0.]
-        target_vel: [0.5, 0., 0.,
+        target_vel: [0., 0., 0.,
                     0., 0., 0.,
                     0., 0., 0.,
                     0., 0.,
@@ -58,7 +58,7 @@ onboard:
                     0., 0., 0.,
                     0., 0.,
                     0., 0., 0., 0.]
-        fixed_target: False #True
+        fixed_target: True #True
 # ---------- Sample Planner ---------- #
         simulation_samples: 100
         xml_path:  /home/zolkin/sample-contact-walking/achilles_model_custom/mujoco/sample_sim.xml
