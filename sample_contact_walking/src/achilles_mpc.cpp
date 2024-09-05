@@ -16,7 +16,10 @@
 //  - Try plotting just the first MPC solve and see what the trajectory is. Why does it swing its leg really far out
 //  - Add whole stack pausing
 //  - Sample planner causes an error eventually
-//  - Implement velocity integration for config and vel targets
+//  - Try tracking a single MPC traj with the floating base
+//  - Try getting it to stand with just mpc
+//  - Try smoothing the velocities with the cost funciton
+//  - Try a WBC to get it to stand
 
 namespace achilles
 {
@@ -173,7 +176,6 @@ namespace achilles
         traj_mpc_ = traj_out_;
         RCLCPP_INFO_STREAM(this->get_logger(), "Warm start trajectory created...");
 
-        // TODO: Verify the initial conditions
         mpc_->ComputeNLP(q_ic_, v_ic_, traj_mpc_);
         mpc_->PrintStatistics();
         traj_out_ = traj_mpc_;
@@ -270,10 +272,6 @@ namespace achilles
             v_(i + msg.v_base.size()) = msg.v_joints.at(i);
         }
 
-        // TODO: Update contact in MPC with SetContactSchedule
-        // TODO: Update contact states properly
-        contact_state_.contacts.at("left_ankle_pitch").state = true;
-        contact_state_.contacts.at("right_ankle_pitch").state = true;
 
         if (q_.size() != model_->GetConfigDim()) {
             RCLCPP_ERROR_STREAM(this->get_logger(), "received q does not match the size of the model");
@@ -322,6 +320,9 @@ namespace achilles
                     v = v_;
                 }
 
+                // TODO: remove
+                // v.setZero();
+
                 // If in NLP mode, then pause the timer and compute the NLP
                 // Then restart the timer after the NLP is solved.
                 // Change state to normal MPC
@@ -350,7 +351,7 @@ namespace achilles
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
                     double time = this->get_clock()->now().seconds();
                     double delay_start_time = this->now().seconds() - traj_start_time_;
-                    mpc_->Compute(q, v, traj_mpc_, delay_start_time);                    
+                    mpc_->Compute(q, v, traj_mpc_, delay_start_time);                  
                     {
                         // Get the traj mutex to protect it
                         std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -359,6 +360,10 @@ namespace achilles
                         // Assign time time too
                         traj_start_time_ = time;
                     }
+
+                    // std::cout << "Left ankle pitch ic error: " << traj_mpc_.GetConfiguration(0)(11) - q(11) << std::endl;
+                    // std::cout << "Norm IC config error: " << (traj_mpc_.GetConfiguration(0) - q).norm() << std::endl;
+                    // std::cout << "Norm IC vel error: " << (traj_mpc_.GetVelocity(0) - v).norm() << std::endl;
 
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Config IC Error: " << (traj_out_.GetConfiguration(0) - q).norm());
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Vel IC Error: " << (traj_out_.GetVelocity(0) - v).norm());
@@ -509,6 +514,8 @@ namespace achilles
                     double time_into_traj = time - traj_start_time_;
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
 
+                    // TODO: Put back
+                    // TODO: Put back
                     traj_out_.GetConfigInterp(time_into_traj, q);
                     traj_out_.GetVelocityInterp(time_into_traj, v);
                     traj_out_.GetTorqueInterp(time_into_traj, tau);
@@ -529,13 +536,11 @@ namespace achilles
                     // ---
                 }
             } else if (ctrl_state_ == SeekInitialCond) {
+                // RCLCPP_WARN_STREAM(this->get_logger(), "Seeking IC");
                 q = q_ic_;
                 v = v_ic_;
                 tau = vectorx_t::Zero(model_->GetNumInputs());
             }
-
-            // TODO: remove
-            // tau.setZero();
 
             // Make the message
             vectorx_t u_mujoco = ConvertControlToMujocoU(q.tail(model_->GetNumInputs()),
@@ -607,7 +612,6 @@ namespace achilles
         q_target_.value()[0](1) = q(1);
 
         for (int i = 1; i < q_target_->GetNumNodes(); i++) {
-            // TODO: Rotate the velocity into the world frame
             const quat_t quat(q_target_.value()[i-1].segment<QUAT_VARS>(POS_VARS));
             const matrix3_t R = quat.toRotationMatrix();
             const vector3_t v = R*v_target_.value()[i].head<POS_VARS>();
@@ -622,7 +626,6 @@ namespace achilles
     }
 
     void AchillesController::PublishTrajViz(const torc::mpc::Trajectory& traj, const std::vector<std::string>& viz_frames) {
-        // TODO: Visualize forces
         // Compute FK for each frame and add the point to a marker message
         visualization_msgs::msg::MarkerArray msg;
         msg.markers.resize(viz_frames.size());
@@ -698,7 +701,6 @@ namespace achilles
 
 
                 geometry_msgs::msg::Point end_point;
-                // TODO: Interpolate the forces
                 end_point.x = start_point.x + force_interp(0)*scale_forces_;
                 end_point.y = start_point.y + force_interp(1)*scale_forces_;
                 end_point.z = start_point.z + force_interp(2)*scale_forces_;

@@ -73,11 +73,11 @@
     <default class="hip_pitch">
       <default class="hip_pitch_pos">
         <!-- <position kp="480" ctrllimited="false"/> -->
-          <position kp="1200" ctrllimited="false"/>
+          <position kp="600" ctrllimited="false"/>
       </default>
       <default class="hip_pitch_vel">
         <!-- <velocity kv="40" ctrllimited="false"/> -->
-        <velocity kv="30" ctrllimited="false"/>
+        <velocity kv="20" ctrllimited="false"/>
       </default>
       <motor ctrllimited="false"/>
       <!-- TODO: The right joint in the URDF had the wrong joint limit, it had a max of 1.5, which is right? -->
@@ -88,7 +88,7 @@
     <default class="hip_yaw">
       <default class="hip_yaw_pos">
         <!-- <position kp="480" ctrllimited="false"/> -->
-        <position kp="800" ctrllimited="false"/>
+        <position kp="200" ctrllimited="false"/>
       </default>
       <default class="hip_yaw_vel">
         <!-- <velocity kv="30" ctrllimited="false"/> -->
@@ -102,7 +102,7 @@
     <default class="hip_roll">
       <default class="hip_roll_pos">
         <!-- <position kp="480" ctrllimited="false"/> -->
-        <position kp="1200" ctrllimited="false"/>
+        <position kp="800" ctrllimited="false"/>
       </default>
       <default class="hip_roll_vel">
         <!-- <velocity kv="40" ctrllimited="false"/> -->
@@ -116,14 +116,13 @@
     <default class="knee_pitch">
       <default class="knee_pitch_pos">
       <!-- TODO: Bring this gain back down -->
-      <!-- 370, 30
-           1200, 50 -->
+      <!-- 370, 30 -->
         <!-- <position kp="370" ctrllimited="false"/>  -->
-        <position kp="600" ctrllimited="false"/> 
+        <position kp="800" ctrllimited="false"/> 
       </default>
       <default class="knee_pitch_vel">
         <!-- <velocity kv="10" ctrllimited="false"/> -->
-        <velocity kv="20" ctrllimited="false"/>
+        <velocity kv="5" ctrllimited="false"/>
       </default>
       <motor ctrllimited="false"/>
       <joint axis="0 1 0" pos="0 0 0" range="0. 2.0" damping="0.1" frictionloss="0.3" actuatorfrcrange="-70.0 70.0" actuatorfrclimited="true"/>
@@ -133,15 +132,13 @@
     <default class="ankle_pitch">
       <default class="ankle_pitch_pos">
         <!-- <position kp="50" kv="2.0" ctrllimited="false"/> -->
-        <!-- 625, 95
-            8200, 15 -->
-        <position kp="8200" ctrllimited="false"/>
+        <position kp="600" kv="0.0" ctrllimited="false"/>
       </default>
       <default class="ankle_pitch_vel">
       <!-- NOTE: The kv here causes weird issues with the contact dynamcis -->
       <!-- TODO: Be careful with this! -->
         <!-- <velocity kv="1.0" forcelimited="true" forcerange="0 5"/> -->
-        <velocity kv="15"/>
+        <velocity kv="5.0"/>
       </default>
       <motor ctrllimited="false"/>
       <joint axis="0 1 0" pos="0 0 0" range="-1.0 1.0" damping="0.1" frictionloss="0.3" actuatorfrcrange="-35.0 35.0" actuatorfrclimited="true"/>
@@ -291,10 +288,10 @@
 
                       <body name="left_ankle_pitch" pos="0 0 -0.275">
                         <!-- Correct inertia from CAD Model -->
-                        <!-- <inertial mass="0.180" fullinertia="0.000031 0.000286 0.000272 0 0 0" pos="0.0272 0.0 -0.0156" /> -->
+                        <inertial mass="0.180" fullinertia="0.000031 0.000286 0.000272 0 0 0" pos="0.0272 0.0 -0.0156" />
 
                         <!-- Adjusted inertia to avoid sim artifacts -->
-                        <inertial mass="0.180" fullinertia="0.001 0.001 0.001 0 0 0" pos="0 0 0" />
+                        <!-- <inertial mass="0.180" fullinertia="0.001 0.001 0.001 0 0 0" pos="0 0 0" /> -->
 
                         <joint name="left_ankle_pitch_joint" class="ankle_pitch"/>
                         <geom name="left_foot" mesh="ankle_pitch" type="mesh" class="visual"/>
@@ -365,10 +362,10 @@
 
                       <body name="right_ankle_pitch" pos="0 0 -0.275">
                         <!-- Correct inertia from CAD Model -->
-                        <!-- <inertial mass="0.180" fullinertia="0.000031 0.000286 0.000272 0 0 0" pos="0.0272 0.0 -0.0156" /> -->
+                        <inertial mass="0.180" fullinertia="0.000031 0.000286 0.000272 0 0 0" pos="0.0272 0.0 -0.0156" />
 
                         <!-- Adjusted inertia to avoid sim artifacts -->
-                        <inertial mass="0.180" fullinertia="0.001 0.001 0.001 0 0 0" pos="0 0 0" />
+                        <!-- <inertial mass="0.180" fullinertia="0.001 0.001 0.001 0 0 0" pos="0 0 0" /> -->
 
                         <joint name="right_ankle_pitch_joint" class="ankle_pitch" />
                         <geom name="right_foot" mesh="ankle_pitch" type="mesh" class="visual"/>

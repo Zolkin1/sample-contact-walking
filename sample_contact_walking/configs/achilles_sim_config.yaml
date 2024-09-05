@@ -15,25 +15,35 @@ onboard:
 # ---------- Swing trajectory ---------- #
         default_swing_height: 0.08
         default_stand_foot_height: 0.015
-        apex_time: 0.5 # 0.7
+        apex_time: 0.7 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
-        max_mpc_solves: -540 
+        mpc_loop_period_sec: 0.01 #0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
+        max_mpc_solves: -220 
 # ---------- Contact schedule ---------- #
-        swing_time: 0.6 #1.
+        swing_time: 0.5 #1.
         first_swing_time: 100.
         double_stance_time: 0.0
         right_foot_first: True
         right_frames: ["foot_front_right", "foot_rear_right"]
         left_frames: ["foot_front_left", "foot_rear_left"]
-        target_config: [0., 0, 0.94,
-                    0., 0., 0., 1,
-                    0., 0., -0.26,
-                    0.65, -0.43,
-                    0., 0., 0., 0.,
-                    0., 0., -0.26,
-                    0.65, -0.43,
-                    0., 0., 0., 0.]
+        # target_config: [0., 0, 0.94,
+        #             0., 0., 0., 1,
+        #             0., 0., -0.26,
+        #             0.65, -0.43,
+        #             0., 0., 0., 0.,
+        #             0., 0., -0.26,
+        #             0.65, -0.43,
+        #             0., 0., 0., 0.]
+        target_config: [0., 0., 0.93,
+                    0., 0., 0., 1.,
+                    0.0000, 0.0209, -0.5515,
+                    1.0239, -0.4725,
+                    0.0000, 0.0000, 0.0000,
+                    0.0000, 
+                    0.0000, -0.0209, -0.3200,
+                    0.9751, -0.6552,
+                    0.0000, 0.0000, 0.0000,
+                    0.0000]
         target_vel: [0., 0., 0.,
                     0., 0., 0.,
                     0., 0., 0.,
@@ -42,14 +52,24 @@ onboard:
                     0., 0., 0.,
                     0., 0.,
                     0., 0., 0., 0.]
-        mpc_ic_config: [0, 0, 0.97,
-                    0, 0, 0, 1,
-                    0, 0, -0.26,
-                    0.65, -0.43,
-                    0, 0, 0, 0,
-                    0, 0, -0.26,
-                    0.65, -0.43,
-                    0, 0, 0, 0]
+        mpc_ic_config: [0., 0., 0.93,
+                    0., 0., 0., 1.,
+                    0.0000, 0.0209, -0.5515,
+                    1.0239, -0.4725,
+                    0.0000, 0.0000, 0.0000,
+                    0.0000, 
+                    0.0000, -0.0209, -0.3200,
+                    0.9751, -0.6552,
+                    0.0000, 0.0000, 0.0000,
+                    0.0000]
+        # mpc_ic_config: [0, 0, 0.97,
+        #             0, 0, 0, 1,
+        #             0, 0, -0.26,
+        #             0.65, -0.43,
+        #             0, 0, 0, 0,
+        #             0, 0, -0.26,
+        #             0.65, -0.43,
+        #             0, 0, 0, 0]
         mpc_ic_vel: [0., 0., 0.,
                     0., 0., 0.,
                     0., 0., 0.,
@@ -167,6 +187,8 @@ onboard:
     - is_simulated: True
       pkg: sample_contact_walking
       executable: simulation
+      params:
+        ic_keyframe: stand_A #testing
       # callback_groups:
       publishers:
         - ros_parameter: pub_true_sim_state_setting
