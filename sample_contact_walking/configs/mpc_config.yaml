@@ -53,8 +53,8 @@ costs:
     #           1, 2, 0.00, 0.00, 0.1, 1, 1, 1, 1 ]
     weight:  [ 1.0, 1.0, 10.0,
           1.5, 1.5, 1.5,
-          1, 2, 20.0, 20.0, 5, 1, 1, 1, 1,
-          1, 2, 20.0, 20.0, 5, 1, 1, 1, 1 ]
+          1, 2, 5.0, 10.0, 5, 1, 1, 1, 1,
+          1, 2, 5.0, 10.0, 5, 1, 1, 1, 1 ]
   - type: VelocityTracking
     name: "VelocityTracking"
     # weight: [1, 1, 5,
@@ -75,7 +75,7 @@ costs:
   - type: ForceRegularization
     name: "ForceReg"
     # weight: [0.0001, 0.0001, 0.01]
-    weight: [.1, .1, 10]
+    weight: [.0001, .0001, 0.01]
   # - type: ForwardKinematics
   #   name: "LeftToe"
   #   weight: [100, 100, 0.0]   # Having a highter weight (like 10000) does seem to help keep the feet in place
