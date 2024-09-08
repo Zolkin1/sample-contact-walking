@@ -7,6 +7,10 @@
 // TODO: remove
 #include "obelisk_estimator.h"
 
+// ------ Mujoco Debug ----- //
+#include <GLFW/glfw3.h>
+// ------ Mujoco Debug ----- //
+
 #include "sample_contact_walking/achilles_mpc.h"
 
 // TODO:
@@ -19,13 +23,18 @@
 //  - Try tracking a single MPC traj with the floating base
 //  - Try getting it to stand with just mpc
 //  - Try smoothing the velocities with the cost funciton
-//  - Try a WBC to get it to stand
+//  - Continue trying the MPC like a WBC. Determine why it stands up with torques only.
+//  - Try without a torque feedforward with the whole MPC problem
+//  - Why does it not even look like its trying to catch itself with torques only?
+
 
 namespace achilles
 {
     AchillesController::AchillesController(const std::string& name) 
     : obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState>(name), 
-        recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(0) {
+        recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(0), sim_ready_(false) {
+
+        mujoco_sim_instance_ = this;
 
         // For now model the feet as point contacts
         contact_state_.contacts.emplace("left_ankle_pitch", torc::models::Contact(torc::models::PointContact, false));
@@ -37,6 +46,9 @@ namespace achilles
         // --- Debug Publisher and Timer --- //
         this->RegisterObkTimer("state_viz_timer_setting", "state_viz_timer", std::bind(&AchillesController::PublishTrajStateViz, this));
         this->RegisterObkPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub_setting", "state_viz_pub");
+
+        // --- Debug Force Publisher --- //
+        this->RegisterObkPublisher<obelisk_sensor_msgs::msg::ObkForceSensor>("force_pub_setting", "force_pub");
 
         this->declare_parameter<std::string>("viz_pub_setting");
         // RCLCPP_ERROR_STREAM(this->get_logger(), "viz pub settings: " << this->get_parameter("viz_pub_setting").as_string());
@@ -140,6 +152,8 @@ namespace achilles
         q_ic_ = torc::utils::StdToEigenVector(q_ic_temp);
         v_ic_ = torc::utils::StdToEigenVector(v_ic_temp);
 
+        std::cout << "q target: " << q_target_.value()[0].transpose() << std::endl;
+        std::cout << "v target: " << v_target_.value()[0].transpose() << std::endl;
         std::cout << "q ic: " << q_ic_.transpose() << std::endl;
         std::cout << "v ic: " << v_ic_.transpose() << std::endl;
 
@@ -281,10 +295,110 @@ namespace achilles
             RCLCPP_ERROR_STREAM(this->get_logger(), "received v does not match the size of the model");
         }
 
-        if (!recieved_first_state_ && q_.size() == model_->GetConfigDim() && v_.size() == model_->GetVelDim()) {
+        if (!recieved_first_state_ && q_.size() == model_->GetConfigDim() && v_.size() == model_->GetVelDim() && q_.segment<QUAT_VARS>(POS_VARS).norm() > 0.99) {
             recieved_first_state_ = true;
         }
     }
+
+    // ------ Mujoco Debug ------ //
+    // -------------------------------------- //
+    // ----------- GLFW Callbacks ----------- //
+    // -------------------------------------- //
+    void AchillesController::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act, int mods) {
+        if (mujoco_sim_instance_) {
+            mujoco_sim_instance_->HandleKeyboard(window, key, scancode, act, mods);
+        } else {
+            throw std::runtime_error("No active mujoco sim instance while the GLFW window is running!");
+        }
+    }
+
+    void AchillesController::HandleKeyboard(__attribute__((unused)) GLFWwindow* window, int key, __attribute__((unused)) int scancode,
+                        int act, __attribute__((unused)) int mods) {
+        // backspace: reset simulation
+        if (act == GLFW_PRESS && key == GLFW_KEY_BACKSPACE) {
+            mj_resetData(mj_model_, data_);
+            mj_forward(mj_model_, data_);
+        }
+
+        if (act == GLFW_PRESS && key == GLFW_KEY_SPACE) {
+            pause = !pause;
+        }
+    }
+
+    void AchillesController::MouseButtonCallback(GLFWwindow* window, int button, int act, int mods) {
+        if (mujoco_sim_instance_) {
+                mujoco_sim_instance_->HandleMouseButton(window, button, act, mods);
+        } else {
+            throw std::runtime_error("No active mujoco sim instance while the GLFW window is running!");
+        }
+    }
+
+    void AchillesController::HandleMouseButton(GLFWwindow* window, __attribute__((unused)) int button, __attribute__((unused)) int act,
+                            __attribute__((unused)) int mods) {
+        // update button state
+        button_left   = (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
+        button_middle = (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS);
+        button_right  = (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);
+
+        // update mouse position
+        glfwGetCursorPos(window, &lastx, &lasty);
+    }
+
+    void AchillesController::MouseMoveCallback(GLFWwindow* window, double xpos, double ypos) {
+        if (mujoco_sim_instance_) {
+            mujoco_sim_instance_->HandleMouseMove(window, xpos, ypos);
+        } else {
+            throw std::runtime_error("No active mujoco sim instance while the GLFW window is running!");
+        }
+    }
+    void AchillesController::HandleMouseMove(GLFWwindow* window, double xpos, double ypos) {
+        // no buttons down: nothing to do
+        if (!button_left && !button_middle && !button_right) {
+            return;
+        }
+
+        // compute mouse displacement, save
+        double dx = xpos - lastx;
+        double dy = ypos - lasty;
+        lastx     = xpos;
+        lasty     = ypos;
+
+        // get current window size
+        int width, height;
+        glfwGetWindowSize(window, &width, &height);
+
+        // get shift key state
+        bool mod_shift = (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+                            glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
+
+        // determine action based on mouse button
+        mjtMouse action;
+        if (button_right) {
+            action = mod_shift ? mjMOUSE_MOVE_H : mjMOUSE_MOVE_V;
+        } else if (button_left) {
+            action = mod_shift ? mjMOUSE_ROTATE_H : mjMOUSE_ROTATE_V;
+        } else {
+            action = mjMOUSE_ZOOM;
+        }
+
+        // move camera
+        mjv_moveCamera(mj_model_, action, dx / height, dy / height, &scn, &cam);
+    }
+
+    void AchillesController::ScrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+        if (mujoco_sim_instance_) {
+            mujoco_sim_instance_->HandleScroll(window, xoffset, yoffset);
+        } else {
+            throw std::runtime_error("No active mujoco sim instance while the GLFW window is running!");
+        }
+    }
+
+    void AchillesController::HandleScroll(__attribute__((unused)) GLFWwindow* window, __attribute__((unused)) double xoffset,
+                        double yoffset) {
+        // emulate vertical mouse motion = 5% of window height
+        mjv_moveCamera(mj_model_, mjMOUSE_ZOOM, 0, -0.05 * yoffset, &scn, &cam);
+    }
+    // ------ Mujoco Debug ------ //
 
     // Running the MPC in its own the thread seems to make the timing more consistent and overall faster
     // If I still need more, I can try to adjust the thread prio
@@ -297,6 +411,72 @@ namespace achilles
         
         static bool first_loop = true;
         auto prev_time = this->now();
+
+        // ------ Mujoco Debug ----- //
+        // Init simulator
+        // load the mujoco model
+        char error[1000] = "Could not load binary model";
+        std::string xml_path_str = this->get_parameter("xml_path").as_string();
+        std::filesystem::path xml_path(xml_path_str);
+        if (!std::filesystem::exists(std::filesystem::path(xml_path))) {
+            throw std::invalid_argument("[Mujoco Debug] Mujoco XML path does not exist!");
+        }
+
+        mj_model_ = mj_loadXML(xml_path.c_str(), 0, error, 1000);
+        if (!mj_model_) {
+            throw std::runtime_error("[Mujoco Debug] Could not create Mujoco model!");
+        }
+
+        // Make the data for each sample
+        data_ = mj_makeData(mj_model_);
+        RCLCPP_INFO_STREAM(this->get_logger(), "Found " << this->mj_model_->nkey << " Mujoco keyframes.");
+        this->declare_parameter<std::string>("ic_keyframe", "ic");
+        for (int i = 0; i < this->mj_model_->nkey; i++) {
+            std::string potential_keyframe(this->mj_model_->names + this->mj_model_->name_keyadr[i]);
+            if (potential_keyframe == this->get_parameter("ic_keyframe").as_string()) {
+                RCLCPP_INFO_STREAM(this->get_logger(),
+                                    "Setting initial condition to keyframe: " << potential_keyframe);
+                mju_copy(this->data_->qpos, &this->mj_model_->key_qpos[i * this->mj_model_->nq], this->mj_model_->nq);
+                mju_copy(this->data_->qvel, &this->mj_model_->key_qvel[i * this->mj_model_->nv], this->mj_model_->nv);
+                this->data_->time = this->mj_model_->key_time[i];
+
+                mju_copy(this->data_->ctrl, &this->mj_model_->key_ctrl[i * this->mj_model_->nu], this->mj_model_->nu);
+            }
+        }
+        // Init rendering
+        mujoco_sim_instance_ = this;
+        // Create the window
+        if (!glfwInit()) {
+            throw std::runtime_error("Could not initialize GLFW");
+        }
+
+        window =
+            glfwCreateWindow(WINDOW_WIDTH_DEFAULT, WINDOW_LENGTH_DEFAULT, "DEBUG Mujoco Simulation", NULL, NULL);
+
+        if (!window) {
+            throw std::runtime_error("Could not create the GLFW window!");
+        }
+
+        glfwMakeContextCurrent(window);
+        glfwSwapInterval(1);
+
+        // initialize visualization data structures
+        mjv_defaultFreeCamera(mj_model_, &cam);
+        mjv_defaultOption(&opt);
+        mjv_defaultScene(&scn);
+        mjr_defaultContext(&con);
+
+        // create scene and context
+        mjv_makeScene(mj_model_, &scn, 2000);
+        mjr_makeContext(mj_model_, &con, mjFONTSCALE_150);
+
+        // install GLFW mouse and keyboard callbacks
+        glfwSetKeyCallback(window, AchillesController::KeyboardCallback);
+        glfwSetCursorPosCallback(window, AchillesController::MouseMoveCallback);
+        glfwSetMouseButtonCallback(window, AchillesController::MouseButtonCallback);
+        glfwSetScrollCallback(window, AchillesController::ScrollCallback);
+
+        // ------ Mujoco Debug ----- //
 
         while (true) {
             // Start the timer
@@ -319,6 +499,15 @@ namespace achilles
                     q = q_;
                     v = v_;
                 }
+
+                // TODO: Remove!
+                // q = q_ic_;
+                // q(2) += 0.02;
+                // q.head<FLOATING_POS_SIZE>() = q_ic_.head<FLOATING_POS_SIZE>();
+                // v.setZero();
+
+                // RCLCPP_ERROR_STREAM(this->get_logger(), "q: " << q.transpose());
+                // RCLCPP_ERROR_STREAM(this->get_logger(), "v: " << v.transpose());
 
                 // TODO: remove
                 // v.setZero();
@@ -351,6 +540,19 @@ namespace achilles
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
                     double time = this->get_clock()->now().seconds();
                     double delay_start_time = this->now().seconds() - traj_start_time_;
+
+                    // ----- Mujoco debug ----- //
+                    mju_copy(q.data(), data_->qpos, q.size());
+                    // Change the quaternion convention
+                    q(3) = data_->qpos[4];
+                    q(4) = data_->qpos[5];
+                    q(5) = data_->qpos[6];
+                    q(6) = data_->qpos[3];
+
+                    mju_copy(v.data(), data_->qvel, v.size());
+                    sim_ready_ = true;
+                    // ----- Mujoco debug ----- //
+
                     mpc_->Compute(q, v, traj_mpc_, delay_start_time);                  
                     {
                         // Get the traj mutex to protect it
@@ -361,6 +563,137 @@ namespace achilles
                         traj_start_time_ = time;
                     }
 
+                    // ------ Mujoco Debug ----- //
+                    double traj_start_time_mj = data_->time;
+                    long step_num = -1;
+                    while (data_->time < traj_start_time_mj + mpc_loop_rate_ns*1e-9) {
+                        std::lock_guard<std::mutex> lock(mj_data_mut_);
+                        if (!pause) {
+                            double time_into_traj = data_->time - traj_start_time_mj;
+                            // Copy controls over
+                            vectorx_t q, v, tau;
+                            traj_out_.GetConfigInterp(time_into_traj, q);
+                            traj_out_.GetVelocityInterp(time_into_traj, v);
+                            traj_out_.GetTorqueInterp(time_into_traj, tau);
+
+                            vectorx_t u_mujoco = ConvertControlToMujocoU(q.tail(model_->GetNumInputs()),
+                                            v.tail(model_->GetNumInputs()), tau);
+                            mju_copy(data_->ctrl, u_mujoco.data(), u_mujoco.size());
+
+                            while (pause) {
+                                std::this_thread::sleep_for(std::chrono::milliseconds(15));
+                            }
+
+                            // Step
+                            mj_step(mj_model_, data_);
+                            // RCLCPP_WARN_STREAM(this->get_logger(), "Stepping");
+
+
+                            obelisk_control_msgs::msg::PDFeedForward msg;
+                            ConvertEigenToStd(u_mujoco, msg.u_mujoco);
+                            ConvertEigenToStd(q.tail(model_->GetNumInputs()), msg.pos_target);
+                            ConvertEigenToStd(v.tail(model_->GetNumInputs()), msg.vel_target);
+                            ConvertEigenToStd(tau, msg.feed_forward);
+                            
+                            if (msg.u_mujoco.size() != 54) {
+                                RCLCPP_ERROR_STREAM(this->get_logger(), "Message's u_mujoco is incorrectly sized. Size: " << msg.u_mujoco.size());
+                            }
+
+                            // msg.header.stamp.sec = data_->time;
+                            msg.header.stamp = this->now();
+
+                            this->GetPublisher<obelisk_control_msgs::msg::PDFeedForward>(this->ctrl_key_)->publish(msg);
+
+                            step_num++;
+
+                            // Publish current state
+                            obelisk_estimator_msgs::msg::EstimatedState msg_est_state;
+                            vectorx_t q_state = vectorx_t::Zero(q.size());
+                            vectorx_t v_state = vectorx_t::Zero(v.size());
+                            // std::lock_guard<std::mutex> lock(mj_data_mut_);
+                            mju_copy(q_state.data(), data_->qpos, q.size());
+                            // Change the quaternion convention
+                            q_state(3) = data_->qpos[4];
+                            q_state(4) = data_->qpos[5];
+                            q_state(5) = data_->qpos[6];
+                            q_state(6) = data_->qpos[3];
+
+                            mju_copy(v_state.data(), data_->qvel, v.size());
+                            // msg.header.stamp.sec = data_->time;
+                
+                            // traj_out_.GetConfigInterp(0.01, q);
+                            msg_est_state.base_link_name = "torso";
+                            vectorx_t q_head = q_state.head<FLOATING_POS_SIZE>();
+                            vectorx_t q_tail = q_state.tail(model_->GetNumInputs());
+                            msg_est_state.q_base = torc::utils::EigenToStdVector(q_head);
+                            msg_est_state.q_joints = torc::utils::EigenToStdVector(q_tail);
+
+                            msg_est_state.joint_names.resize(q_tail.size());
+                            msg_est_state.joint_names[0] = "left_hip_yaw_joint";
+                            msg_est_state.joint_names[1] = "left_hip_roll_joint";
+                            msg_est_state.joint_names[2] = "left_hip_pitch_joint";
+                            msg_est_state.joint_names[3] = "left_knee_pitch_joint";
+                            msg_est_state.joint_names[4] = "left_ankle_pitch_joint";
+                            msg_est_state.joint_names[5] = "left_shoulder_pitch_joint";
+                            msg_est_state.joint_names[6] = "left_shoulder_roll_joint";
+                            msg_est_state.joint_names[7] = "left_shoulder_yaw_joint";
+                            msg_est_state.joint_names[8] = "left_elbow_pitch_joint";
+                            msg_est_state.joint_names[9] = "right_hip_yaw_joint";
+                            msg_est_state.joint_names[10] = "right_hip_roll_joint";
+                            msg_est_state.joint_names[11] = "right_hip_pitch_joint";
+                            msg_est_state.joint_names[12] = "right_knee_pitch_joint";
+                            msg_est_state.joint_names[13] = "right_ankle_pitch_joint";
+                            msg_est_state.joint_names[14] = "right_shoulder_pitch_joint";
+                            msg_est_state.joint_names[15] = "right_shoulder_roll_joint";
+                            msg_est_state.joint_names[16] = "right_shoulder_yaw_joint";
+                            msg_est_state.joint_names[17] = "right_elbow_pitch_joint";
+
+                            // traj_out_.GetVelocityInterp(0.01, v);
+                            vectorx_t v_head = v_state.head<FLOATING_VEL_SIZE>();
+                            vectorx_t v_tail = v_state.tail(model_->GetNumInputs());
+
+                            // vectorx_t temp = vectorx_t::Zero(6);
+                            msg_est_state.v_base = torc::utils::EigenToStdVector(v_head);
+                            msg_est_state.v_joints = torc::utils::EigenToStdVector(v_tail);
+
+                            // TODO: Put back!
+                            msg_est_state.header.stamp = this->now();
+
+                            this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg_est_state);
+                        }
+
+                        // Render
+                        // This logic will only work with certain time step sizes
+                        if (step_num % 40 == 0 || pause) {
+                            if (!glfwWindowShouldClose(window)) {
+                                // get framebuffer viewport
+                                mjrRect viewport = {0, 0, 0, 0};
+                                glfwGetFramebufferSize(window, &viewport.width, &viewport.height);
+
+                                float time = 0;
+
+                                // update scene and render
+                                time = data_->time;
+                                mjv_updateScene(mj_model_, data_, &opt, NULL, &cam, mjCAT_ALL, &scn);
+                                
+                                mjr_render(viewport, &scn, &con);
+
+                                // add time stamp in upper-left corner
+                                char stamp[50];
+                                sprintf_arr(stamp, "Time = %.3f", time);
+                                mjr_overlay(mjFONT_NORMAL, mjGRID_TOPLEFT, viewport, stamp, NULL, &con);
+
+                                // swap OpenGL buffers (blocking call due to v-sync)
+                                glfwSwapBuffers(window);
+
+                                // process pending GUI events, call GLFW callbacks
+                                glfwPollEvents();
+                            }
+                        }
+                    }
+                    
+                    // ------ Mujoco Debug ----- //
+
                     // std::cout << "Left ankle pitch ic error: " << traj_mpc_.GetConfiguration(0)(11) - q(11) << std::endl;
                     // std::cout << "Norm IC config error: " << (traj_mpc_.GetConfiguration(0) - q).norm() << std::endl;
                     // std::cout << "Norm IC vel error: " << (traj_mpc_.GetVelocity(0) - v).norm() << std::endl;
@@ -368,9 +701,10 @@ namespace achilles
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Config IC Error: " << (traj_out_.GetConfiguration(0) - q).norm());
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Vel IC Error: " << (traj_out_.GetVelocity(0) - v).norm());
 
-                    if (GetState() != Mpc) {
-                        TransitionState(Mpc);
-                    }
+                    // TODO: Put back
+                    // if (GetState() != Mpc) {
+                    //     TransitionState(Mpc);
+                    // }
                 } else {
                     static bool printed = false;
                     if (!printed) {
@@ -495,6 +829,10 @@ namespace achilles
         //  setpoints from the trajectory.
 
         obelisk_control_msgs::msg::PDFeedForward msg;
+
+        // For force debugging
+        obelisk_sensor_msgs::msg::ObkForceSensor force_msg;
+
         if (GetState() != NoOutput) {
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Publishing first control.");
             
@@ -514,12 +852,64 @@ namespace achilles
                     double time_into_traj = time - traj_start_time_;
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
 
-                    // TODO: Put back
+                    // TODO: Remove
+                    // q = traj_out_.GetConfiguration(0);
+                    // v = traj_out_.GetVelocity(0);
+                    // q.head(v.size()) = traj_out_.GetVelocity(1);
+                    // std::cout << "traj node 1 vel: " << traj_out_.GetVelocity(1).transpose() << std::endl;
+                    // RCLCPP_INFO_STREAM(this->get_logger(), "traj v l knee diff: " << v(3) - traj_out_.GetVelocity(1)(3));
+                    // tau = traj_out_.GetTau(1);
+
                     // TODO: Put back
                     traj_out_.GetConfigInterp(time_into_traj, q);
                     traj_out_.GetVelocityInterp(time_into_traj, v);
                     traj_out_.GetTorqueInterp(time_into_traj, tau);
-                
+
+                    // For force debugging
+                    std::array<std::string, 4> frames = {"foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left"};
+                    for (const auto& frame : frames) {
+                        geometry_msgs::msg::Vector3 force;
+                        vector3_t force_traj;
+                        traj_out_.GetForceInterp(time_into_traj, frame, force_traj);
+                        force.x = force_traj(0);
+                        force.y = force_traj(1);
+                        force.z = force_traj(2);
+
+                        force_msg.forces.emplace_back(force);
+                    }
+
+                    // TODO: Remove
+                    // tau.head<5>().setZero();
+                    // tau.tail(9).setZero();
+                    // tau(5) = 0;
+                    // tau(6) = 0;
+                    // tau(7) = 0;
+                    // tau(8) = 0;
+
+                    // tau.setZero();
+
+                    // std::vector<torc::models::ExternalForce<double>> f_ext;
+                    // for (const auto& frame : mpc_->GetContactFrames()) {
+                    //     vector3_t force;
+                    //     traj_out_.GetForceInterp(time_into_traj, frame, force);
+                    //     f_ext.emplace_back(frame, force);
+                    // }
+
+                    // const double fd_delta = 1e-8;
+                    // vectorx_t v2;
+                    // traj_out_.GetVelocityInterp(time_into_traj + fd_delta, v2);
+                    // vectorx_t a = (v2 - v)/fd_delta;
+                    // tau = model_->InverseDynamics(q, v, a, f_ext);
+                    // tau = tau.tail(18);
+
+                    // std::cout << "a: " << a.transpose() << std::endl;
+                    // std::cout << "new id: " << tau.transpose() << std::endl;
+
+                    // vectorx_t tau2;
+                    // traj_out_.GetTorqueInterp(time_into_traj, tau2);
+                    // std::cout << "traj: " << tau2.transpose() << std::endl;
+                    // std::cout << "normed difference: " << (tau2 - tau).norm() << std::endl;
+
                     // This is a safety in case the interpolation time is too large
                     if (q.size() == 0) {
                         RCLCPP_WARN_STREAM(this->get_logger(), "Trajectory interpolation time is after the trajectory ends!");
@@ -556,9 +946,12 @@ namespace achilles
             }
 
             msg.header.stamp = this->now();
+            // TODO: Put back
+            // this->GetPublisher<obelisk_control_msgs::msg::PDFeedForward>(this->ctrl_key_)->publish(msg);
 
-            this->GetPublisher<obelisk_control_msgs::msg::PDFeedForward>(this->ctrl_key_)->publish(msg);
-            
+            // Publish desired forces for debugging         
+            force_msg.header.stamp = this->now();   
+            this->GetPublisher<obelisk_sensor_msgs::msg::ObkForceSensor>("force_pub")->publish(force_msg);
         }
 
         return msg;
@@ -723,62 +1116,84 @@ namespace achilles
     }
 
     void AchillesController::PublishTrajStateViz() {
-        // std::lock_guard<std::mutex> lock(traj_out_mut_);
+        std::lock_guard<std::mutex> lock(traj_out_mut_);
 
-        // if (traj_start_time_ < 0) {
-        //     traj_start_time_ = this->get_clock()->now().seconds();
-        // }
+        if (traj_start_time_ < 0) {
+            traj_start_time_ = this->get_clock()->now().seconds();
+        }
+        obelisk_estimator_msgs::msg::EstimatedState msg;
 
-        // double time = this->get_clock()->now().seconds();
-        // // TODO: Do I need to use nanoseconds?
-        // double time_into_traj = time - traj_start_time_;
-        // // double time_into_traj = 0;
+        double time = this->get_clock()->now().seconds();
+        // TODO: Do I need to use nanoseconds?
+        double time_into_traj = time - traj_start_time_;
+        // double time_into_traj = 0;
 
-        // // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
-        // vectorx_t q;
-        // vectorx_t v;
+        // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
+        vectorx_t q = vectorx_t::Zero(model_->GetConfigDim());
+        vectorx_t v = vectorx_t::Zero(model_->GetVelDim());
         // traj_out_.GetConfigInterp(time_into_traj, q);
         // traj_out_.GetVelocityInterp(time_into_traj, v);
+        // TODO: Remove
+        // ----- Mujoco Debug ----- //
+        if (sim_ready_) {
+            std::lock_guard<std::mutex> lock(mj_data_mut_);
+            mju_copy(q.data(), data_->qpos, q.size());
+            // Change the quaternion convention
+            q(3) = data_->qpos[4];
+            q(4) = data_->qpos[5];
+            q(5) = data_->qpos[6];
+            q(6) = data_->qpos[3];
 
-        // // traj_out_.GetConfigInterp(0.01, q);
-        // obelisk_estimator_msgs::msg::EstimatedState msg;
-        // msg.base_link_name = "torso";
-        // vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
-        // vectorx_t q_tail = q.tail(model_->GetNumInputs());
-        // msg.q_base = torc::utils::EigenToStdVector(q_head);
-        // msg.q_joints = torc::utils::EigenToStdVector(q_tail);
+            mju_copy(v.data(), data_->qvel, v.size());
+            // msg.header.stamp.sec = data_->time;
+        } else {
+            // msg.header.stamp = this->now();
+            q = q_ic_;
+            v = v_ic_;
+        }
+        // ----- Mujoco Debug ----- //
 
-        // msg.joint_names.resize(q_tail.size());
-        // msg.joint_names[0] = "left_hip_yaw_joint";
-        // msg.joint_names[1] = "left_hip_roll_joint";
-        // msg.joint_names[2] = "left_hip_pitch_joint";
-        // msg.joint_names[3] = "left_knee_pitch_joint";
-        // msg.joint_names[4] = "left_ankle_pitch_joint";
-        // msg.joint_names[5] = "left_shoulder_pitch_joint";
-        // msg.joint_names[6] = "left_shoulder_roll_joint";
-        // msg.joint_names[7] = "left_shoulder_yaw_joint";
-        // msg.joint_names[8] = "left_elbow_pitch_joint";
-        // msg.joint_names[9] = "right_hip_yaw_joint";
-        // msg.joint_names[10] = "right_hip_roll_joint";
-        // msg.joint_names[11] = "right_hip_pitch_joint";
-        // msg.joint_names[12] = "right_knee_pitch_joint";
-        // msg.joint_names[13] = "right_ankle_pitch_joint";
-        // msg.joint_names[14] = "right_shoulder_pitch_joint";
-        // msg.joint_names[15] = "right_shoulder_roll_joint";
-        // msg.joint_names[16] = "right_shoulder_yaw_joint";
-        // msg.joint_names[17] = "right_elbow_pitch_joint";
+        // traj_out_.GetConfigInterp(0.01, q);
+        msg.base_link_name = "torso";
+        vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
+        vectorx_t q_tail = q.tail(model_->GetNumInputs());
+        msg.q_base = torc::utils::EigenToStdVector(q_head);
+        msg.q_joints = torc::utils::EigenToStdVector(q_tail);
 
-        // // traj_out_.GetVelocityInterp(0.01, v);
-        // vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
-        // vectorx_t v_tail = v.tail(model_->GetNumInputs());
+        msg.joint_names.resize(q_tail.size());
+        msg.joint_names[0] = "left_hip_yaw_joint";
+        msg.joint_names[1] = "left_hip_roll_joint";
+        msg.joint_names[2] = "left_hip_pitch_joint";
+        msg.joint_names[3] = "left_knee_pitch_joint";
+        msg.joint_names[4] = "left_ankle_pitch_joint";
+        msg.joint_names[5] = "left_shoulder_pitch_joint";
+        msg.joint_names[6] = "left_shoulder_roll_joint";
+        msg.joint_names[7] = "left_shoulder_yaw_joint";
+        msg.joint_names[8] = "left_elbow_pitch_joint";
+        msg.joint_names[9] = "right_hip_yaw_joint";
+        msg.joint_names[10] = "right_hip_roll_joint";
+        msg.joint_names[11] = "right_hip_pitch_joint";
+        msg.joint_names[12] = "right_knee_pitch_joint";
+        msg.joint_names[13] = "right_ankle_pitch_joint";
+        msg.joint_names[14] = "right_shoulder_pitch_joint";
+        msg.joint_names[15] = "right_shoulder_roll_joint";
+        msg.joint_names[16] = "right_shoulder_yaw_joint";
+        msg.joint_names[17] = "right_elbow_pitch_joint";
 
-        // // vectorx_t temp = vectorx_t::Zero(6);
-        // msg.v_base = torc::utils::EigenToStdVector(v_head);
-        // msg.v_joints = torc::utils::EigenToStdVector(v_tail);
+        // traj_out_.GetVelocityInterp(0.01, v);
+        vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
+        vectorx_t v_tail = v.tail(model_->GetNumInputs());
 
-        // msg.header.stamp = this->now();
+        // vectorx_t temp = vectorx_t::Zero(6);
+        msg.v_base = torc::utils::EigenToStdVector(v_head);
+        msg.v_joints = torc::utils::EigenToStdVector(v_tail);
 
-        // this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
+        msg.header.stamp = this->now();
+
+        // TODO: put back!
+        if (!sim_ready_) {
+            this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
+        }
     }
 
     void AchillesController::AddPeriodicContacts() {

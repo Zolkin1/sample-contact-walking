@@ -15,9 +15,36 @@ namespace achilles {
     class AchillesController : public obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState> {
         public:
             AchillesController(const std::string& name);
+
+            // ------ Mujoco Debug ----- //
+            static AchillesController* mujoco_sim_instance_;
+            // ------ Mujoco Debug ----- //
         protected:
 
         private:
+            // ------ Mujoco Debug ----- //
+            static void KeyboardCallback(GLFWwindow* window, int key, int scancode, int act, int mods);
+            static void MouseButtonCallback(GLFWwindow* window, int button, int act, int mods);
+            static void MouseMoveCallback(GLFWwindow* window, double xpos, double ypos);
+            static void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
+
+            void HandleKeyboard(__attribute__((unused)) GLFWwindow* window, int key, __attribute__((unused)) int scancode, int act, __attribute__((unused)) int mods);
+            void HandleMouseButton(GLFWwindow* window, __attribute__((unused)) int button, __attribute__((unused)) int act,
+                               __attribute__((unused)) int mods);
+            void HandleMouseMove(GLFWwindow* window, double xpos, double ypos);
+            void HandleScroll(__attribute__((unused)) GLFWwindow* window, __attribute__((unused)) double xoffset,
+                          double yoffset);
+
+            // Helper
+            template <std::size_t N> static inline int sprintf_arr(char (&dest)[N], const char* format, ...) {
+                std::va_list vargs;
+                va_start(vargs, format);
+                int retval = std::vsnprintf(dest, N, format, vargs);
+                va_end(vargs);
+                return retval;
+            }
+            // ------ Mujoco Debug ----- //
+
             // Control functions
             obelisk_control_msgs::msg::PDFeedForward ComputeControl() override;
             // void ComputeMpc();
@@ -121,5 +148,33 @@ namespace achilles {
             // Threads
             std::thread mpc_thread_;
             std::thread sample_thread_;
+
+            // ------ Mujoco Debug ----- //
+            mjModel* mj_model_;
+            mjData* data_;
+            mjvCamera cam;          // abstract camera
+            mjvOption opt;          // visualization options
+            mjvScene scn;           // abstract scene
+            mjrContext con;         // custom GPU context
+
+            std::atomic<bool> sim_ready_;
+            std::mutex mj_data_mut_;
+
+            GLFWwindow* window;
+
+            // mouse interaction
+            bool button_left   = false;
+            bool button_middle = false;
+            bool button_right  = false;
+            double lastx       = 0;
+            double lasty       = 0;
+
+            bool pause = false;
+
+            static constexpr int WINDOW_WIDTH_DEFAULT  = 1200;
+            static constexpr int WINDOW_LENGTH_DEFAULT = 900;
+            // ------ Mujoco Debug ----- //
     };
+
+    AchillesController* AchillesController::mujoco_sim_instance_ = nullptr;
 } // namespace achilles

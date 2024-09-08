@@ -3,13 +3,13 @@ general_settings:
   verbose: True
   node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
   node_dt: 0.01 #0.025
-  first_node_dt: 0.01
+  first_node_dt: 0.01 # 0.01
   compile_derivatives: False #True
   base_frame: "torso"
   scale_cost: False
   max_initial_solves: 20
   initial_constraint_tol: 5e-4
-  nodes_full_dynamics: 10   # Also determines how many nodes have torque constraints
+  nodes_full_dynamics: 10 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0 #-1e-2 #5e-3 # TODO: Tune or disable
   terminal_cost_weight: 1 #50 Having a smaller terminal weight seems to help for now
 solver_settings:
@@ -17,11 +17,11 @@ solver_settings:
   abs_tol: 1e-3
   verbose: False
   polish: False
-  rho: 0.01 #0.05 #0.05 looks good for no sim walking traj. 0.01 allows for standing
+  rho: 0.1 #0.05 #0.05 looks good for no sim walking traj. 0.01 allows for standing
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6 # 1e-10
   adaptive_rho: False
-  max_iter: 20 #20
+  max_iter: 50 #20
   scaling: 10
 constraints:
   friction_coef: 0.5  # TODO: Tune this
@@ -47,14 +47,14 @@ constraints:
 costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    # weight:  [ 1.0, 1.0, 10.0,
+    # weight:  [ 1.0, 1.0, 1.0,
     #           1.5, 1.5, 1.5,
     #           1, 2, 0.00, 0.00, 0.1, 1, 1, 1, 1,
     #           1, 2, 0.00, 0.00, 0.1, 1, 1, 1, 1 ]
-    weight:  [ 1.0, 1.0, 10.0,
+    weight:  [ 1.0, 1.0, 100.0, # Why does the z height weight make it stand???
           1.5, 1.5, 1.5,
-          1, 2, 5.0, 10.0, 5, 1, 1, 1, 1,
-          1, 2, 5.0, 10.0, 5, 1, 1, 1, 1 ]
+          1, 2, 0.0, 0.0, 0.1, 1, 1, 1, 1,
+          1, 2, 0.0, 0.0, 0.1, 1, 1, 1, 1 ]
   - type: VelocityTracking
     name: "VelocityTracking"
     # weight: [1, 1, 5,
@@ -63,15 +63,15 @@ costs:
     #         1, 0.1, 0.0, .0, .05, 1, 1, 1, 1]
     weight: [1, 1, 5,
         0.5, 0.5, 0.5,
-        1, .1, 0, 1, 1, 1, 1, 1, 1,
-        1, .1, 0, 1, 1, 1, 1, 1, 1]
+        1, .1, 0.0, 0.00, 1, 1, 1, 1, 1,
+        1, .1, 0.0, 0.00, 1, 1, 1, 1, 1]
         # The velocity on the knee is important to prevent bouncing
   - type: TorqueRegularization
     name: "TorqueReg"
     # weight: [.000, .000, .000, .000, .001, .5, .5, .5, .1,
     #         .000, .000, .000, .000, .001, .5, .5, .5, .1]
-    weight: [.000, .000, .000, .000, .001, .5, .5, .5, .1,
-             .000, .000, .000, .000, .001, .5, .5, .5, .1]
+    weight: [.00, .00, .00, .00, .0, .5, .5, .5, .1,
+             .00, .00, .00, .00, .0, .5, .5, .5, .1]
   - type: ForceRegularization
     name: "ForceReg"
     # weight: [0.0001, 0.0001, 0.01]

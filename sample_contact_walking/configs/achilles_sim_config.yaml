@@ -7,7 +7,7 @@ onboard:
       params:
         urdf_path: /home/zolkin/sample-contact-walking/achilles_model_custom/urdf/achilles.urdf
 # ---------- Viz ---------- #
-        viz_frames: ["torso", "foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left", "right_hand", "left_hand"]
+        viz_frames: ["torso", "foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left", "right_hand", "left_hand", "right_knee_pitch", left_knee_pitch]
         # viz_frames: ["torso", "foot_front_right", "foot_front_left"]
         viz_forces: True
         viz_force_scale: 0.01
@@ -18,7 +18,7 @@ onboard:
         apex_time: 0.7 # 0.7
 # ---------- MPC Loop ---------- #
         mpc_loop_period_sec: 0.01 #0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
-        max_mpc_solves: -220 
+        max_mpc_solves: -24 
 # ---------- Contact schedule ---------- #
         swing_time: 0.5 #1.
         first_swing_time: 100.
@@ -79,6 +79,8 @@ onboard:
                     0., 0.,
                     0., 0., 0., 0.]
         fixed_target: True #True
+# ---------- Mujoco Debug ---------- #
+        ic_keyframe: stand_A
 # ---------- Sample Planner ---------- #
         simulation_samples: 100
         xml_path:  /home/zolkin/sample-contact-walking/achilles_model_custom/mujoco/sample_sim.xml
@@ -101,6 +103,12 @@ onboard:
         # --- Debug Viz --- #
         - ros_parameter: state_viz_pub_setting
           topic: /obelisk/achilles/est_state
+          history_depth: 10
+          callback_group: None
+          non_obelisk: False
+        # --- Debug Forces --- #
+        - ros_parameter: force_pub_setting
+          topic: /obelisk/achilles/force_debug
           history_depth: 10
           callback_group: None
           non_obelisk: False
@@ -214,7 +222,7 @@ onboard:
           robot_pkg: achilles_model_custom
           model_xml_path: sim_achilles.xml
           n_u: 54
-          time_step: 0.001
+          time_step: 0.0005 #0.001
           num_steps_per_viz: 16 # No longer used
           sensor_settings:
           # ---------- Joint Encoders ---------- #
@@ -291,6 +299,15 @@ onboard:
             sensor_names:
               torso_mocap_pos_sensor: framepos
               torso_mocap_quat_sensor: framequat
+          # ---------- Force Sensors ---------- #
+          - topic: /obelisk/achilles/force_sensors
+            dt: 0.002
+            msg_type: ObkForceSensor
+            sensor_names:
+              right_toe_force_sensor: force
+              right_heel_force_sensor: force
+              left_toe_force_sensor: force
+              left_heel_force_sensor: force
   viz:
     on: True
     viz_tool: foxglove
