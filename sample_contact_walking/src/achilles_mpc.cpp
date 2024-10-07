@@ -26,6 +26,7 @@
 //  - Continue trying the MPC like a WBC. Determine why it stands up with torques only.
 //  - Try without a torque feedforward with the whole MPC problem
 //  - Why does it not even look like its trying to catch itself with torques only?
+//  - Fix the holonomic constraints
 
 
 namespace achilles
@@ -531,6 +532,25 @@ namespace achilles
 
                 AddPeriodicContacts();
 
+                    // ----- Mujoco debug ----- //
+                    // traj_out_.GetConfigInterp(mpc_loop_rate_ns*1e-9, q);
+                    // traj_out_.GetVelocityInterp(mpc_loop_rate_ns*1e-9, v);
+                    mju_copy(q.data(), data_->qpos, q.size());
+                    // Change the quaternion convention
+                    q(3) = data_->qpos[4];
+                    q(4) = data_->qpos[5];
+                    q(5) = data_->qpos[6];
+                    q(6) = data_->qpos[3];
+                    // RCLCPP_INFO_STREAM(this->get_logger(), "q: " << q.transpose());
+
+                    mju_copy(v.data(), data_->qvel, v.size());
+
+                    // TODO: What is the correct frame?
+                    quat_t quat(q.segment<QUAT_VARS>(POS_VARS));
+                    v.segment<3>(POS_VARS) = quat.toRotationMatrix()*v.segment<3>(POS_VARS);
+                    // ----- Mujoco debug ----- //
+
+
                 if (!fixed_target_) {
                     UpdateMpcTargets(q);
                     mpc_->SetConfigTarget(q_target_.value());
@@ -540,20 +560,7 @@ namespace achilles
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
                     double time = this->get_clock()->now().seconds();
                     double delay_start_time = this->now().seconds() - traj_start_time_;
-
-                    // ----- Mujoco debug ----- //
-                    mju_copy(q.data(), data_->qpos, q.size());
-                    // Change the quaternion convention
-                    q(3) = data_->qpos[4];
-                    q(4) = data_->qpos[5];
-                    q(5) = data_->qpos[6];
-                    q(6) = data_->qpos[3];
-
-                    mju_copy(v.data(), data_->qvel, v.size());
-                    sim_ready_ = true;
-                    // ----- Mujoco debug ----- //
-
-                    mpc_->Compute(q, v, traj_mpc_, delay_start_time);                  
+                    mpc_->Compute(q, v, traj_mpc_, delay_start_time);
                     {
                         // Get the traj mutex to protect it
                         std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -564,6 +571,7 @@ namespace achilles
                     }
 
                     // ------ Mujoco Debug ----- //
+                    sim_ready_ = true;
                     double traj_start_time_mj = data_->time;
                     long step_num = -1;
                     while (data_->time < traj_start_time_mj + mpc_loop_rate_ns*1e-9) {
@@ -606,11 +614,13 @@ namespace achilles
 
                             step_num++;
 
+                            // TODO: Print velocities to debug holonomic constraint issues. Why do the feet want to slide forward?
+
                             // Publish current state
                             obelisk_estimator_msgs::msg::EstimatedState msg_est_state;
                             vectorx_t q_state = vectorx_t::Zero(q.size());
                             vectorx_t v_state = vectorx_t::Zero(v.size());
-                            // std::lock_guard<std::mutex> lock(mj_data_mut_);
+
                             mju_copy(q_state.data(), data_->qpos, q.size());
                             // Change the quaternion convention
                             q_state(3) = data_->qpos[4];
@@ -619,6 +629,10 @@ namespace achilles
                             q_state(6) = data_->qpos[3];
 
                             mju_copy(v_state.data(), data_->qvel, v.size());
+
+                            // q_state = q;
+                            // q_state(2) += 0.01;
+                            // v_state = v;
                             // msg.header.stamp.sec = data_->time;
                 
                             // traj_out_.GetConfigInterp(0.01, q);
@@ -1131,27 +1145,8 @@ namespace achilles
         // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
         vectorx_t q = vectorx_t::Zero(model_->GetConfigDim());
         vectorx_t v = vectorx_t::Zero(model_->GetVelDim());
-        // traj_out_.GetConfigInterp(time_into_traj, q);
-        // traj_out_.GetVelocityInterp(time_into_traj, v);
-        // TODO: Remove
-        // ----- Mujoco Debug ----- //
-        if (sim_ready_) {
-            std::lock_guard<std::mutex> lock(mj_data_mut_);
-            mju_copy(q.data(), data_->qpos, q.size());
-            // Change the quaternion convention
-            q(3) = data_->qpos[4];
-            q(4) = data_->qpos[5];
-            q(5) = data_->qpos[6];
-            q(6) = data_->qpos[3];
-
-            mju_copy(v.data(), data_->qvel, v.size());
-            // msg.header.stamp.sec = data_->time;
-        } else {
-            // msg.header.stamp = this->now();
-            q = q_ic_;
-            v = v_ic_;
-        }
-        // ----- Mujoco Debug ----- //
+        traj_out_.GetConfigInterp(time_into_traj, q);
+        traj_out_.GetVelocityInterp(time_into_traj, v);
 
         // traj_out_.GetConfigInterp(0.01, q);
         msg.base_link_name = "torso";
@@ -1190,7 +1185,6 @@ namespace achilles
 
         msg.header.stamp = this->now();
 
-        // TODO: put back!
         if (!sim_ready_) {
             this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
         }

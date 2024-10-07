@@ -18,7 +18,7 @@ onboard:
         apex_time: 0.7 # 0.7
 # ---------- MPC Loop ---------- #
         mpc_loop_period_sec: 0.01 #0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
-        max_mpc_solves: -24 
+        max_mpc_solves: 125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.5 #1.
         first_swing_time: 100.
@@ -34,7 +34,7 @@ onboard:
         #             0., 0., -0.26,
         #             0.65, -0.43,
         #             0., 0., 0., 0.]
-        target_config: [0., 0., 0.93,
+        target_config: [0., 0., 0.95,
                     0., 0., 0., 1.,
                     0.0000, 0.0209, -0.5515,
                     1.0239, -0.4725,

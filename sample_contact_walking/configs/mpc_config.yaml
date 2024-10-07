@@ -2,14 +2,14 @@ general_settings:
   nodes: 32
   verbose: True
   node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
-  node_dt: 0.01 #0.025
+  node_dt: 0.025 #0.025
   first_node_dt: 0.01 # 0.01
   compile_derivatives: False #True
   base_frame: "torso"
   scale_cost: False
   max_initial_solves: 20
   initial_constraint_tol: 5e-4
-  nodes_full_dynamics: 10 #4   # Also determines how many nodes have torque constraints
+  nodes_full_dynamics: 4 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0 #-1e-2 #5e-3 # TODO: Tune or disable
   terminal_cost_weight: 1 #50 Having a smaller terminal weight seems to help for now
 solver_settings:
@@ -21,10 +21,10 @@ solver_settings:
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6 # 1e-10
   adaptive_rho: False
-  max_iter: 50 #20
+  max_iter: 20 #20 # TODO: Why does running this for more iterations with rho=0.1 make it so much worse? In general, why does rho=0.1 not work?
   scaling: 10
 constraints:
-  friction_coef: 0.5  # TODO: Tune this
+  friction_coef: 0.1  # TODO: Tune this
   max_grf: 800
   collisions:
     - frame1: "foot_front_left"
@@ -51,8 +51,10 @@ costs:
     #           1.5, 1.5, 1.5,
     #           1, 2, 0.00, 0.00, 0.1, 1, 1, 1, 1,
     #           1, 2, 0.00, 0.00, 0.1, 1, 1, 1, 1 ]
-    weight:  [ 1.0, 1.0, 100.0, # Why does the z height weight make it stand???
+    weight:  [ 1.0, 1.0, 2.0, # Why does the z height weight make it stand???
           1.5, 1.5, 1.5,
+          # 0, 0, 0.0, 0.0, 0, 1, 1, 1, 1,
+          # 0, 0, 0.0, 0.0, 0, 1, 1, 1, 1 ]
           1, 2, 0.0, 0.0, 0.1, 1, 1, 1, 1,
           1, 2, 0.0, 0.0, 0.1, 1, 1, 1, 1 ]
   - type: VelocityTracking
@@ -61,10 +63,10 @@ costs:
     #         0.5, 0.5, 0.5,
     #         1, 0.1, 0.0, .0, .05, 1, 1, 1, 1,
     #         1, 0.1, 0.0, .0, .05, 1, 1, 1, 1]
-    weight: [1, 1, 5,
-        0.5, 0.5, 0.5,
-        1, .1, 0.0, 0.00, 1, 1, 1, 1, 1,
-        1, .1, 0.0, 0.00, 1, 1, 1, 1, 1]
+    weight: [2, 2, 7,
+        .5, .5, .5,
+        1, .1, 0.0, 0.00, 0.05, 1, 1, 1, 1,
+        1, .1, 0.0, 0.00, 0.05, 1, 1, 1, 1]
         # The velocity on the knee is important to prevent bouncing
   - type: TorqueRegularization
     name: "TorqueReg"
@@ -75,7 +77,7 @@ costs:
   - type: ForceRegularization
     name: "ForceReg"
     # weight: [0.0001, 0.0001, 0.01]
-    weight: [.0001, .0001, 0.01]
+    weight: [.000, .000, 0.0]
   # - type: ForwardKinematics
   #   name: "LeftToe"
   #   weight: [100, 100, 0.0]   # Having a highter weight (like 10000) does seem to help keep the feet in place
