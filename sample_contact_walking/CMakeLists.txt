@@ -50,7 +50,7 @@ include_directories(include)
 ament_export_include_directories(include)
 
 # ------- Controller ------- #
-add_executable(ll_controller src/achilles_mpc.cpp)
+add_executable(ll_controller src/robot_mpc.cpp)
 target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo Mpc SamplePlanner)
 
 ament_target_dependencies(ll_controller
@@ -59,7 +59,7 @@ ament_target_dependencies(ll_controller
 
 # ------- Estimator ------- #
 add_executable(state_estimator 
-    src/achilles_estimator.cpp
+    src/robot_estimator.cpp
     )
 target_link_libraries(state_estimator PUBLIC Obelisk::Core pinocchio::pinocchio)
 
@@ -70,7 +70,7 @@ ament_target_dependencies(
 )
 
 # ------- Simulation ------- #
-add_executable(simulation src/achilles_sim.cpp)
+add_executable(simulation src/robot_sim.cpp)
 target_link_libraries(simulation PUBLIC Obelisk::Core)
 
 # ------- Install ------- #

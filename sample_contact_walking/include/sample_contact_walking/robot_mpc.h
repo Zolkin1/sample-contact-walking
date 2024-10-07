@@ -22,29 +22,6 @@ namespace achilles {
         protected:
 
         private:
-            // ------ Mujoco Debug ----- //
-            static void KeyboardCallback(GLFWwindow* window, int key, int scancode, int act, int mods);
-            static void MouseButtonCallback(GLFWwindow* window, int button, int act, int mods);
-            static void MouseMoveCallback(GLFWwindow* window, double xpos, double ypos);
-            static void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
-
-            void HandleKeyboard(__attribute__((unused)) GLFWwindow* window, int key, __attribute__((unused)) int scancode, int act, __attribute__((unused)) int mods);
-            void HandleMouseButton(GLFWwindow* window, __attribute__((unused)) int button, __attribute__((unused)) int act,
-                               __attribute__((unused)) int mods);
-            void HandleMouseMove(GLFWwindow* window, double xpos, double ypos);
-            void HandleScroll(__attribute__((unused)) GLFWwindow* window, __attribute__((unused)) double xoffset,
-                          double yoffset);
-
-            // Helper
-            template <std::size_t N> static inline int sprintf_arr(char (&dest)[N], const char* format, ...) {
-                std::va_list vargs;
-                va_start(vargs, format);
-                int retval = std::vsnprintf(dest, N, format, vargs);
-                va_end(vargs);
-                return retval;
-            }
-            // ------ Mujoco Debug ----- //
-
             // Control functions
             obelisk_control_msgs::msg::PDFeedForward ComputeControl() override;
             // void ComputeMpc();
@@ -138,9 +115,6 @@ namespace achilles {
             std::shared_ptr<torc::mpc::FullOrderMpc> mpc_;
             std::unique_ptr<torc::models::FullOrderRigidBody> model_;
             torc::mpc::ContactSchedule contact_schedule_;
-
-            // Sample planning
-            std::unique_ptr<torc::sample::CrossEntropy> cem_;
 
             // Threads
             std::thread mpc_thread_;
