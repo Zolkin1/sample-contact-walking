@@ -6,7 +6,7 @@
 #include "full_order_mpc.h"
 #include "cross_entropy.h"
 
-namespace achilles {
+namespace robot {
     using torc::mpc::vectorx_t;
     using torc::mpc::vector3_t;
     using torc::mpc::quat_t;
@@ -35,6 +35,9 @@ namespace achilles {
 
             // Contact schedule
             void AddPeriodicContacts();
+
+            // Parse contact into
+            void ParseContactParameters();
 
             // State functions
             void UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) override;
@@ -111,7 +114,6 @@ namespace achilles {
             double next_right_insertion_time_;
             double next_left_insertion_time_;
 
-            torc::models::RobotContactInfo contact_state_;
             std::shared_ptr<torc::mpc::FullOrderMpc> mpc_;
             std::unique_ptr<torc::models::FullOrderRigidBody> model_;
             torc::mpc::ContactSchedule contact_schedule_;
@@ -148,4 +150,4 @@ namespace achilles {
     };
 
     MpcController* MpcController::mujoco_sim_instance_ = nullptr;
-} // namespace achilles
+} // namespace robot

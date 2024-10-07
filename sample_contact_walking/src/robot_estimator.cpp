@@ -11,33 +11,33 @@
 #include "sample_contact_walking/robot_estimator.h"
 #include "obelisk_ros_utils.h"
 
-namespace achilles {
-    AchillesEstimator::AchillesEstimator(const std::string& name) 
+namespace robot {
+    RobotEstimator::RobotEstimator(const std::string& name) 
         : obelisk::ObeliskEstimator<obelisk_estimator_msgs::msg::EstimatedState>(name),
         recieved_first_encoders_(false), recieved_first_mocap_(false), recieved_first_imu_(false)  {
         // ---------- Joint Encoder Subscription ---------- /, /
         this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkJointEncoders>(
             "joint_encoders_setting", "jnt_sensor",
-            std::bind(&AchillesEstimator::JointEncoderCallback, this, std::placeholders::_1));
+            std::bind(&RobotEstimator::JointEncoderCallback, this, std::placeholders::_1));
         
         // ---------- Mocap Subscription ---------- //
         this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkFramePose>(
             "mocap_setting", "mocap_sensor",
-            std::bind(&AchillesEstimator::MocapCallback, this, std::placeholders::_1));
+            std::bind(&RobotEstimator::MocapCallback, this, std::placeholders::_1));
 
         // ---------- IMU Subscriptions ---------- //
         this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkImu>(
             "torso_imu_setting", "torso_imu_sensor",
-            std::bind(&AchillesEstimator::TorsoImuCallback, this, std::placeholders::_1));
+            std::bind(&RobotEstimator::TorsoImuCallback, this, std::placeholders::_1));
 
         // ---------- True Sim State Subscription ---------- //
         this->RegisterObkSubscription<obelisk_sensor_msgs::msg::TrueSimState>(
             "true_sim_sub_setting", "true_sim_state",
-            std::bind(&AchillesEstimator::TrueStateCallback, this, std::placeholders::_1));
+            std::bind(&RobotEstimator::TrueStateCallback, this, std::placeholders::_1));
 
         // ------ DEBUG ------ //
         // this->RegisterObkSubscription<obelisk_control_msgs::msg::PDFeedForward>("debug_print_setting",
-        //     "debug_print", std::bind(&AchillesEstimator::ReceiveControlDebug, this, std::placeholders::_1));
+        //     "debug_print", std::bind(&RobotEstimator::ReceiveControlDebug, this, std::placeholders::_1));
         // this->RegisterObkPublisher<obelisk_control_msgs::msg::PDFeedForward>("debug_pub_setting", "debug_pub");
         // ------ DEBUG ------ //
         
@@ -59,7 +59,7 @@ namespace achilles {
         this->MakeTorsoMocapTransform();
     }
 
-    void AchillesEstimator::JointEncoderCallback(const obelisk_sensor_msgs::msg::ObkJointEncoders& msg) {
+    void RobotEstimator::JointEncoderCallback(const obelisk_sensor_msgs::msg::ObkJointEncoders& msg) {
         recieved_first_encoders_ = true;
 
         joint_pos_ = msg.joint_pos;
@@ -67,7 +67,7 @@ namespace achilles {
         joint_names_ = msg.joint_names;        
     }
 
-    void AchillesEstimator::MocapCallback(const obelisk_sensor_msgs::msg::ObkFramePose& msg) {
+    void RobotEstimator::MocapCallback(const obelisk_sensor_msgs::msg::ObkFramePose& msg) {
         recieved_first_mocap_ = true;
 
         prev_base_pos_ = base_pos_;
@@ -94,11 +94,11 @@ namespace achilles {
         }
     }
 
-    void AchillesEstimator::TorsoImuCallback(__attribute__((__unused__)) const obelisk_sensor_msgs::msg::ObkImu& msg) {
+    void RobotEstimator::TorsoImuCallback(__attribute__((__unused__)) const obelisk_sensor_msgs::msg::ObkImu& msg) {
         recieved_first_imu_ = true;
     }
 
-    obelisk_estimator_msgs::msg::EstimatedState AchillesEstimator::ComputeStateEstimate() {
+    obelisk_estimator_msgs::msg::EstimatedState RobotEstimator::ComputeStateEstimate() {
         
         if (recieved_first_imu_ && recieved_first_encoders_ && recieved_first_mocap_) {
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Starting to publish estimated states.");
@@ -176,7 +176,7 @@ namespace achilles {
         return est_state_msg_;
     }
 
-    void AchillesEstimator::MakeTorsoMocapTransform() {
+    void RobotEstimator::MakeTorsoMocapTransform() {
         geometry_msgs::msg::TransformStamped t;
 
         t.header.stamp = this->get_clock()->now();
@@ -199,14 +199,14 @@ namespace achilles {
         torso_mocap_broadcaster_->sendTransform(t);
     } 
 
-    void AchillesEstimator::TrueStateCallback(const obelisk_sensor_msgs::msg::TrueSimState& msg) {
+    void RobotEstimator::TrueStateCallback(const obelisk_sensor_msgs::msg::TrueSimState& msg) {
         for (size_t i = 0; i < FLOATING_VEL_SIZE; i++) {
             base_vel_[i] = msg.v_base[i];
         }
     }
 
     // TODO: Remove after debug
-    // void AchillesEstimator::ReceiveControlDebug(const obelisk_control_msgs::msg::PDFeedForward& msg) {
+    // void RobotEstimator::ReceiveControlDebug(const obelisk_control_msgs::msg::PDFeedForward& msg) {
     //     auto time = this->now();
     //     obelisk_control_msgs::msg::PDFeedForward msg2;
     //     msg2 = msg;
@@ -214,9 +214,9 @@ namespace achilles {
     //     this->GetPublisher<obelisk_control_msgs::msg::PDFeedForward>("debug_pub")->publish(msg2);
     // }
 
-} // namespace achilles
+} // namespace robot
 
 int main(int argc, char* argv[]) {
-    obelisk::utils::SpinObelisk<achilles::AchillesEstimator, rclcpp::executors::MultiThreadedExecutor>(
+    obelisk::utils::SpinObelisk<robot::RobotEstimator, rclcpp::executors::MultiThreadedExecutor>(
         argc, argv, "state_estimator");
 }

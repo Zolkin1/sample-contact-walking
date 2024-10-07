@@ -29,17 +29,13 @@
 //  - Fix the holonomic constraints
 
 
-namespace achilles
+namespace robot
 {
     MpcController::MpcController(const std::string& name) 
     : obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState>(name), 
         recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(0), sim_ready_(false) {
 
         mujoco_sim_instance_ = this;
-
-        // For now model the feet as point contacts
-        contact_state_.contacts.emplace("left_ankle_pitch", torc::models::Contact(torc::models::PointContact, false));
-        contact_state_.contacts.emplace("right_ankle_pitch", torc::models::Contact(torc::models::PointContact, false));
 
         this->declare_parameter<double>("mpc_loop_period_sec", 0.01);
         this->declare_parameter<long>("max_mpc_solves", -1);
@@ -65,64 +61,14 @@ namespace achilles
         model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path);
 
         // Create and configure MPC
-        mpc_ = std::make_shared<torc::mpc::FullOrderMpc>("achilles_mpc_obk", this->get_parameter("params_path").as_string(), urdf_path);
+        mpc_ = std::make_shared<torc::mpc::FullOrderMpc>("robot_mpc_obk", this->get_parameter("params_path").as_string(), urdf_path);
         RCLCPP_INFO_STREAM(this->get_logger(), "MPC Created...");
 
         mpc_->Configure();
         RCLCPP_INFO_STREAM(this->get_logger(), "MPC Configured...");
 
-        // Make the contact schedule
-        this->declare_parameter<double>("swing_time", 0.3);
-        this->declare_parameter<double>("first_swing_time", 1);
-        this->declare_parameter<double>("double_stance_time", 0.0);
-        this->declare_parameter<bool>("right_foot_first", true);
-        this->declare_parameter<std::vector<std::string>>("right_frames");
-        this->declare_parameter<std::vector<std::string>>("left_frames");
-
-        this->get_parameter("swing_time", swing_time_);
-        this->get_parameter("first_swing_time", first_swing_time_);
-        this->get_parameter("double_stance_time", double_stance_time_);
-        this->get_parameter("right_foot_first", right_foot_first_);
-        this->get_parameter("right_frames", right_frames_);
-        this->get_parameter("left_frames", left_frames_);
-
-        if (right_frames_.empty()) {
-            throw std::runtime_error("No right foot frames provided!");
-        }
-
-        if (left_frames_.empty()) {
-            throw std::runtime_error("No left foot frames provided!");
-        }
-
-
-        contact_schedule_.SetFrames(mpc_->GetContactFrames());
-
-        if (right_foot_first_) {
-            contact_schedule_.InsertSwingByDuration(right_frames_[0], first_swing_time_, swing_time_);
-            contact_schedule_.InsertSwingByDuration(right_frames_[1], first_swing_time_, swing_time_);
-            next_right_insertion_time_ = first_swing_time_ + 2*swing_time_;
-            next_left_insertion_time_ = first_swing_time_ + swing_time_;
-        } else {
-            contact_schedule_.InsertSwingByDuration(left_frames_[0], first_swing_time_, swing_time_);
-            contact_schedule_.InsertSwingByDuration(left_frames_[1], first_swing_time_, swing_time_);
-            next_left_insertion_time_ = first_swing_time_ + 2*swing_time_;
-            next_right_insertion_time_ = first_swing_time_ + swing_time_;
-        }
-
-        AddPeriodicContacts();
-
-        this->declare_parameter<double>("default_swing_height", 0.1);
-        this->declare_parameter<double>("default_stand_foot_height", 0.0);
-        this->declare_parameter<double>("apex_time", 0.5);
-        mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
-            this->get_parameter("default_swing_height").as_double(),
-            this->get_parameter("default_stand_foot_height").as_double(),
-            this->get_parameter("apex_time").as_double());
-
-        mpc_->PrintContactSchedule();
-        for (const auto& frame : mpc_->GetContactFrames()) {
-            mpc_->PrintSwingTraj(frame);
-        }
+        // Parse contact schedule info
+        ParseContactParameters();
 
         // Setup q and v targets
         this->declare_parameter<std::vector<double>>("target_config");
@@ -797,10 +743,65 @@ namespace achilles
         // } 
     }
 
-} // namespace achilles
+    void MpcController::ParseContactParameters() {
+        // Make the contact schedule
+        this->declare_parameter<double>("swing_time", 0.3);
+        this->declare_parameter<double>("first_swing_time", 1);
+        this->declare_parameter<double>("double_stance_time", 0.0);
+        this->declare_parameter<bool>("right_foot_first", true);
+        this->declare_parameter<std::vector<std::string>>("right_frames");
+        this->declare_parameter<std::vector<std::string>>("left_frames");
+
+        this->get_parameter("swing_time", swing_time_);
+        this->get_parameter("first_swing_time", first_swing_time_);
+        this->get_parameter("double_stance_time", double_stance_time_);
+        this->get_parameter("right_foot_first", right_foot_first_);
+        this->get_parameter("right_frames", right_frames_);
+        this->get_parameter("left_frames", left_frames_);
+
+        if (right_frames_.empty()) {
+            throw std::runtime_error("No right foot frames provided!");
+        }
+
+        if (left_frames_.empty()) {
+            throw std::runtime_error("No left foot frames provided!");
+        }
+
+
+        contact_schedule_.SetFrames(mpc_->GetContactFrames());
+
+        if (right_foot_first_) {
+            contact_schedule_.InsertSwingByDuration(right_frames_[0], first_swing_time_, swing_time_);
+            contact_schedule_.InsertSwingByDuration(right_frames_[1], first_swing_time_, swing_time_);
+            next_right_insertion_time_ = first_swing_time_ + 2*swing_time_;
+            next_left_insertion_time_ = first_swing_time_ + swing_time_;
+        } else {
+            contact_schedule_.InsertSwingByDuration(left_frames_[0], first_swing_time_, swing_time_);
+            contact_schedule_.InsertSwingByDuration(left_frames_[1], first_swing_time_, swing_time_);
+            next_left_insertion_time_ = first_swing_time_ + 2*swing_time_;
+            next_right_insertion_time_ = first_swing_time_ + swing_time_;
+        }
+
+        AddPeriodicContacts();
+
+        this->declare_parameter<double>("default_swing_height", 0.1);
+        this->declare_parameter<double>("default_stand_foot_height", 0.0);
+        this->declare_parameter<double>("apex_time", 0.5);
+        mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
+            this->get_parameter("default_swing_height").as_double(),
+            this->get_parameter("default_stand_foot_height").as_double(),
+            this->get_parameter("apex_time").as_double());
+
+        mpc_->PrintContactSchedule();
+        for (const auto& frame : mpc_->GetContactFrames()) {
+            mpc_->PrintSwingTraj(frame);
+        }
+    }
+
+} // namespace robot
 
 
 int main(int argc, char* argv[]) {
-    obelisk::utils::SpinObelisk<achilles::MpcController, rclcpp::executors::MultiThreadedExecutor>(
+    obelisk::utils::SpinObelisk<robot::MpcController, rclcpp::executors::MultiThreadedExecutor>(
         argc, argv, "whole_body_controller");
 }

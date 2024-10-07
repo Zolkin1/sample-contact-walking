@@ -26,6 +26,7 @@ onboard:
         right_foot_first: True
         right_frames: ["foot_front_right", "foot_rear_right"]
         left_frames: ["foot_front_left", "foot_rear_left"]
+# ---------- Targets ---------- #
         # target_config: [0., 0, 0.94,
         #             0., 0., 0., 1,
         #             0., 0., -0.26,

@@ -5,13 +5,13 @@
 // TODO: Remove after debug!
 // #include "obelisk_controller.h"
 
-namespace achilles {
+namespace robot {
     using vector3_t = Eigen::Vector3d;
     using vector6_t = Eigen::Vector<double, 6>;
 
-    class AchillesEstimator : public obelisk::ObeliskEstimator<obelisk_estimator_msgs::msg::EstimatedState> {
+    class RobotEstimator : public obelisk::ObeliskEstimator<obelisk_estimator_msgs::msg::EstimatedState> {
         public:
-            AchillesEstimator(const std::string& name);
+            RobotEstimator(const std::string& name);
         protected:
 
         private:
@@ -66,4 +66,4 @@ namespace achilles {
             // broadcasters
             std::shared_ptr<tf2_ros::StaticTransformBroadcaster> torso_mocap_broadcaster_;
     };
-} // namespace achilles
+} // namespace robot
