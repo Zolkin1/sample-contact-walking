@@ -254,11 +254,6 @@ namespace achilles
             this->get_parameter("params_path").as_string(), mpc_);
 
         this->declare_parameter("sample_loop_period_sec", 0.05);
-
-        // ----------- DEBUG ----------- //
-        // TODO: Put back! Make changes in the thread!
-        // sample_thread_ = std::thread(&AchillesController::SampleThread, this);
-        // ----------- DEBUG ----------- //
     }
 
     void AchillesController::UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) {
@@ -742,98 +737,6 @@ namespace achilles
                 while ((-(this->now() - start_time).nanoseconds() + mpc_loop_rate_ns) > 0) {}
             } else {
                 RCLCPP_WARN_STREAM(this->get_logger(), "MPC computation took longer than loop rate allowed for. " << std::abs(time_left)*1e-6 << "ms over time.");
-            }
-        }
-    }
-
-    void AchillesController::SampleThread() {
-        // TODO: Change parameter
-        const long sample_loop_rate_ns = this->get_parameter("sample_loop_period_sec").as_double()*1e9;
-        RCLCPP_INFO_STREAM(this->get_logger(), "Sample loop period set to: " << sample_loop_rate_ns << "ns.");
-        
-        static bool first_loop = true;
-        auto prev_time = this->now();
-
-        torc::mpc::Trajectory traj_ref;
-        torc::mpc::Trajectory traj_plan;
-
-        int num_plans = 0;
-        this->declare_parameter<int>("max_sample_plans", -1);
-        const int max_plans = this->get_parameter("max_sample_plans").as_int();
-
-        while (true) {
-            // Start the timer
-            auto start_time = this->now();
-
-            if (recieved_first_state_) {
-                RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Computing first trajectory.");
-
-                if (first_loop) {
-                    prev_time = this->now();
-                    first_loop = false;
-                }
-
-                torc::mpc::ContactSchedule cs_out;
-                {
-                    // Get the traj mutex to protect it
-                    std::lock_guard<std::mutex> lock(traj_out_mut_);
-                    traj_ref = traj_out_;
-                }
-
-                vectorx_t q, v;
-                {
-                    // Get the mutex to protect the states
-                    std::lock_guard<std::mutex> lock(est_state_mut_);
-
-                    // Create current state
-                    q = q_;
-                    v = v_;
-                }
-
-                traj_ref.SetConfiguration(0, q);
-                traj_ref.SetVelocity(0, v);
-
-                if (max_plans < 0 || num_plans < max_plans) {
-                    double time = this->get_clock()->now().seconds();
-                    cem_->Plan(traj_ref, traj_plan, cs_out, {"ConfigTracking", "VelocityTracking"});
-                    num_plans++;
-                
-                    // ----------- DEBUG ----------- //
-                    // TODO: Remove this
-                    // Set the planned trajectory as the desired trajectory
-                    {
-                        // Get the traj mutex to protect it
-                        std::lock_guard<std::mutex> lock(traj_out_mut_);
-                        traj_out_ = traj_plan;
-
-                        // Assign time time too
-                        traj_start_time_ = time;
-                    }
-                    // ----------- DEBUG ----------- //
-                }
-                
-                // ----------- DEBUG ----------- //
-                // TODO: Remove!
-                if (GetState() != Mpc) {
-                    TransitionState(Mpc);
-                }
-
-                // TODO: If this is slow, then I need to move it
-                PublishTrajViz(traj_plan, viz_frames_);
-                // ----------- DEBUG ----------- //
-
-            }
-
-            // Stop timer
-            auto stop_time = this->now(); 
-
-            // Compute difference
-            const long time_left = sample_loop_rate_ns - (stop_time - start_time).nanoseconds();
-            if (time_left > 0) {
-                // TODO: Only sleep if I have at least 3ms left or else busy weight
-                std::this_thread::sleep_for(std::chrono::nanoseconds(time_left));
-            } else {
-                RCLCPP_WARN_STREAM(this->get_logger(), "Sample planner took longer than loop rate allowed for. " << std::abs(time_left)*1e-6 << "ms over time.");
             }
         }
     }

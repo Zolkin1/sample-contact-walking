@@ -56,9 +56,6 @@ namespace achilles {
             // TODO: Update when I have joystick access
             void UpdateMpcTargets(const vectorx_t& q);
 
-            // Sample planning thread function
-            void SampleThread();
-
             // Contact schedule
             void AddPeriodicContacts();
 
