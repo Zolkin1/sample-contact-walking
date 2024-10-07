@@ -17,14 +17,14 @@ solver_settings:
   abs_tol: 1e-3
   verbose: False
   polish: False
-  rho: 0.1 #0.05 #0.05 looks good for no sim walking traj. 0.01 allows for standing
+  rho: 0.05 #0.05 #0.05 looks good for no sim walking traj. 0.01 allows for standing
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6 # 1e-10
   adaptive_rho: False
   max_iter: 20 #20 # TODO: Why does running this for more iterations with rho=0.1 make it so much worse? In general, why does rho=0.1 not work?
   scaling: 10
 constraints:
-  friction_coef: 0.1  # TODO: Tune this
+  friction_coef: 0.5  # TODO: Tune this
   max_grf: 800
   collisions:
     - frame1: "foot_front_left"
@@ -51,7 +51,7 @@ costs:
     #           1.5, 1.5, 1.5,
     #           1, 2, 0.00, 0.00, 0.1, 1, 1, 1, 1,
     #           1, 2, 0.00, 0.00, 0.1, 1, 1, 1, 1 ]
-    weight:  [ 1.0, 1.0, 2.0, # Why does the z height weight make it stand???
+    weight:  [ 1.0, 1.0, 10.0, # Why does the z height weight make it stand???
           1.5, 1.5, 1.5,
           # 0, 0, 0.0, 0.0, 0, 1, 1, 1, 1,
           # 0, 0, 0.0, 0.0, 0, 1, 1, 1, 1 ]
@@ -63,7 +63,7 @@ costs:
     #         0.5, 0.5, 0.5,
     #         1, 0.1, 0.0, .0, .05, 1, 1, 1, 1,
     #         1, 0.1, 0.0, .0, .05, 1, 1, 1, 1]
-    weight: [2, 2, 7,
+    weight: [1, 1, 5,
         .5, .5, .5,
         1, .1, 0.0, 0.00, 0.05, 1, 1, 1, 1,
         1, .1, 0.0, 0.00, 0.05, 1, 1, 1, 1]
@@ -77,7 +77,7 @@ costs:
   - type: ForceRegularization
     name: "ForceReg"
     # weight: [0.0001, 0.0001, 0.01]
-    weight: [.000, .000, 0.0]
+    weight: [.0001, .0001, 0.01]
   # - type: ForwardKinematics
   #   name: "LeftToe"
   #   weight: [100, 100, 0.0]   # Having a highter weight (like 10000) does seem to help keep the feet in place

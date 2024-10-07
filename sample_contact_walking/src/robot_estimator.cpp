@@ -168,7 +168,7 @@ namespace achilles {
 
             // Regardless of state of incoming data (i.e. even if dt <= 0)
             // TODO: Put back!
-            this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>(this->est_pub_key_)->publish(est_state_msg_);
+            // this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>(this->est_pub_key_)->publish(est_state_msg_);
         } else {
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Waiting on sensor measurements to publish estimated state.");
         }
