@@ -31,7 +31,7 @@
 
 namespace achilles
 {
-    AchillesController::AchillesController(const std::string& name) 
+    MpcController::MpcController(const std::string& name) 
     : obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState>(name), 
         recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(0), sim_ready_(false) {
 
@@ -45,7 +45,7 @@ namespace achilles
         this->declare_parameter<long>("max_mpc_solves", -1);
 
         // --- Debug Publisher and Timer --- //
-        this->RegisterObkTimer("state_viz_timer_setting", "state_viz_timer", std::bind(&AchillesController::PublishTrajStateViz, this));
+        this->RegisterObkTimer("state_viz_timer_setting", "state_viz_timer", std::bind(&MpcController::PublishTrajStateViz, this));
         this->RegisterObkPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub_setting", "state_viz_pub");
 
         // --- Debug Force Publisher --- //
@@ -224,7 +224,7 @@ namespace achilles
         this->get_parameter("force_frames", force_frames_);
 
         // Spin up MPC thread
-        mpc_thread_ = std::thread(&AchillesController::MpcThread, this);
+        mpc_thread_ = std::thread(&MpcController::MpcThread, this);
         // sched_param sch;
         // int policy;
         // pthread_getschedparam(mpc_thread_.native_handle(), &policy, &sch);
@@ -256,7 +256,7 @@ namespace achilles
         this->declare_parameter("sample_loop_period_sec", 0.05);
     }
 
-    void AchillesController::UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) {
+    void MpcController::UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) {
         // Get the mutex to protect the states
         std::lock_guard<std::mutex> lock(est_state_mut_);
         
@@ -300,7 +300,7 @@ namespace achilles
     // -------------------------------------- //
     // ----------- GLFW Callbacks ----------- //
     // -------------------------------------- //
-    void AchillesController::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act, int mods) {
+    void MpcController::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act, int mods) {
         if (mujoco_sim_instance_) {
             mujoco_sim_instance_->HandleKeyboard(window, key, scancode, act, mods);
         } else {
@@ -308,7 +308,7 @@ namespace achilles
         }
     }
 
-    void AchillesController::HandleKeyboard(__attribute__((unused)) GLFWwindow* window, int key, __attribute__((unused)) int scancode,
+    void MpcController::HandleKeyboard(__attribute__((unused)) GLFWwindow* window, int key, __attribute__((unused)) int scancode,
                         int act, __attribute__((unused)) int mods) {
         // backspace: reset simulation
         if (act == GLFW_PRESS && key == GLFW_KEY_BACKSPACE) {
@@ -321,7 +321,7 @@ namespace achilles
         }
     }
 
-    void AchillesController::MouseButtonCallback(GLFWwindow* window, int button, int act, int mods) {
+    void MpcController::MouseButtonCallback(GLFWwindow* window, int button, int act, int mods) {
         if (mujoco_sim_instance_) {
                 mujoco_sim_instance_->HandleMouseButton(window, button, act, mods);
         } else {
@@ -329,7 +329,7 @@ namespace achilles
         }
     }
 
-    void AchillesController::HandleMouseButton(GLFWwindow* window, __attribute__((unused)) int button, __attribute__((unused)) int act,
+    void MpcController::HandleMouseButton(GLFWwindow* window, __attribute__((unused)) int button, __attribute__((unused)) int act,
                             __attribute__((unused)) int mods) {
         // update button state
         button_left   = (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
@@ -340,14 +340,14 @@ namespace achilles
         glfwGetCursorPos(window, &lastx, &lasty);
     }
 
-    void AchillesController::MouseMoveCallback(GLFWwindow* window, double xpos, double ypos) {
+    void MpcController::MouseMoveCallback(GLFWwindow* window, double xpos, double ypos) {
         if (mujoco_sim_instance_) {
             mujoco_sim_instance_->HandleMouseMove(window, xpos, ypos);
         } else {
             throw std::runtime_error("No active mujoco sim instance while the GLFW window is running!");
         }
     }
-    void AchillesController::HandleMouseMove(GLFWwindow* window, double xpos, double ypos) {
+    void MpcController::HandleMouseMove(GLFWwindow* window, double xpos, double ypos) {
         // no buttons down: nothing to do
         if (!button_left && !button_middle && !button_right) {
             return;
@@ -381,7 +381,7 @@ namespace achilles
         mjv_moveCamera(mj_model_, action, dx / height, dy / height, &scn, &cam);
     }
 
-    void AchillesController::ScrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+    void MpcController::ScrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
         if (mujoco_sim_instance_) {
             mujoco_sim_instance_->HandleScroll(window, xoffset, yoffset);
         } else {
@@ -389,7 +389,7 @@ namespace achilles
         }
     }
 
-    void AchillesController::HandleScroll(__attribute__((unused)) GLFWwindow* window, __attribute__((unused)) double xoffset,
+    void MpcController::HandleScroll(__attribute__((unused)) GLFWwindow* window, __attribute__((unused)) double xoffset,
                         double yoffset) {
         // emulate vertical mouse motion = 5% of window height
         mjv_moveCamera(mj_model_, mjMOUSE_ZOOM, 0, -0.05 * yoffset, &scn, &cam);
@@ -399,7 +399,7 @@ namespace achilles
     // Running the MPC in its own the thread seems to make the timing more consistent and overall faster
     // If I still need more, I can try to adjust the thread prio
     // Experimentally, note that the faster I run it, the more consistent (and faster, up to a limit) it is
-    void AchillesController::MpcThread() {
+    void MpcController::MpcThread() {
         const long mpc_loop_rate_ns = this->get_parameter("mpc_loop_period_sec").as_double()*1e9;
         RCLCPP_INFO_STREAM(this->get_logger(), "MPC loop period set to: " << mpc_loop_rate_ns << "ns.");
 
@@ -467,10 +467,10 @@ namespace achilles
         mjr_makeContext(mj_model_, &con, mjFONTSCALE_150);
 
         // install GLFW mouse and keyboard callbacks
-        glfwSetKeyCallback(window, AchillesController::KeyboardCallback);
-        glfwSetCursorPosCallback(window, AchillesController::MouseMoveCallback);
-        glfwSetMouseButtonCallback(window, AchillesController::MouseButtonCallback);
-        glfwSetScrollCallback(window, AchillesController::ScrollCallback);
+        glfwSetKeyCallback(window, MpcController::KeyboardCallback);
+        glfwSetCursorPosCallback(window, MpcController::MouseMoveCallback);
+        glfwSetMouseButtonCallback(window, MpcController::MouseButtonCallback);
+        glfwSetScrollCallback(window, MpcController::ScrollCallback);
 
         // ------ Mujoco Debug ----- //
 
@@ -741,7 +741,7 @@ namespace achilles
         }
     }
 
-    obelisk_control_msgs::msg::PDFeedForward AchillesController::ComputeControl() {
+    obelisk_control_msgs::msg::PDFeedForward MpcController::ComputeControl() {
         // This callback does not need any access to the state as it outputs PD
         //  setpoints from the trajectory.
 
@@ -874,20 +874,20 @@ namespace achilles
         return msg;
     }
 
-    void AchillesController::ConvertEigenToStd(const vectorx_t& eig_vec, std::vector<double>& std_vec) {
+    void MpcController::ConvertEigenToStd(const vectorx_t& eig_vec, std::vector<double>& std_vec) {
         std_vec.clear();
         for (int i = 0; i < eig_vec.size(); i++) {
             std_vec.emplace_back(eig_vec(i));
         }
     }
 
-    vectorx_t AchillesController::ConvertControlToMujocoU(const vectorx_t& pos_target, const vectorx_t& vel_target, const vectorx_t& feed_forward) {
+    vectorx_t MpcController::ConvertControlToMujocoU(const vectorx_t& pos_target, const vectorx_t& vel_target, const vectorx_t& feed_forward) {
         vectorx_t u(pos_target.size() + vel_target.size() + feed_forward.size());
         u << pos_target, vel_target, feed_forward;
         return u;
     }
 
-    void AchillesController::TransitionState(const ControllerState& new_state) {
+    void MpcController::TransitionState(const ControllerState& new_state) {
         std::lock_guard<std::mutex> lock(ctrl_state_mut_);
 
         ctrl_state_ = new_state;
@@ -908,12 +908,12 @@ namespace achilles
         RCLCPP_INFO_STREAM(this->get_logger(), "Transitioning to state: " << new_state_str);
     }
 
-    AchillesController::ControllerState AchillesController::GetState() {
+    MpcController::ControllerState MpcController::GetState() {
         std::lock_guard<std::mutex> lock(ctrl_state_mut_);
         return ctrl_state_;
     }
 
-    void AchillesController::UpdateMpcTargets(const vectorx_t& q) {
+    void MpcController::UpdateMpcTargets(const vectorx_t& q) {
         // For now, only update the desired x and y positions based on the x, y target vel
 
         const std::vector<double>& dt_vec = mpc_->GetDtVector();
@@ -935,7 +935,7 @@ namespace achilles
         // Also in the future we will get inputs from the joystick
     }
 
-    void AchillesController::PublishTrajViz(const torc::mpc::Trajectory& traj, const std::vector<std::string>& viz_frames) {
+    void MpcController::PublishTrajViz(const torc::mpc::Trajectory& traj, const std::vector<std::string>& viz_frames) {
         // Compute FK for each frame and add the point to a marker message
         visualization_msgs::msg::MarkerArray msg;
         msg.markers.resize(viz_frames.size());
@@ -1032,7 +1032,7 @@ namespace achilles
         }
     }
 
-    void AchillesController::PublishTrajStateViz() {
+    void MpcController::PublishTrajStateViz() {
         std::lock_guard<std::mutex> lock(traj_out_mut_);
 
         if (traj_start_time_ < 0) {
@@ -1093,7 +1093,7 @@ namespace achilles
         }
     }
 
-    void AchillesController::AddPeriodicContacts() {
+    void MpcController::AddPeriodicContacts() {
 
         while (next_right_insertion_time_ < 1) {
             for (const auto& frame : right_frames_) {
@@ -1127,6 +1127,6 @@ namespace achilles
 
 
 int main(int argc, char* argv[]) {
-    obelisk::utils::SpinObelisk<achilles::AchillesController, rclcpp::executors::MultiThreadedExecutor>(
+    obelisk::utils::SpinObelisk<achilles::MpcController, rclcpp::executors::MultiThreadedExecutor>(
         argc, argv, "whole_body_controller");
 }

@@ -12,12 +12,12 @@ namespace achilles {
     using torc::mpc::quat_t;
     using torc::mpc::matrix3_t;
 
-    class AchillesController : public obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState> {
+    class MpcController : public obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState> {
         public:
-            AchillesController(const std::string& name);
+            MpcController(const std::string& name);
 
             // ------ Mujoco Debug ----- //
-            static AchillesController* mujoco_sim_instance_;
+            static MpcController* mujoco_sim_instance_;
             // ------ Mujoco Debug ----- //
         protected:
 
@@ -173,5 +173,5 @@ namespace achilles {
             // ------ Mujoco Debug ----- //
     };
 
-    AchillesController* AchillesController::mujoco_sim_instance_ = nullptr;
+    MpcController* MpcController::mujoco_sim_instance_ = nullptr;
 } // namespace achilles
