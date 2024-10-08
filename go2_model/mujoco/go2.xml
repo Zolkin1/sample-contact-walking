@@ -105,10 +105,12 @@
   </asset>
 
   <worldbody>
-    <body name="base" pos="0 0 0.445" childclass="go2">
+    <body name="torso" pos="0 0 0.445" childclass="go2">
       <inertial pos="0.021112 0 -0.005366" quat="-0.000543471 0.713435 -0.00173769 0.700719" mass="6.921"
         diaginertia="0.107027 0.0980771 0.0244531"/>
-      <freejoint/>
+
+      <freejoint name="root"/>
+
       <geom mesh="base_0" material="black" class="visual"/>
       <geom mesh="base_1" material="black" class="visual"/>
       <geom mesh="base_2" material="black" class="visual"/>
@@ -119,7 +121,7 @@
       <geom size="0.047" pos="0.293 0 -0.06" class="collision"/>
       
       <site name="imu" pos="-0.02557 0 0.04232"/>
-      <site name="base_mocap_site" pos="0 0 0" euler="0 0 0" size="0.01"/>
+      <site name="torso_mocap_site" pos="0 0 0" euler="0 0 0" size="0.01"/>
 
       <body name="FL_hip" pos="0.1934 0.0465 0">
         <inertial pos="-0.0054 0.00194 -0.000105" quat="0.497014 0.499245 0.505462 0.498237" mass="0.678"
@@ -276,8 +278,8 @@
     <framequat name="imu_quat_sensor" objtype="site" objname="imu" noise="0.01"/>
 
     <!-- Mocap sensors -->
-    <framepos name="base_mocap_pos_sensor" objtype="site" objname="base_mocap_site" noise="0.01"/>
-    <framequat name="base_mocap_quat_sensor" objtype="site" objname="base_mocap_site" noise="0.01"/>
+    <framepos name="base_mocap_pos_sensor" objtype="site" objname="torso_mocap_site" noise="0.01"/>
+    <framequat name="base_mocap_quat_sensor" objtype="site" objname="torso_mocap_site" noise="0.01"/>
 
     <!--  Force sensors  -->
     <force name="FL_force_sensor" site="FL_foot_site"/>

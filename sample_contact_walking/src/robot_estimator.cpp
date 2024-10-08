@@ -180,8 +180,8 @@ namespace robot {
         geometry_msgs::msg::TransformStamped t;
 
         t.header.stamp = this->get_clock()->now();
-        t.header.frame_id = "torso_mocap_site";
-        t.child_frame_id = "base_link";
+        t.header.frame_id = "torso_mocap_site";     // This must match the base link in the estimated state
+        t.child_frame_id = "base_link";             // Must match the the base link in the urdf
 
         t.transform.translation.x = 0.0;
         t.transform.translation.y = 0.0;

@@ -6,7 +6,8 @@ Stephen Brawner (brawner@gmail.com)
 <!-- Modified by Zach Olkin. Reduced velocity limits for MPC. -->
 <robot
   name="go2_description">
-  <link name="base">
+  <link name="base_link"/>
+  <link name="torso">
   <!-- TODO: Add link without inertia for the base -->
     <inertial>
       <origin
@@ -28,7 +29,7 @@ Stephen Brawner (brawner@gmail.com)
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://go2_description/meshes/base.dae" />
+          filename="package://go2_description/meshes/trunk.dae" />
       </geometry>
       <material
         name="">
@@ -43,6 +44,11 @@ Stephen Brawner (brawner@gmail.com)
       </geometry>
     </collision>
   </link>
+  <joint name="base_to_torso_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="torso"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
   <link
     name="Head_upper">
     <inertial>
@@ -75,7 +81,7 @@ Stephen Brawner (brawner@gmail.com)
       xyz="0.285 0 0.01"
       rpy="0 0 0" />
     <parent
-      link="base" />
+      link="torso" />
     <child
       link="Head_upper" />
     <axis
@@ -163,7 +169,7 @@ Stephen Brawner (brawner@gmail.com)
       xyz="0.1934 0.0465 0"
       rpy="0 0 0" />
     <parent
-      link="base" />
+      link="torso" />
     <child
       link="FL_hip" />
     <axis
@@ -183,7 +189,7 @@ Stephen Brawner (brawner@gmail.com)
   </link>
   <joint name="FL_hip_rotor_joint" type="fixed">
     <origin rpy="0 0 0" xyz="0.11215 0.04675 0"/>
-    <parent link="base"/>
+    <parent link="torso"/>
     <child link="FL_hip_rotor"/>
   </joint>
   <link
@@ -458,7 +464,7 @@ Stephen Brawner (brawner@gmail.com)
       xyz="0.1934 -0.0465 0"
       rpy="0 0 0" />
     <parent
-      link="base" />
+      link="torso" />
     <child
       link="FR_hip" />
     <axis
@@ -478,7 +484,7 @@ Stephen Brawner (brawner@gmail.com)
   </link>
   <joint name="FR_hip_rotor_joint" type="fixed">
     <origin rpy="0 0 0" xyz="0.11215 -0.04675 0"/>
-    <parent link="base"/>
+    <parent link="torso"/>
     <child link="FR_hip_rotor"/>
   </joint>
   <link
@@ -753,7 +759,7 @@ Stephen Brawner (brawner@gmail.com)
       xyz="-0.1934 0.0465 0"
       rpy="0 0 0" />
     <parent
-      link="base" />
+      link="torso" />
     <child
       link="RL_hip" />
     <axis
@@ -773,7 +779,7 @@ Stephen Brawner (brawner@gmail.com)
   </link>
   <joint name="RL_hip_rotor_joint" type="fixed">
     <origin rpy="0 0 0" xyz="-0.11215 0.04675 0"/>
-    <parent link="base"/>
+    <parent link="torso"/>
     <child link="RL_hip_rotor"/>
   </joint>
   <link
@@ -1048,7 +1054,7 @@ Stephen Brawner (brawner@gmail.com)
       xyz="-0.1934 -0.0465 0"
       rpy="0 0 0" />
     <parent
-      link="base" />
+      link="torso" />
     <child
       link="RR_hip" />
     <axis
@@ -1068,7 +1074,7 @@ Stephen Brawner (brawner@gmail.com)
   </link>
   <joint name="RR_hip_rotor_joint" type="fixed">
     <origin rpy="0 0 0" xyz="-0.11215 -0.04675 0"/>
-    <parent link="base"/>
+    <parent link="torso"/>
     <child link="RR_hip_rotor"/>
   </joint>
   <link
@@ -1323,7 +1329,7 @@ Stephen Brawner (brawner@gmail.com)
       xyz="-0.02557 0 0.04232"
       rpy="0 0 0" />
     <parent
-      link="base" />
+      link="torso" />
     <child
       link="imu" />
     <axis
@@ -1353,7 +1359,7 @@ Stephen Brawner (brawner@gmail.com)
       xyz="0.28945 0 -0.046825"
       rpy="0 2.8782 0" />
     <parent
-      link="base" />
+      link="torso" />
     <child
       link="radar" />
     <axis

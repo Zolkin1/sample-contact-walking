@@ -8,7 +8,7 @@ onboard:
         urdf_path: /home/zolkin/sample-contact-walking/go2_model/urdf/go2_description.urdf
         robot_name: "go2"
 # ---------- Viz ---------- #
-        viz_frames: ["base", "FR_foot", "FL_foot", "RR_foot", "RL_foot"]
+        viz_frames: ["torso", "FR_foot", "FL_foot", "RR_foot", "RL_foot"]
         viz_forces: True
         viz_force_scale: 0.01
         force_frames: ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
@@ -18,7 +18,7 @@ onboard:
         apex_time: 0.7 # 0.7
 # ---------- MPC Loop ---------- #
         mpc_loop_period_sec: 0.01 #0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
-        max_mpc_solves: -125 
+        max_mpc_solves: 125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.5 #1.
         first_swing_time: 0.1
@@ -52,7 +52,7 @@ onboard:
                     0, 0.0, 0.,
                     0, 0.0, 0.,
                     0, 0.0, 0.]
-        fixed_target: False #True
+        fixed_target: True #True
       callback_groups: 
         control_cbg: MutuallyExclusiveCallbackGroup
         estimation_cbg: MutuallyExclusiveCallbackGroup
