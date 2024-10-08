@@ -6,8 +6,8 @@ Stephen Brawner (brawner@gmail.com)
 <!-- Modified by Zach Olkin. Reduced velocity limits for MPC. -->
 <robot
   name="go2_description">
-  <link
-    name="base">
+  <link name="base">
+  <!-- TODO: Add link without inertia for the base -->
     <inertial>
       <origin
         xyz="0.021112 0 -0.005366"

@@ -57,11 +57,14 @@ namespace robot
         std::filesystem::path urdf_path(this->get_parameter("urdf_path").as_string());
 
         // Create model
-        std::string model_name = name + "_model";
+        this->declare_parameter<std::string>("robot_name", "");
+        std::string robot_name = this->get_parameter("robot_name").as_string();
+        RCLCPP_INFO_STREAM(this->get_logger(), "Config yaml robot name: " << robot_name);
+        std::string model_name = name + robot_name + "_model";
         model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path);
 
         // Create and configure MPC
-        mpc_ = std::make_shared<torc::mpc::FullOrderMpc>("robot_mpc_obk", this->get_parameter("params_path").as_string(), urdf_path);
+        mpc_ = std::make_shared<torc::mpc::FullOrderMpc>(name + robot_name + "robot_mpc_obk", this->get_parameter("params_path").as_string(), urdf_path);
         RCLCPP_INFO_STREAM(this->get_logger(), "MPC Created...");
 
         mpc_->Configure();
@@ -189,14 +192,14 @@ namespace robot
         //     }
         // }
 
-        // Sample planning
-        this->declare_parameter("simulation_samples", 50);
-        this->declare_parameter<std::string>("xml_path");
+        // // Sample planning
+        // this->declare_parameter("simulation_samples", 50);
+        // this->declare_parameter<std::string>("xml_path");
 
-        std::string xml_path_str = this->get_parameter("xml_path").as_string();
-        std::filesystem::path xml_path(xml_path_str);
+        // std::string xml_path_str = this->get_parameter("xml_path").as_string();
+        // std::filesystem::path xml_path(xml_path_str);
 
-        this->declare_parameter("sample_loop_period_sec", 0.05);
+        // this->declare_parameter("sample_loop_period_sec", 0.05);
     }
 
     void MpcController::UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) {
@@ -402,28 +405,19 @@ namespace robot
                     traj_out_.GetVelocityInterp(time_into_traj, v);
                     traj_out_.GetTorqueInterp(time_into_traj, tau);
 
-                    // For force debugging
-                    std::array<std::string, 4> frames = {"foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left"};
-                    for (const auto& frame : frames) {
-                        geometry_msgs::msg::Vector3 force;
-                        vector3_t force_traj;
-                        traj_out_.GetForceInterp(time_into_traj, frame, force_traj);
-                        force.x = force_traj(0);
-                        force.y = force_traj(1);
-                        force.z = force_traj(2);
+                    // ----- For force debugging
+                    // std::array<std::string, 4> frames = {"foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left"};
+                    // for (const auto& frame : frames) {
+                    //     geometry_msgs::msg::Vector3 force;
+                    //     vector3_t force_traj;
+                    //     traj_out_.GetForceInterp(time_into_traj, frame, force_traj);
+                    //     force.x = force_traj(0);
+                    //     force.y = force_traj(1);
+                    //     force.z = force_traj(2);
 
-                        force_msg.forces.emplace_back(force);
-                    }
-
-                    // TODO: Remove
-                    // tau.head<5>().setZero();
-                    // tau.tail(9).setZero();
-                    // tau(5) = 0;
-                    // tau(6) = 0;
-                    // tau(7) = 0;
-                    // tau(8) = 0;
-
-                    // tau.setZero();
+                    //     force_msg.forces.emplace_back(force);
+                    // }
+                    // ----- For force debugging
 
                     // std::vector<torc::models::ExternalForce<double>> f_ext;
                     // for (const auto& frame : mpc_->GetContactFrames()) {
@@ -478,17 +472,18 @@ namespace robot
             ConvertEigenToStd(v.tail(model_->GetNumInputs()), msg.vel_target);
             ConvertEigenToStd(tau, msg.feed_forward);
             
-            if (msg.u_mujoco.size() != 54) {
+            if (msg.u_mujoco.size() != 3*model_->GetNumInputs()) {
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Message's u_mujoco is incorrectly sized. Size: " << msg.u_mujoco.size());
             }
 
             msg.header.stamp = this->now();
             // TODO: Put back
-            // this->GetPublisher<obelisk_control_msgs::msg::PDFeedForward>(this->ctrl_key_)->publish(msg);
+            this->GetPublisher<obelisk_control_msgs::msg::PDFeedForward>(this->ctrl_key_)->publish(msg);
 
             // Publish desired forces for debugging         
             force_msg.header.stamp = this->now();   
-            this->GetPublisher<obelisk_sensor_msgs::msg::ObkForceSensor>("force_pub")->publish(force_msg);
+            // TODO: Put back
+            // this->GetPublisher<obelisk_sensor_msgs::msg::ObkForceSensor>("force_pub")->publish(force_msg);
         }
 
         return msg;

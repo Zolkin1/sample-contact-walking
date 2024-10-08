@@ -5,7 +5,7 @@ general_settings:
   node_dt: 0.025 #0.025
   first_node_dt: 0.01 # 0.01
   compile_derivatives: False #True
-  base_frame: "torso"
+  base_frame: "base"
   scale_cost: False
   max_initial_solves: 20
   initial_constraint_tol: 5e-4
@@ -27,81 +27,51 @@ constraints:
   friction_coef: 0.5  # TODO: Tune this
   max_grf: 800
   collisions:
-    - frame1: "foot_front_left"
-      frame2: "foot_front_right"
+    - frame1: "FR_foot"
+      frame2: "FL_foot"
       radius1: 0.06
       radius2: 0.06
-    - frame1: "foot_rear_left"
-      frame2: "foot_rear_right"
+    - frame1: "RR_foot"
+      frame2: "RL_foot"
       radius1: 0.06
       radius2: 0.06
-    - frame1: "foot_front_left"
-      frame2: "foot_rear_right"
+    - frame1: "FR_foot"
+      frame2: "RR_foot"
       radius1: 0.06
       radius2: 0.06
-    - frame1: "foot_rear_left"
-      frame2: "foot_front_right"
+    - frame1: "FL_foot"
+      frame2: "RL_foot"
       radius1: 0.06
       radius2: 0.06
   # TODO: Add hand and knee collisions
 costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    # weight:  [ 1.0, 1.0, 1.0,
-    #           1.5, 1.5, 1.5,
-    #           1, 2, 0.00, 0.00, 0.1, 1, 1, 1, 1,
-    #           1, 2, 0.00, 0.00, 0.1, 1, 1, 1, 1 ]
-    weight:  [ 1.0, 1.0, 10.0, # Why does the z height weight make it stand???
+    weight:  [ 1.0, 1.0, 10.0,
           1.5, 1.5, 1.5,
-          # 0, 0, 0.0, 0.0, 0, 1, 1, 1, 1,
-          # 0, 0, 0.0, 0.0, 0, 1, 1, 1, 1 ]
-          1, 2, 0.0, 0.0, 0.1, 1, 1, 1, 1,
-          1, 2, 0.0, 0.0, 0.1, 1, 1, 1, 1 ]
+          1, 1, 1,          # FL
+          1, 1, 1,          # FR
+          1, 1, 1,          # RL
+          1, 1, 1]          # RR
   - type: VelocityTracking
     name: "VelocityTracking"
-    # weight: [1, 1, 5,
-    #         0.5, 0.5, 0.5,
-    #         1, 0.1, 0.0, .0, .05, 1, 1, 1, 1,
-    #         1, 0.1, 0.0, .0, .05, 1, 1, 1, 1]
     weight: [1, 1, 5,
         .5, .5, .5,
-        1, .1, 0.0, 0.00, 0.05, 1, 1, 1, 1,
-        1, .1, 0.0, 0.00, 0.05, 1, 1, 1, 1]
-        # The velocity on the knee is important to prevent bouncing
+        1, .1, 0.0,         # FL
+        0.00, 0.05, 1,      # FR
+        1, 1, 1,            # RL
+        1, .1, 0.0]         # RR
   - type: TorqueRegularization
     name: "TorqueReg"
-    # weight: [.000, .000, .000, .000, .001, .5, .5, .5, .1,
-    #         .000, .000, .000, .000, .001, .5, .5, .5, .1]
-    weight: [.00, .00, .00, .00, .0, .5, .5, .5, .1,
-             .00, .00, .00, .00, .0, .5, .5, .5, .1]
+    weight: [.01, .01, .01,       # FL
+             .01, .01, .01,       # FR
+             .01, .01, .01,       # RL
+             .01, .01, .01]       # RR
   - type: ForceRegularization
     name: "ForceReg"
-    # weight: [0.0001, 0.0001, 0.01]
     weight: [.0001, .0001, 0.01]
-  # - type: ForwardKinematics
-  #   name: "LeftToe"
-  #   weight: [100, 100, 0.0]   # Having a highter weight (like 10000) does seem to help keep the feet in place
-  #   frame: "foot_front_left"
-  # - type: ForwardKinematics
-  #   name: "LeftHeel"
-  #   weight: [100, 100, 0.0]
-  #   frame: "foot_rear_left"
-  # - type: ForwardKinematics
-  #   name: "RightToe"
-  #   weight: [100, 100, 0.0]
-  #   frame: "foot_front_right"
-  # - type: ForwardKinematics
-  #   name: "RightHeel"
-  #   weight: [100, 100, 0.0]
-  #   frame: "foot_rear_right"
 contacts:
-  # For now, removing hands
-  # contact_frames: ["right_foot", "left_foot"] #, "right_hand", "left_hand"]
-  contact_frames: ["foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left"]
-
-# Weights notes:
-# - More weight on keeping the arm velocity and torques down since for now they are unconstrained
-# - Slightly more weight on hip yaw torque to keep the feet straight
+  contact_frames: ["RL_foot", "FR_foot", "FL_foot", "RR_foot"]
 
 line_search:
   alpha_min: 1e-3
@@ -110,41 +80,6 @@ line_search:
   constraint_reduction_mult: 1e-6
   alpha_step: 0.5 # Since the line search is high variance, lowering this helps
   armijo_constant: 1e-4
-
-cem_settings:
-  sample_variance: 0.0
-  num_finalists: 1
-#*** Note *** These must be in the same order!
-  pos_actuator_names: ["left_hip_yaw_pos", "left_hip_roll_pos", "left_hip_pitch_pos",
-                       "left_knee_pitch_pos", "left_ankle_pitch_pos",
-                       "left_shoulder_pitch_pos", "left_shoulder_roll_pos", "left_shoulder_yaw_pos",
-                       "left_elbow_pitch_pos",
-                       "right_hip_yaw_pos", "right_hip_roll_pos", "right_hip_pitch_pos",
-                       "right_knee_pitch_pos", "right_ankle_pitch_pos",
-                       "right_shoulder_pitch_pos", "right_shoulder_roll_pos", "right_shoulder_yaw_pos",
-                       "right_elbow_pitch_pos"
-  ]
-  vel_actuator_names: ["left_hip_yaw_vel", "left_hip_roll_vel", "left_hip_pitch_vel",
-                       "left_knee_pitch_vel", "left_ankle_pitch_vel",
-                       "left_shoulder_pitch_vel", "left_shoulder_roll_vel", "left_shoulder_yaw_vel",
-                       "left_elbow_pitch_vel",
-                       "right_hip_yaw_vel", "right_hip_roll_vel", "right_hip_pitch_vel",
-                       "right_knee_pitch_vel", "right_ankle_pitch_vel",
-                       "right_shoulder_pitch_vel", "right_shoulder_roll_vel", "right_shoulder_yaw_vel",
-                       "right_elbow_pitch_vel"
-  ]
-  torque_actuator_names: ["left_hip_yaw_tor", "left_hip_roll_tor", "left_hip_pitch_tor",
-                          "left_knee_pitch_tor", "left_ankle_pitch_tor",
-                          "left_shoulder_pitch_tor", "left_shoulder_roll_tor", "left_shoulder_yaw_tor",
-                          "left_elbow_pitch_tor",
-                          "right_hip_yaw_tor", "right_hip_roll_tor", "right_hip_pitch_tor",
-                          "right_knee_pitch_tor", "right_ankle_pitch_tor",
-                          "right_shoulder_pitch_tor", "right_shoulder_roll_tor", "right_shoulder_yaw_tor",
-                          "right_elbow_pitch_tor"
-  ]
-  actuator_idxs: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]          # Indexes into the trajectory configuration vector
-  sample_type: "Position"
-
 
   # Misc notes:
   # When rho = 0.1 I seem to follow the trajectory better (i.e. better open loop performance), but I have more oscillations and drift

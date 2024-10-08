@@ -6,6 +6,7 @@ onboard:
       params_path: /home/zolkin/sample-contact-walking/sample_contact_walking/configs/go2_mpc_config.yaml
       params:
         urdf_path: /home/zolkin/sample-contact-walking/go2_model/urdf/go2_description.urdf
+        robot_name: "go2"
 # ---------- Viz ---------- #
         viz_frames: ["base", "FR_foot", "FL_foot", "RR_foot", "RL_foot"]
         viz_forces: True
@@ -162,7 +163,7 @@ onboard:
       pkg: sample_contact_walking
       executable: simulation
       params:
-        ic_keyframe: stand_A #testing
+        ic_keyframe: home #testing
       # callback_groups:
       publishers:
         - ros_parameter: pub_true_sim_state_setting
@@ -187,8 +188,8 @@ onboard:
         - ros_parameter: mujoco_setting
           robot_pkg: go2_model
           model_xml_path: go2_scene.xml
-          n_u: 54
-          time_step: 0.0005 #0.001
+          n_u: 36
+          time_step: 0.001
           num_steps_per_viz: 16 # No longer used
           sensor_settings:
           # ---------- Joint Encoders ---------- #
@@ -197,83 +198,59 @@ onboard:
             msg_type: ObkJointEncoders
             sensor_names:
             # ---------- Joint Positions ---------- #
-              left_hip_yaw_joint_pos_sensor: jointpos
-              left_hip_roll_joint_pos_sensor: jointpos
-              left_hip_pitch_joint_pos_sensor: jointpos
-              left_knee_pitch_joint_pos_sensor: jointpos
-              left_ankle_pitch_joint_pos_sensor: jointpos
-              left_shoulder_pitch_joint_pos_sensor: jointpos
-              left_shoulder_roll_joint_pos_sensor: jointpos
-              left_shoulder_yaw_joint_pos_sensor: jointpos
-              left_elbow_pitch_joint_pos_sensor: jointpos
-              right_hip_yaw_joint_pos_sensor: jointpos
-              right_hip_roll_joint_pos_sensor: jointpos
-              right_hip_pitch_joint_pos_sensor: jointpos
-              right_knee_pitch_joint_pos_sensor: jointpos
-              right_ankle_pitch_joint_pos_sensor: jointpos
-              right_shoulder_pitch_joint_pos_sensor: jointpos
-              right_shoulder_roll_joint_pos_sensor: jointpos
-              right_shoulder_yaw_joint_pos_sensor: jointpos
-              right_elbow_pitch_joint_pos_sensor: jointpos
+              FL_hip_joint_pos_sensor: jointpos
+              FR_hip_joint_pos_sensor: jointpos
+              RL_hip_joint_pos_sensor: jointpos
+              RR_hip_joint_pos_sensor: jointpos
+
+              FL_thigh_joint_pos_sensor: jointpos
+              FR_thigh_joint_pos_sensor: jointpos
+              RL_thigh_joint_pos_sensor: jointpos
+              RR_thigh_joint_pos_sensor: jointpos
+
+              FL_calf_joint_pos_sensor: jointpos
+              FR_calf_joint_pos_sensor: jointpos
+              RL_calf_joint_pos_sensor: jointpos
+              RR_calf_joint_pos_sensor: jointpos
             # ---------- Joint Velocities ---------- #
-              left_hip_yaw_joint_vel_sensor: jointvel
-              left_hip_roll_joint_vel_sensor: jointvel
-              left_hip_pitch_joint_vel_sensor: jointvel
-              left_knee_pitch_joint_vel_sensor: jointvel
-              left_ankle_pitch_joint_vel_sensor: jointvel
-              left_shoulder_pitch_joint_vel_sensor: jointvel
-              left_shoulder_roll_joint_vel_sensor: jointvel
-              left_shoulder_yaw_joint_vel_sensor: jointvel
-              left_elbow_pitch_joint_vel_sensor: jointvel
-              right_hip_yaw_joint_vel_sensor: jointvel
-              right_hip_roll_joint_vel_sensor: jointvel
-              right_hip_pitch_joint_vel_sensor: jointvel
-              right_knee_pitch_joint_vel_sensor: jointvel
-              right_ankle_pitch_joint_vel_sensor: jointvel
-              right_shoulder_pitch_joint_vel_sensor: jointvel
-              right_shoulder_roll_joint_vel_sensor: jointvel
-              right_shoulder_yaw_joint_vel_sensor: jointvel
-              right_elbow_pitch_joint_vel_sensor: jointvel
-          # ---------- Torso IMU ---------- #
+              FL_hip_joint_vel_sensor: jointvel
+              FR_hip_joint_vel_sensor: jointvel
+              RL_hip_joint_vel_sensor: jointvel
+              RR_hip_joint_vel_sensor: jointvel
+
+              FL_thigh_joint_vel_sensor: jointvel
+              FR_thigh_joint_vel_sensor: jointvel
+              RL_thigh_joint_vel_sensor: jointvel
+              RR_thigh_joint_vel_sensor: jointvel
+
+              FL_calf_joint_vel_sensor: jointvel
+              FR_calf_joint_vel_sensor: jointvel
+              RL_calf_joint_vel_sensor: jointvel
+              RR_calf_joint_vel_sensor: jointvel
+          # ---------- Base IMU ---------- #
           - topic: /obelisk/go2/torso_imu
             dt: 0.002
             msg_type: ObkImu
             sensor_names:
-              torso_imu_acc_sensor: accelerometer
-              torso_imu_gyro_sensor: gyro
-              torso_imu_quat_sensor: framequat
-          # ---------- Left Foot IMU ---------- #
-          - topic: /obelisk/go2/left_foot_imu
-            dt: 0.002
-            msg_type: ObkImu
-            sensor_names:
-              left_foot_imu_acc_sensor: accelerometer
-              left_foot_imu_gyro_sensor: gyro
-              left_foot_imu_quat_sensor: framequat
-          # ---------- Right Foot IMU ---------- #
-          - topic: /obelisk/go2/left_foot_imu
-            dt: 0.002
-            msg_type: ObkImu
-            sensor_names:
-              right_foot_imu_acc_sensor: accelerometer
-              right_foot_imu_gyro_sensor: gyro
-              right_foot_imu_quat_sensor: framequat
+              imu_acc_sensor: accelerometer
+              imu_gyro_sensor: gyro
+              imu_quat_sensor: framequat
           # ---------- Mocap ---------- #
           - topic: /obelisk/go2/torso_pose
             dt: 0.002
             msg_type: ObkFramePose
             sensor_names:
-              torso_mocap_pos_sensor: framepos
-              torso_mocap_quat_sensor: framequat
+              base_mocap_pos_sensor: framepos
+              base_mocap_quat_sensor: framequat
           # ---------- Force Sensors ---------- #
           - topic: /obelisk/go2/force_sensors
             dt: 0.002
             msg_type: ObkForceSensor
             sensor_names:
-              right_toe_force_sensor: force
-              right_heel_force_sensor: force
-              left_toe_force_sensor: force
-              left_heel_force_sensor: force
+              FL_force_sensor: force
+              FR_force_sensor: force
+              RL_force_sensor: force
+              RR_force_sensor: force
   viz:
     on: True
     viz_tool: foxglove
