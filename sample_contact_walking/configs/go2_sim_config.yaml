@@ -7,7 +7,7 @@ onboard:
       params:
         urdf_path: /home/zolkin/sample-contact-walking/go2_model/urdf/go2_description.urdf
 # ---------- Viz ---------- #
-        viz_frames: ["torso", "foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left", "right_hand", "left_hand", "right_knee_pitch", left_knee_pitch]
+        viz_frames: ["base", "FR_foot", "FL_foot", "RR_foot", "RL_foot"]
         viz_forces: True
         viz_force_scale: 0.01
         force_frames: ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
@@ -58,30 +58,30 @@ onboard:
       publishers:
         # Low level controller publisher
         - ros_parameter: pub_ctrl_setting
-          topic: /obelisk/achilles/low_level_control
+          topic: /obelisk/go2/low_level_control
           history_depth: 10
           non_obelisk: False
         # Trajectory viz
         - ros_parameter: viz_pub_setting
-          topic: /obelisk/achilles/traj_viz
+          topic: /obelisk/go2/traj_viz
           history_depth: 10
           non_obelisk: True
         # --- Debug Viz --- #
         - ros_parameter: state_viz_pub_setting
-          topic: /obelisk/achilles/est_state
+          topic: /obelisk/go2/est_state
           history_depth: 10
           callback_group: None
           non_obelisk: False
         # --- Debug Forces --- #
         - ros_parameter: force_pub_setting
-          topic: /obelisk/achilles/force_debug
+          topic: /obelisk/go2/force_debug
           history_depth: 10
           callback_group: None
           non_obelisk: False
       subscribers:
         # Estimated state subscriber
         - ros_parameter: sub_est_setting
-          topic: /obelisk/achilles/est_state
+          topic: /obelisk/go2/est_state
           history_depth: 10
           callback_group: estimation_cbg
           non_obelisk: False
@@ -105,13 +105,13 @@ onboard:
         debug_cbg: MutuallyExclusiveCallbackGroup 
       publishers:
         - ros_parameter: pub_est_setting
-          topic: /obelisk/achilles/est_state
+          topic: /obelisk/go2/est_state
           history_depth: 10
           callback_group: None
           non_obelisk: False
       # ---- DEBUG ---- #
         # - ros_parameter: debug_pub_setting
-        #   topic: /obelisk/achilles/debug_control
+        #   topic: /obelisk/go2/debug_control
         #   history_depth: 10
         #   callback_group: None
       # ---- DEBUG ---- #
@@ -122,7 +122,7 @@ onboard:
       subscribers:
       # ---------- Joint Encoders ---------- #
         - ros_parameter: joint_encoders_setting
-          topic: /obelisk/achilles/joint_encoders
+          topic: /obelisk/go2/joint_encoders
           # msg_type: ObkJointEncoders
           history_depth: 10
           # callback_key: sub_callback1
@@ -130,7 +130,7 @@ onboard:
           non_obelisk: False
       # ---------- Mocap ---------- #
         - ros_parameter: mocap_setting
-          topic: /obelisk/achilles/torso_pose
+          topic: /obelisk/go2/torso_pose
           # msg_type: ObkFramePose
           history_depth: 10
           # callback_key: sub_callback1
@@ -138,7 +138,7 @@ onboard:
           non_obelisk: False
       # ---------- Torso IMU ---------- #
         - ros_parameter: torso_imu_setting
-          topic: /obelisk/achilles/torso_imu
+          topic: /obelisk/go2/torso_imu
           # msg_type: ObkFramePose
           history_depth: 10
           # callback_key: sub_callback1
@@ -146,13 +146,13 @@ onboard:
           non_obelisk: False
       # ---------- True Sim State ---------- #
         - ros_parameter: true_sim_sub_setting
-          topic: /obelisk/achilles/true_sim_state
+          topic: /obelisk/go2/true_sim_state
           history_depth: 10
           callback_group: None
           non_obelisk: False
       # ---- DEBUG ---- #
         # - ros_parameter: debug_print_setting
-        #   topic: /obelisk/achilles/low_level_control
+        #   topic: /obelisk/go2/low_level_control
         #   history_depth: 10
         #   callback_grou: Debug_cbg
       # ---- DEBUG ---- #
@@ -166,7 +166,7 @@ onboard:
       # callback_groups:
       publishers:
         - ros_parameter: pub_true_sim_state_setting
-          topic: /obelisk/achilles/true_sim_state
+          topic: /obelisk/go2/true_sim_state
           history_depth: 10
           callback_group: None
       timers:
@@ -177,7 +177,7 @@ onboard:
       subscribers:
         - ros_parameter: sub_ctrl_setting
           # key: sub1
-          topic: /obelisk/achilles/low_level_control
+          topic: /obelisk/go2/low_level_control
           # msg_type: PD_FF
           history_depth: 10
           # callback_key: sub_callback1
@@ -185,14 +185,14 @@ onboard:
           non_obelisk: False
       sim:
         - ros_parameter: mujoco_setting
-          robot_pkg: achilles_model_custom
-          model_xml_path: sim_achilles.xml
+          robot_pkg: go2_model
+          model_xml_path: go2_scene.xml
           n_u: 54
           time_step: 0.0005 #0.001
           num_steps_per_viz: 16 # No longer used
           sensor_settings:
           # ---------- Joint Encoders ---------- #
-          - topic: /obelisk/achilles/joint_encoders
+          - topic: /obelisk/go2/joint_encoders
             dt: 0.002
             msg_type: ObkJointEncoders
             sensor_names:
@@ -235,7 +235,7 @@ onboard:
               right_shoulder_yaw_joint_vel_sensor: jointvel
               right_elbow_pitch_joint_vel_sensor: jointvel
           # ---------- Torso IMU ---------- #
-          - topic: /obelisk/achilles/torso_imu
+          - topic: /obelisk/go2/torso_imu
             dt: 0.002
             msg_type: ObkImu
             sensor_names:
@@ -243,7 +243,7 @@ onboard:
               torso_imu_gyro_sensor: gyro
               torso_imu_quat_sensor: framequat
           # ---------- Left Foot IMU ---------- #
-          - topic: /obelisk/achilles/left_foot_imu
+          - topic: /obelisk/go2/left_foot_imu
             dt: 0.002
             msg_type: ObkImu
             sensor_names:
@@ -251,7 +251,7 @@ onboard:
               left_foot_imu_gyro_sensor: gyro
               left_foot_imu_quat_sensor: framequat
           # ---------- Right Foot IMU ---------- #
-          - topic: /obelisk/achilles/left_foot_imu
+          - topic: /obelisk/go2/left_foot_imu
             dt: 0.002
             msg_type: ObkImu
             sensor_names:
@@ -259,14 +259,14 @@ onboard:
               right_foot_imu_gyro_sensor: gyro
               right_foot_imu_quat_sensor: framequat
           # ---------- Mocap ---------- #
-          - topic: /obelisk/achilles/torso_pose
+          - topic: /obelisk/go2/torso_pose
             dt: 0.002
             msg_type: ObkFramePose
             sensor_names:
               torso_mocap_pos_sensor: framepos
               torso_mocap_quat_sensor: framequat
           # ---------- Force Sensors ---------- #
-          - topic: /obelisk/achilles/force_sensors
+          - topic: /obelisk/go2/force_sensors
             dt: 0.002
             msg_type: ObkForceSensor
             sensor_names:
@@ -282,12 +282,12 @@ onboard:
     viz_nodes:
       - pkg: obelisk_viz_cpp
         executable: default_robot_viz
-        robot_pkg: achilles_model_custom
-        urdf: achilles.urdf
+        robot_pkg: go2_model
+        urdf: go2_description.urdf
         robot_topic: robot_description
         subscribers:
           - ros_parameter: sub_viz_est_setting
-            topic: /obelisk/achilles/est_state
+            topic: /obelisk/go2/est_state
             history_depth: 10
             callback_group: None
             non_obelisk: False

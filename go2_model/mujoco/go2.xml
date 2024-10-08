@@ -1,7 +1,8 @@
 <!-- Go2 Mujoco XML. Originally pulled from the Mujoco Menagerie then modified by Zach Olkin.
 - Changed names of default classes
 - Added torque limits at the joint level rather than motor level
-- Add PD controllers on the joints -->
+- Added PD controllers on the joints
+- Added sensors and sensor sites -->
 <mujoco model="go2">
   <compiler angle="radian" meshdir="assets" autolimits="true"/>
 
@@ -116,7 +117,10 @@
       <geom size="0.1881 0.04675 0.057" type="box" class="collision"/>
       <geom size="0.05 0.045" pos="0.285 0 0.01" type="cylinder" class="collision"/>
       <geom size="0.047" pos="0.293 0 -0.06" class="collision"/>
+      
       <site name="imu" pos="-0.02557 0 0.04232"/>
+      <site name="base_mocap_site" pos="0 0 0" euler="0 0 0" size="0.01"/>
+
       <body name="FL_hip" pos="0.1934 0.0465 0">
         <inertial pos="-0.0054 0.00194 -0.000105" quat="0.497014 0.499245 0.505462 0.498237" mass="0.678"
           diaginertia="0.00088403 0.000596003 0.000479967"/>
@@ -141,6 +145,7 @@
             <geom size="0.011 0.0325" pos="0.02 0 -0.148" quat="0.999688 0 0.0249974 0" type="cylinder" class="collision"/>
             <geom pos="0 0 -0.213" mesh="foot" class="visual" material="black"/>
             <geom name="FL" class="foot"/>
+            <site name="FL_foot_site" pos="0 0 -0.213" size="0.01"/>
           </body>
         </body>
       </body>
@@ -168,6 +173,7 @@
             <geom size="0.011 0.0325" pos="0.02 0 -0.148" quat="0.999688 0 0.0249974 0" type="cylinder" class="collision"/>
             <geom pos="0 0 -0.213" mesh="foot" class="visual" material="black"/>
             <geom name="FR" class="foot"/>
+            <site name="FR_foot_site" pos="0 0 -0.213" size="0.01"/>
           </body>
         </body>
       </body>
@@ -195,6 +201,7 @@
             <geom size="0.011 0.0325" pos="0.02 0 -0.148" quat="0.999688 0 0.0249974 0" type="cylinder" class="collision"/>
             <geom pos="0 0 -0.213" mesh="foot" class="visual" material="black"/>
             <geom name="RL" class="foot"/>
+            <site name="RL_foot_site" pos="0 0 -0.213" size="0.01"/>
           </body>
         </body>
       </body>
@@ -222,12 +229,64 @@
             <geom size="0.011 0.0325" pos="0.02 0 -0.148" quat="0.999688 0 0.0249974 0" type="cylinder" class="collision"/>
             <geom pos="0 0 -0.213" mesh="foot" class="visual" material="black"/>
             <geom name="RR" class="foot"/>
+            <site name="RR_foot_site" pos="0 0 -0.213" size="0.01"/>
           </body>
         </body>
       </body>
     </body>
   </worldbody>
 
+<!-- Sensors -->
+<sensor>
+    <!-- Joint position sensors -->
+    <jointpos name="FL_hip_joint_pos_sensor" joint="FL_hip_joint" noise="0.001"/>
+    <jointpos name="FR_hip_joint_pos_sensor" joint="FR_hip_joint" noise="0.001"/>
+    <jointpos name="RL_hip_joint_pos_sensor" joint="RL_hip_joint" noise="0.001"/>
+    <jointpos name="RR_hip_joint_pos_sensor" joint="RR_hip_joint" noise="0.001"/>
+
+    <jointpos name="FL_thigh_joint_pos_sensor" joint="FL_thigh_joint" noise="0.001"/>
+    <jointpos name="FR_thigh_joint_pos_sensor" joint="FR_thigh_joint" noise="0.001"/>
+    <jointpos name="RL_thigh_joint_pos_sensor" joint="RL_thigh_joint" noise="0.001"/>
+    <jointpos name="RR_thigh_joint_pos_sensor" joint="RR_thigh_joint" noise="0.001"/>
+
+    <jointpos name="FL_calf_joint_pos_sensor" joint="FL_calf_joint" noise="0.001"/>
+    <jointpos name="FR_calf_joint_pos_sensor" joint="FR_calf_joint" noise="0.001"/>
+    <jointpos name="RL_calf_joint_pos_sensor" joint="RL_calf_joint" noise="0.001"/>
+    <jointpos name="RR_calf_joint_pos_sensor" joint="RR_calf_joint" noise="0.001"/>
+
+    <!-- Joint velocity sensors -->
+    <jointvel name="FL_hip_joint_vel_sensor" joint="FL_hip_joint" noise="0.001"/>
+    <jointvel name="FR_hip_joint_vel_sensor" joint="FR_hip_joint" noise="0.001"/>
+    <jointvel name="RL_hip_joint_vel_sensor" joint="RL_hip_joint" noise="0.001"/>
+    <jointvel name="RR_hip_joint_vel_sensor" joint="RR_hip_joint" noise="0.001"/>
+
+    <jointvel name="FL_thigh_joint_vel_sensor" joint="FL_thigh_joint" noise="0.001"/>
+    <jointvel name="FR_thigh_joint_vel_sensor" joint="FR_thigh_joint" noise="0.001"/>
+    <jointvel name="RL_thigh_joint_vel_sensor" joint="RL_thigh_joint" noise="0.001"/>
+    <jointvel name="RR_thigh_joint_vel_sensor" joint="RR_thigh_joint" noise="0.001"/>
+
+    <jointvel name="FL_calf_joint_vel_sensor" joint="FL_calf_joint" noise="0.001"/>
+    <jointvel name="FR_calf_joint_vel_sensor" joint="FR_calf_joint" noise="0.001"/>
+    <jointvel name="RL_calf_joint_vel_sensor" joint="RL_calf_joint" noise="0.001"/>
+    <jointvel name="RR_calf_joint_vel_sensor" joint="RR_calf_joint" noise="0.001"/>
+
+    <!-- IMU sensors -->
+    <accelerometer name="imu_acc_sensor" site="imu" noise="0.1"/>
+    <gyro name="imu_gyro_sensor" site="imu" noise="0.01"/>
+    <framequat name="imu_quat_sensor" objtype="site" objname="imu" noise="0.01"/>
+
+    <!-- Mocap sensors -->
+    <framepos name="base_mocap_pos_sensor" objtype="site" objname="base_mocap_site" noise="0.01"/>
+    <framequat name="base_mocap_quat_sensor" objtype="site" objname="base_mocap_site" noise="0.01"/>
+
+    <!--  Force sensors  -->
+    <force name="FL_force_sensor" site="FL_foot_site"/>
+    <force name="FR_force_sensor" site="FR_foot_site"/>
+    <force name="RL_force_sensor" site="RL_foot_site"/>
+    <force name="RR_force_sensor" site="RR_foot_site"/>
+  </sensor>
+
+<!-- Actuators -->
   <actuator>
     <!-- Position Control -->
     <position class="hip_pos" name="FR_hip_pos" joint="FR_hip_joint"/>
