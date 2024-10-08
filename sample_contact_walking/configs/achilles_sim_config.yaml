@@ -3,7 +3,7 @@ onboard:
   control:
     - pkg: sample_contact_walking
       executable: ll_controller
-      params_path: /home/zolkin/sample-contact-walking/sample_contact_walking/configs/mpc_config.yaml
+      params_path: /home/zolkin/sample-contact-walking/sample_contact_walking/configs/achilles_mpc_config.yaml
       params:
         urdf_path: /home/zolkin/sample-contact-walking/achilles_model_custom/urdf/achilles.urdf
 # ---------- Viz ---------- #

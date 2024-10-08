@@ -1,0 +1,302 @@
+config: go2_sim
+onboard:
+  control:
+    - pkg: sample_contact_walking
+      executable: ll_controller
+      params_path: /home/zolkin/sample-contact-walking/sample_contact_walking/configs/go2_mpc_config.yaml
+      params:
+        urdf_path: /home/zolkin/sample-contact-walking/go2_model/urdf/go2_description.urdf
+# ---------- Viz ---------- #
+        viz_frames: ["torso", "foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left", "right_hand", "left_hand", "right_knee_pitch", left_knee_pitch]
+        viz_forces: True
+        viz_force_scale: 0.01
+        force_frames: ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
+# ---------- Swing trajectory ---------- #
+        default_swing_height: 0.08
+        default_stand_foot_height: 0.015
+        apex_time: 0.7 # 0.7
+# ---------- MPC Loop ---------- #
+        mpc_loop_period_sec: 0.01 #0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
+        max_mpc_solves: -125 
+# ---------- Contact schedule ---------- #
+        swing_time: 0.5 #1.
+        first_swing_time: 0.1
+        double_stance_time: 0.0
+        right_foot_first: True
+        # Diagonal pairs
+        right_frames: ["RL_foot", "FR_foot"]
+        left_frames: ["FL_foot", "RR_foot"]
+# ---------- Targets ---------- #
+        target_config: [0, 0, 0.27,
+                    1, 0, 0, 0,
+                    0, 0.9, -1.8,
+                    0, 0.9, -1.8,
+                    0, 0.9, -1.8,
+                    0, 0.9, -1.8]
+        target_vel: [0, 0, 0.,
+                    0, 0, 0,
+                    0, 0.0, 0.,
+                    0, 0.0, 0.,
+                    0, 0.0, 0.,
+                    0, 0.0, 0.]
+        mpc_ic_config: [0, 0, 0.27,
+                    1, 0, 0, 0,
+                    0, 0.9, -1.8,
+                    0, 0.9, -1.8,
+                    0, 0.9, -1.8,
+                    0, 0.9, -1.8]
+        mpc_ic_vel: [0, 0, 0.,
+                    0, 0, 0,
+                    0, 0.0, 0.,
+                    0, 0.0, 0.,
+                    0, 0.0, 0.,
+                    0, 0.0, 0.]
+        fixed_target: False #True
+      callback_groups: 
+        control_cbg: MutuallyExclusiveCallbackGroup
+        estimation_cbg: MutuallyExclusiveCallbackGroup
+      publishers:
+        # Low level controller publisher
+        - ros_parameter: pub_ctrl_setting
+          topic: /obelisk/achilles/low_level_control
+          history_depth: 10
+          non_obelisk: False
+        # Trajectory viz
+        - ros_parameter: viz_pub_setting
+          topic: /obelisk/achilles/traj_viz
+          history_depth: 10
+          non_obelisk: True
+        # --- Debug Viz --- #
+        - ros_parameter: state_viz_pub_setting
+          topic: /obelisk/achilles/est_state
+          history_depth: 10
+          callback_group: None
+          non_obelisk: False
+        # --- Debug Forces --- #
+        - ros_parameter: force_pub_setting
+          topic: /obelisk/achilles/force_debug
+          history_depth: 10
+          callback_group: None
+          non_obelisk: False
+      subscribers:
+        # Estimated state subscriber
+        - ros_parameter: sub_est_setting
+          topic: /obelisk/achilles/est_state
+          history_depth: 10
+          callback_group: estimation_cbg
+          non_obelisk: False
+      timers:
+        # Low level control timer
+        - ros_parameter: timer_ctrl_setting
+          timer_period_sec: 0.001
+          callback_group: control_cbg
+        # MPC compute Timer - removed due to ros timing issues.
+        # - ros_parameter: timer_mpc_setting
+        #   timer_period_sec: 0.009
+        #   callback_group: mpc_cbg
+        # --- Debug Viz --- #
+        - ros_parameter: state_viz_timer_setting
+          timer_period_sec: 0.002
+          callback_group: None
+  estimation:
+    - pkg: sample_contact_walking
+      executable: state_estimator
+      callback_groups:
+        debug_cbg: MutuallyExclusiveCallbackGroup 
+      publishers:
+        - ros_parameter: pub_est_setting
+          topic: /obelisk/achilles/est_state
+          history_depth: 10
+          callback_group: None
+          non_obelisk: False
+      # ---- DEBUG ---- #
+        # - ros_parameter: debug_pub_setting
+        #   topic: /obelisk/achilles/debug_control
+        #   history_depth: 10
+        #   callback_group: None
+      # ---- DEBUG ---- #
+      timers:
+        - ros_parameter: timer_est_setting
+          timer_period_sec: 0.002
+          callback_group: None
+      subscribers:
+      # ---------- Joint Encoders ---------- #
+        - ros_parameter: joint_encoders_setting
+          topic: /obelisk/achilles/joint_encoders
+          # msg_type: ObkJointEncoders
+          history_depth: 10
+          # callback_key: sub_callback1
+          callback_group: None
+          non_obelisk: False
+      # ---------- Mocap ---------- #
+        - ros_parameter: mocap_setting
+          topic: /obelisk/achilles/torso_pose
+          # msg_type: ObkFramePose
+          history_depth: 10
+          # callback_key: sub_callback1
+          callback_group: None
+          non_obelisk: False
+      # ---------- Torso IMU ---------- #
+        - ros_parameter: torso_imu_setting
+          topic: /obelisk/achilles/torso_imu
+          # msg_type: ObkFramePose
+          history_depth: 10
+          # callback_key: sub_callback1
+          callback_group: None
+          non_obelisk: False
+      # ---------- True Sim State ---------- #
+        - ros_parameter: true_sim_sub_setting
+          topic: /obelisk/achilles/true_sim_state
+          history_depth: 10
+          callback_group: None
+          non_obelisk: False
+      # ---- DEBUG ---- #
+        # - ros_parameter: debug_print_setting
+        #   topic: /obelisk/achilles/low_level_control
+        #   history_depth: 10
+        #   callback_grou: Debug_cbg
+      # ---- DEBUG ---- #
+  # sensing:
+  robot:
+    - is_simulated: True
+      pkg: sample_contact_walking
+      executable: simulation
+      params:
+        ic_keyframe: stand_A #testing
+      # callback_groups:
+      publishers:
+        - ros_parameter: pub_true_sim_state_setting
+          topic: /obelisk/achilles/true_sim_state
+          history_depth: 10
+          callback_group: None
+      timers:
+        - ros_parameter: timer_true_sim_state_setting
+          history_depth: 10
+          timer_period_sec: 0.002
+          callback_group: None
+      subscribers:
+        - ros_parameter: sub_ctrl_setting
+          # key: sub1
+          topic: /obelisk/achilles/low_level_control
+          # msg_type: PD_FF
+          history_depth: 10
+          # callback_key: sub_callback1
+          callback_group: None
+          non_obelisk: False
+      sim:
+        - ros_parameter: mujoco_setting
+          robot_pkg: achilles_model_custom
+          model_xml_path: sim_achilles.xml
+          n_u: 54
+          time_step: 0.0005 #0.001
+          num_steps_per_viz: 16 # No longer used
+          sensor_settings:
+          # ---------- Joint Encoders ---------- #
+          - topic: /obelisk/achilles/joint_encoders
+            dt: 0.002
+            msg_type: ObkJointEncoders
+            sensor_names:
+            # ---------- Joint Positions ---------- #
+              left_hip_yaw_joint_pos_sensor: jointpos
+              left_hip_roll_joint_pos_sensor: jointpos
+              left_hip_pitch_joint_pos_sensor: jointpos
+              left_knee_pitch_joint_pos_sensor: jointpos
+              left_ankle_pitch_joint_pos_sensor: jointpos
+              left_shoulder_pitch_joint_pos_sensor: jointpos
+              left_shoulder_roll_joint_pos_sensor: jointpos
+              left_shoulder_yaw_joint_pos_sensor: jointpos
+              left_elbow_pitch_joint_pos_sensor: jointpos
+              right_hip_yaw_joint_pos_sensor: jointpos
+              right_hip_roll_joint_pos_sensor: jointpos
+              right_hip_pitch_joint_pos_sensor: jointpos
+              right_knee_pitch_joint_pos_sensor: jointpos
+              right_ankle_pitch_joint_pos_sensor: jointpos
+              right_shoulder_pitch_joint_pos_sensor: jointpos
+              right_shoulder_roll_joint_pos_sensor: jointpos
+              right_shoulder_yaw_joint_pos_sensor: jointpos
+              right_elbow_pitch_joint_pos_sensor: jointpos
+            # ---------- Joint Velocities ---------- #
+              left_hip_yaw_joint_vel_sensor: jointvel
+              left_hip_roll_joint_vel_sensor: jointvel
+              left_hip_pitch_joint_vel_sensor: jointvel
+              left_knee_pitch_joint_vel_sensor: jointvel
+              left_ankle_pitch_joint_vel_sensor: jointvel
+              left_shoulder_pitch_joint_vel_sensor: jointvel
+              left_shoulder_roll_joint_vel_sensor: jointvel
+              left_shoulder_yaw_joint_vel_sensor: jointvel
+              left_elbow_pitch_joint_vel_sensor: jointvel
+              right_hip_yaw_joint_vel_sensor: jointvel
+              right_hip_roll_joint_vel_sensor: jointvel
+              right_hip_pitch_joint_vel_sensor: jointvel
+              right_knee_pitch_joint_vel_sensor: jointvel
+              right_ankle_pitch_joint_vel_sensor: jointvel
+              right_shoulder_pitch_joint_vel_sensor: jointvel
+              right_shoulder_roll_joint_vel_sensor: jointvel
+              right_shoulder_yaw_joint_vel_sensor: jointvel
+              right_elbow_pitch_joint_vel_sensor: jointvel
+          # ---------- Torso IMU ---------- #
+          - topic: /obelisk/achilles/torso_imu
+            dt: 0.002
+            msg_type: ObkImu
+            sensor_names:
+              torso_imu_acc_sensor: accelerometer
+              torso_imu_gyro_sensor: gyro
+              torso_imu_quat_sensor: framequat
+          # ---------- Left Foot IMU ---------- #
+          - topic: /obelisk/achilles/left_foot_imu
+            dt: 0.002
+            msg_type: ObkImu
+            sensor_names:
+              left_foot_imu_acc_sensor: accelerometer
+              left_foot_imu_gyro_sensor: gyro
+              left_foot_imu_quat_sensor: framequat
+          # ---------- Right Foot IMU ---------- #
+          - topic: /obelisk/achilles/left_foot_imu
+            dt: 0.002
+            msg_type: ObkImu
+            sensor_names:
+              right_foot_imu_acc_sensor: accelerometer
+              right_foot_imu_gyro_sensor: gyro
+              right_foot_imu_quat_sensor: framequat
+          # ---------- Mocap ---------- #
+          - topic: /obelisk/achilles/torso_pose
+            dt: 0.002
+            msg_type: ObkFramePose
+            sensor_names:
+              torso_mocap_pos_sensor: framepos
+              torso_mocap_quat_sensor: framequat
+          # ---------- Force Sensors ---------- #
+          - topic: /obelisk/achilles/force_sensors
+            dt: 0.002
+            msg_type: ObkForceSensor
+            sensor_names:
+              right_toe_force_sensor: force
+              right_heel_force_sensor: force
+              left_toe_force_sensor: force
+              left_heel_force_sensor: force
+  viz:
+    on: True
+    viz_tool: foxglove
+    rviz_pkg: obelisk_ros
+    rviz_config: basic_obk_config.rviz
+    viz_nodes:
+      - pkg: obelisk_viz_cpp
+        executable: default_robot_viz
+        robot_pkg: achilles_model_custom
+        urdf: achilles.urdf
+        robot_topic: robot_description
+        subscribers:
+          - ros_parameter: sub_viz_est_setting
+            topic: /obelisk/achilles/est_state
+            history_depth: 10
+            callback_group: None
+            non_obelisk: False
+        publishers:
+          - ros_parameter: pub_viz_joint_setting
+            topic: joint_states
+            history_depth: 10
+            callback_group: None
+        timers:
+          - ros_parameter: timer_viz_joint_setting
+            timer_period_sec: 0.01
+            callback_group: None

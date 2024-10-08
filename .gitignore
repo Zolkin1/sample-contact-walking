@@ -42,3 +42,6 @@ obk_logs/
 deriv_libs/
 
 MUJOCO_LOG.*
+
+# Code gen
+adcg_sources/
