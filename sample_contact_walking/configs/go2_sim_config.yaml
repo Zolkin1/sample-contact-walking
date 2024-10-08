@@ -18,7 +18,7 @@ onboard:
         apex_time: 0.7 # 0.7
 # ---------- MPC Loop ---------- #
         mpc_loop_period_sec: 0.01 #0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
-        max_mpc_solves: 125 
+        max_mpc_solves: 100 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.5 #1.
         first_swing_time: 0.1
@@ -41,7 +41,7 @@ onboard:
                     0, 0.0, 0.,
                     0, 0.0, 0.]
         mpc_ic_config: [0, 0, 0.27,
-                    1, 0, 0, 0,
+                    0, 0, 0, 1,         # Why is the quaternion flipped here?
                     0, 0.9, -1.8,
                     0, 0.9, -1.8,
                     0, 0.9, -1.8,

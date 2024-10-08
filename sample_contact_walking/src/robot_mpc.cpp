@@ -102,11 +102,10 @@ namespace robot
         q_ic_ = torc::utils::StdToEigenVector(q_ic_temp);
         v_ic_ = torc::utils::StdToEigenVector(v_ic_temp);
 
-        std::cout << "q target: " << q_target_.value()[0].transpose() << std::endl;
-        std::cout << "v target: " << v_target_.value()[0].transpose() << std::endl;
-        std::cout << "q ic: " << q_ic_.transpose() << std::endl;
-        std::cout << "v ic: " << v_ic_.transpose() << std::endl;
-
+        RCLCPP_INFO_STREAM(this->get_logger(), "q target: " << q_target_.value()[0].transpose());
+        RCLCPP_INFO_STREAM(this->get_logger(), "v target: " << v_target_.value()[0].transpose());
+        RCLCPP_INFO_STREAM(this->get_logger(), "q ic: " << q_ic_.transpose());
+        RCLCPP_INFO_STREAM(this->get_logger(), "v ic: " << v_ic_.transpose());
 
         this->declare_parameter<bool>("fixed_target", true);
         this->get_parameter("fixed_target", fixed_target_);
@@ -215,9 +214,17 @@ namespace robot
             q_(i) = msg.q_base.at(i);
         }
 
+        // TODO: Make this read in the joint names in case the message order does not match
         for (size_t i = 0; i < msg.q_joints.size(); i++) {
-            q_(i + msg.q_base.size()) = msg.q_joints.at(i);
+            const auto joint_idx = model_->GetJointID(msg.joint_names[i]);
+            if (joint_idx.has_value()) {
+                q_(joint_idx.value() - 2 + msg.q_base.size()) = msg.q_joints.at(i);     // Offset for the root and base joints
+            } else {
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Joint " << msg.joint_names[i] << " not found in the robot model!");
+            }
         }
+
+        // RCLCPP_INFO_STREAM(this->get_logger(), "q: " << q_.transpose());
 
         // Velocity
         for (size_t i = 0; i < msg.v_base.size(); i++) {

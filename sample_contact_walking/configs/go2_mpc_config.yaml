@@ -5,7 +5,7 @@ general_settings:
   node_dt: 0.025 #0.025
   first_node_dt: 0.01 # 0.01
   compile_derivatives: False #True
-  base_frame: "base"
+  base_frame: "torso"
   scale_cost: False
   max_initial_solves: 20
   initial_constraint_tol: 5e-4

@@ -8,7 +8,6 @@ Stephen Brawner (brawner@gmail.com)
   name="go2_description">
   <link name="base_link"/>
   <link name="torso">
-  <!-- TODO: Add link without inertia for the base -->
     <inertial>
       <origin
         xyz="0.021112 0 -0.005366"
