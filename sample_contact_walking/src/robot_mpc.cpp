@@ -315,10 +315,25 @@ namespace robot
                 contact_schedule_.ShiftSwings(-time_shift_sec);    // TODO: Do I need a mutex on this later?
                 next_left_insertion_time_ -= time_shift_sec;
                 next_right_insertion_time_ -= time_shift_sec;
+                
+                // Assign stance heights based on measurements
+                model_->FirstOrderFK(q);
+                std::vector<double> stance_height(mpc_->GetContactFrames().size());
+                int frame_idx = 0;
+                for (const auto& frame : mpc_->GetContactFrames()) {
+                    if (contact_schedule_.InContact(frame, 0)) {
+                        stance_height[frame_idx] = std::min(model_->GetFrameState(frame).placement.translation()(2), this->get_parameter("default_stand_foot_height").as_double());
+                    } else {
+                        stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
+                    }
+                    frame_idx++;
+                }
+
                 prev_time = this->now();
                 mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
                     this->get_parameter("default_swing_height").as_double(),
-                    this->get_parameter("default_stand_foot_height").as_double(),
+                    stance_height,
+                    // this->get_parameter("default_stand_foot_height").as_double(),
                     this->get_parameter("apex_time").as_double());
 
                 AddPeriodicContacts();
@@ -881,9 +896,15 @@ namespace robot
         this->declare_parameter<double>("default_swing_height", 0.1);
         this->declare_parameter<double>("default_stand_foot_height", 0.0);
         this->declare_parameter<double>("apex_time", 0.5);
+
+        std::vector<double> stance_height(mpc_->GetContactFrames().size());
+        for (auto& height : stance_height) {
+            height = this->get_parameter("default_stand_foot_height").as_double();
+        }
+
         mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
             this->get_parameter("default_swing_height").as_double(),
-            this->get_parameter("default_stand_foot_height").as_double(),
+            stance_height,
             this->get_parameter("apex_time").as_double());
 
         mpc_->PrintContactSchedule();
