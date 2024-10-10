@@ -14,14 +14,14 @@ onboard:
         force_frames: ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
 # ---------- Swing trajectory ---------- #
         default_swing_height: 0.08
-        default_stand_foot_height: 0.015
+        default_stand_foot_height: 0.01
         apex_time: 0.7 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.01 #0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
-        max_mpc_solves: 100 #125 
+        mpc_loop_period_sec: 0.003 #0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
+        max_mpc_solves: -40 #125 
 # ---------- Contact schedule ---------- #
-        swing_time: 0.5 #1.
-        first_swing_time: 0.1
+        swing_time: 0.3 #1.
+        first_swing_time: 100.
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -29,12 +29,12 @@ onboard:
         left_frames: ["FL_foot", "RR_foot"]
 # ---------- Targets ---------- #
         target_config: [0, 0, 0.27,
-                    1, 0, 0, 0,
+                    0, 0, 0, 1,
                     0, 0.9, -1.8,
                     0, 0.9, -1.8,
                     0, 0.9, -1.8,
                     0, 0.9, -1.8]
-        target_vel: [0, 0, 0.,
+        target_vel: [0.0, 0.0, 0.,
                     0, 0, 0,
                     0, 0.0, 0.,
                     0, 0.0, 0.,

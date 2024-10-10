@@ -6,7 +6,8 @@
 <mujoco model="go2">
   <compiler angle="radian" meshdir="assets" autolimits="true"/>
 
-  <option cone="elliptic" impratio="100" integrator="implicitfast"/>
+  <!-- <option cone="pyramidal" integrator="implicitfast" timestep="0.001"/> -->
+  <option cone="elliptic" impratio="100" integrator="implicitfast" timestep="0.001"/>
 
 <!-- All motor control limits are handeled in the joint actuatorfrcrange field. -->
   <default>
@@ -14,7 +15,6 @@
       <geom friction="0.6" margin="0.001" condim="1"/>
       <joint axis="0 1 0" damping="2" armature="0.01" frictionloss="0.2"/>
       <motor ctrllimited="false"/>
-      <!-- <motor ctrlrange="-23.7 23.7"/> -->
 
       <!-- Hip joints -->
       <default class="hip">
@@ -22,11 +22,13 @@
 
         <!-- Position Control -->
         <default class="hip_pos">
-          <position kp="500" ctrllimited="false"/>
+          <!-- <position kp="0" ctrllimited="false"/> -->
+          <position kp="100" ctrllimited="false"/>
         </default>
 
         <!-- Velocity Control -->
         <default class="hip_vel">
+          <!-- <velocity kv="0" ctrllimited="false"/> -->
           <velocity kv="2" ctrllimited="false"/>
         </default>
       </default>
@@ -42,11 +44,13 @@
 
         <!-- Position Control -->
         <default class="thigh_pos">
-          <position kp="500" ctrllimited="false"/>
+          <!-- <position kp="0" ctrllimited="false"/> -->
+          <position kp="125" ctrllimited="false"/>
         </default>
 
         <!-- Velocity Control -->
         <default class="thigh_vel">
+          <!-- <velocity kv="0" ctrllimited="false"/> -->
           <velocity kv="2" ctrllimited="false"/>
         </default> 
       </default>
@@ -54,14 +58,17 @@
       <!-- Calf joints -->
       <default class="calf">
         <joint range="-2.7227 -0.83776" actuatorfrcrange="-45.43 45.43"/>
+        <!-- <joint range="-2.7227 -0.83776" actuatorfrcrange="-45.43 45.43"/> -->
 
         <!-- Position Control -->
         <default class="calf_pos">
-          <position kp="500" ctrllimited="false"/>
+          <!-- <position kp="0" ctrllimited="false"/> -->
+          <position kp="125" ctrllimited="false"/>
         </default>
 
         <!-- Velocity Control -->
         <default class="calf_vel">
+          <!-- <velocity kv="0" ctrllimited="false"/> -->
           <velocity kv="2" ctrllimited="false"/>
         </default>
       </default>
@@ -107,7 +114,8 @@
   <worldbody>
     <body name="torso" pos="0 0 0.445" childclass="go2">
       <inertial pos="0.021112 0 -0.005366" quat="-0.000543471 0.713435 -0.00173769 0.700719" mass="6.921"
-        diaginertia="0.107027 0.0980771 0.0244531"/>
+        diaginertia="0.02448 0.098077 0.107"/>
+        <!-- diaginertia changed to match urdf throghout xml -->
 
       <freejoint name="root"/>
 
@@ -125,11 +133,17 @@
 
       <body name="FL_hip" pos="0.1934 0.0465 0">
         <inertial pos="-0.0054 0.00194 -0.000105" quat="0.497014 0.499245 0.505462 0.498237" mass="0.678"
-          diaginertia="0.00088403 0.000596003 0.000479967"/>
+          diaginertia="0.00048 0.000884 0.000596"/>
         <joint name="FL_hip_joint" class="hip"/>
         <geom mesh="hip_0" material="metal" class="visual"/>
         <geom mesh="hip_1" material="gray" class="visual"/>
         <geom size="0.046 0.02" pos="0 0.08 0" quat="1 1 0 0" type="cylinder" class="collision"/>
+
+        <body name="FL_hip_rotor" pos="0.11215 0.04675 0">
+          <inertial pos="0 0 0" euler="0 0 0" mass="0.089"
+                diaginertia="0.000111842 0.000059647 0.000059647"/>
+        </body>
+
         <body name="FL_thigh" pos="0 0.0955 0">
           <inertial pos="-0.00374 -0.0223 -0.0327" quat="0.829533 0.0847635 -0.0200632 0.551623" mass="1.152"
             diaginertia="0.00594973 0.00584149 0.000878787"/>
@@ -151,6 +165,7 @@
           </body>
         </body>
       </body>
+
       <body name="FR_hip" pos="0.1934 -0.0465 0">
         <inertial pos="-0.0054 -0.00194 -0.000105" quat="0.498237 0.505462 0.499245 0.497014" mass="0.678"
           diaginertia="0.00088403 0.000596003 0.000479967"/>
@@ -158,6 +173,12 @@
         <geom mesh="hip_0" material="metal" class="visual" quat="4.63268e-05 1 0 0"/>
         <geom mesh="hip_1" material="gray" class="visual" quat="4.63268e-05 1 0 0"/>
         <geom size="0.046 0.02" pos="0 -0.08 0" quat="0.707107 0.707107 0 0" type="cylinder" class="collision"/>
+
+        <body name="FR_hip_rotor" pos="0.11215 -0.04675 0">
+          <inertial pos="0 0 0" euler="0 0 0" mass="0.089"
+                diaginertia="0.000111842 0.000059647 0.000059647"/>
+        </body>
+
         <body name="FR_thigh" pos="0 -0.0955 0">
           <inertial pos="-0.00374 0.0223 -0.0327" quat="0.551623 -0.0200632 0.0847635 0.829533" mass="1.152"
             diaginertia="0.00594973 0.00584149 0.000878787"/>
@@ -186,6 +207,12 @@
         <geom mesh="hip_0" material="metal" class="visual" quat="4.63268e-05 0 1 0"/>
         <geom mesh="hip_1" material="gray" class="visual" quat="4.63268e-05 0 1 0"/>
         <geom size="0.046 0.02" pos="0 0.08 0" quat="0.707107 0.707107 0 0" type="cylinder" class="collision"/>
+
+        <body name="RL_hip_rotor" pos="-0.11215 0.04675 0">
+          <inertial pos="0 0 0" euler="0 0 0" mass="0.089"
+                diaginertia="0.000111842 0.000059647 0.000059647"/>
+        </body>
+
         <body name="RL_thigh" pos="0 0.0955 0">
           <inertial pos="-0.00374 -0.0223 -0.0327" quat="0.829533 0.0847635 -0.0200632 0.551623" mass="1.152"
             diaginertia="0.00594973 0.00584149 0.000878787"/>
@@ -214,6 +241,12 @@
         <geom mesh="hip_0" material="metal" class="visual" quat="2.14617e-09 4.63268e-05 4.63268e-05 -1"/>
         <geom mesh="hip_1" material="gray" class="visual" quat="2.14617e-09 4.63268e-05 4.63268e-05 -1"/>
         <geom size="0.046 0.02" pos="0 -0.08 0" quat="0.707107 0.707107 0 0" type="cylinder" class="collision"/>
+
+        <body name="RR_hip_rotor" pos="-0.11215 -0.04675 0">
+          <inertial pos="0 0 0" euler="0 0 0" mass="0.089"
+                diaginertia="0.000111842 0.000059647 0.000059647"/>
+        </body>
+
         <body name="RR_thigh" pos="0 -0.0955 0">
           <inertial pos="-0.00374 0.0223 -0.0327" quat="0.551623 -0.0200632 0.0847635 0.829533" mass="1.152"
             diaginertia="0.00594973 0.00584149 0.000878787"/>
@@ -291,46 +324,46 @@
 <!-- Actuators -->
   <actuator>
     <!-- Position Control -->
-    <position class="hip_pos" name="FR_hip_pos" joint="FR_hip_joint"/>
-    <position class="thigh_pos" name="FR_thigh_pos" joint="FR_thigh_joint"/>
-    <position class="calf_pos" name="FR_calf_pos" joint="FR_calf_joint"/>
     <position class="hip_pos" name="FL_hip_pos" joint="FL_hip_joint"/>
     <position class="thigh_pos" name="FL_thigh_pos" joint="FL_thigh_joint"/>
     <position class="calf_pos" name="FL_calf_pos" joint="FL_calf_joint"/>
-    <position class="hip_pos" name="RR_hip_pos" joint="RR_hip_joint"/>
-    <position class="thigh_pos" name="RR_thigh_pos" joint="RR_thigh_joint"/>
-    <position class="calf_pos" name="RR_calf_pos" joint="RR_calf_joint"/>
+    <position class="hip_pos" name="FR_hip_pos" joint="FR_hip_joint"/>
+    <position class="thigh_pos" name="FR_thigh_pos" joint="FR_thigh_joint"/>
+    <position class="calf_pos" name="FR_calf_pos" joint="FR_calf_joint"/>
     <position class="hip_pos" name="RL_hip_pos" joint="RL_hip_joint"/>
     <position class="thigh_pos" name="RL_thigh_pos" joint="RL_thigh_joint"/>
     <position class="calf_pos" name="RL_calf_pos" joint="RL_calf_joint"/>
+    <position class="hip_pos" name="RR_hip_pos" joint="RR_hip_joint"/>
+    <position class="thigh_pos" name="RR_thigh_pos" joint="RR_thigh_joint"/>
+    <position class="calf_pos" name="RR_calf_pos" joint="RR_calf_joint"/>
 
     <!-- Velocity Control -->
-    <velocity class="hip_vel" name="FR_hip_vel" joint="FR_hip_joint"/>
-    <velocity class="thigh_vel" name="FR_thigh_vel" joint="FR_thigh_joint"/>
-    <velocity class="calf_vel" name="FR_calf_vel" joint="FR_calf_joint"/>
     <velocity class="hip_vel" name="FL_hip_vel" joint="FL_hip_joint"/>
     <velocity class="thigh_vel" name="FL_thigh_vel" joint="FL_thigh_joint"/>
     <velocity class="calf_vel" name="FL_calf_vel" joint="FL_calf_joint"/>
-    <velocity class="hip_vel" name="RR_hip_vel" joint="RR_hip_joint"/>
-    <velocity class="thigh_vel" name="RR_thigh_vel" joint="RR_thigh_joint"/>
-    <velocity class="calf_vel" name="RR_calf_vel" joint="RR_calf_joint"/>
+    <velocity class="hip_vel" name="FR_hip_vel" joint="FR_hip_joint"/>
+    <velocity class="thigh_vel" name="FR_thigh_vel" joint="FR_thigh_joint"/>
+    <velocity class="calf_vel" name="FR_calf_vel" joint="FR_calf_joint"/>
     <velocity class="hip_vel" name="RL_hip_vel" joint="RL_hip_joint"/>
     <velocity class="thigh_vel" name="RL_thigh_vel" joint="RL_thigh_joint"/>
     <velocity class="calf_vel" name="RL_calf_vel" joint="RL_calf_joint"/>
+    <velocity class="hip_vel" name="RR_hip_vel" joint="RR_hip_joint"/>
+    <velocity class="thigh_vel" name="RR_thigh_vel" joint="RR_thigh_joint"/>
+    <velocity class="calf_vel" name="RR_calf_vel" joint="RR_calf_joint"/>
 
     <!-- Torque Control -->
-    <motor class="hip" name="FR_hip" joint="FR_hip_joint"/>
-    <motor class="thigh" name="FR_thigh" joint="FR_thigh_joint"/>
-    <motor class="calf" name="FR_calf" joint="FR_calf_joint"/>
     <motor class="hip" name="FL_hip" joint="FL_hip_joint"/>
     <motor class="thigh" name="FL_thigh" joint="FL_thigh_joint"/>
     <motor class="calf" name="FL_calf" joint="FL_calf_joint"/>
-    <motor class="hip" name="RR_hip" joint="RR_hip_joint"/>
-    <motor class="thigh" name="RR_thigh" joint="RR_thigh_joint"/>
-    <motor class="calf" name="RR_calf" joint="RR_calf_joint"/>
+    <motor class="hip" name="FR_hip" joint="FR_hip_joint"/>
+    <motor class="thigh" name="FR_thigh" joint="FR_thigh_joint"/>
+    <motor class="calf" name="FR_calf" joint="FR_calf_joint"/>
     <motor class="hip" name="RL_hip" joint="RL_hip_joint"/>
     <motor class="thigh" name="RL_thigh" joint="RL_thigh_joint"/>
     <motor class="calf" name="RL_calf" joint="RL_calf_joint"/>
+    <motor class="hip" name="RR_hip" joint="RR_hip_joint"/>
+    <motor class="thigh" name="RR_thigh" joint="RR_thigh_joint"/>
+    <motor class="calf" name="RR_calf" joint="RR_calf_joint"/>
   </actuator>
 
   <keyframe>

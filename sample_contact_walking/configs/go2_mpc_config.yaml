@@ -1,8 +1,8 @@
 general_settings:
-  nodes: 32
+  nodes: 20 #32
   verbose: True
   node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
-  node_dt: 0.025 #0.025
+  node_dt: 0.025 #0.025. Why does going to 0.015 hurt the performance?
   first_node_dt: 0.01 # 0.01
   compile_derivatives: False #True
   base_frame: "torso"
@@ -17,11 +17,11 @@ solver_settings:
   abs_tol: 1e-3
   verbose: False
   polish: False
-  rho: 0.05 #0.05 #0.05 looks good for no sim walking traj. 0.01 allows for standing
+  rho: 0.05 #0.05 is a normal value. 0.01 seems to work really well for standing still in sim
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6 # 1e-10
   adaptive_rho: False
-  max_iter: 20 #20 # TODO: Why does running this for more iterations with rho=0.1 make it so much worse? In general, why does rho=0.1 not work?
+  max_iter: 20
   scaling: 10
 constraints:
   friction_coef: 0.5  # TODO: Tune this
@@ -47,29 +47,50 @@ constraints:
 costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    weight:  [ 1.0, 1.0, 10.0,
+    weight:  [ 10.0, 10.0, 10, #1.0, 1.0, 10., # 10.0
           1.5, 1.5, 1.5,
-          1, 1, 1,          # FL
-          1, 1, 1,          # FR
-          1, 1, 1,          # RL
-          1, 1, 1]          # RR
+          #1.5, 1.5, 1.5,
+          # 10, 10, 10,          # FL
+          # 10, 10, 10,          # FR
+          # 10, 10, 10,          # RL
+          # 10, 10, 10]
+          0.001, 0.1, 0.001,          # FL
+          0.001, 0.1, 0.001,          # FR
+          0.001, 0.1, 0.001,          # RL
+          0.001, 0.1, 0.001,]          # RR
   - type: VelocityTracking
     name: "VelocityTracking"
     weight: [1, 1, 5,
         .5, .5, .5,
-        1, .1, 0.0,         # FL
-        0.00, 0.05, 1,      # FR
-        1, 1, 1,            # RL
-        1, .1, 0.0]         # RR
+        0.1, 0.01, 0.0,         # FL
+        0.1, 0.01, 0.0,         # FR
+        0.1, 0.01, 0.0,         # RL
+        0.1, 0.01, 0.0]         # RR
   - type: TorqueRegularization
     name: "TorqueReg"
-    weight: [.01, .01, .01,       # FL
-             .01, .01, .01,       # FR
-             .01, .01, .01,       # RL
-             .01, .01, .01]       # RR
+    weight: [.001, .001, .001,       # FL
+             .001, .001, .001,       # FR
+             .001, .001, .001,       # RL
+             .001, .001, .001]       # RR
   - type: ForceRegularization
     name: "ForceReg"
-    weight: [.0001, .0001, 0.01]
+    weight: [0.0001, 0.0001, 0.01]
+  # - type: ForwardKinematics
+  #   name: "FLFoot"
+  #   weight: [0.0, 0.0, 10]
+  #   frame: "FL_foot"
+  # - type: ForwardKinematics
+  #   name: "FRFoot"
+  #   weight: [0.0, 0.0, 0]
+  #   frame: "FR_foot"
+  # - type: ForwardKinematics
+  #   name: "RLFoot"
+  #   weight: [0.0, 0.0, 10]
+  #   frame: "RL_foot"
+  # - type: ForwardKinematics
+  #   name: "RRFoot"
+  #   weight: [0.0, 0.0, 10]
+  #   frame: "RR_foot"
 contacts:
   contact_frames: ["RL_foot", "FR_foot", "FL_foot", "RR_foot"]
 
