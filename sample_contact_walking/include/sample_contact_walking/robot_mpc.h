@@ -49,6 +49,7 @@ namespace robot {
             // Viz
             void PublishTrajViz(const torc::mpc::Trajectory& traj, const std::vector<std::string>& viz_frames);
             void PublishTrajStateViz();
+            void MakeTargetTorsoMocapTransform();
 
             // States
             enum ControllerState {
@@ -121,6 +122,9 @@ namespace robot {
             // Threads
             std::thread mpc_thread_;
             std::thread sample_thread_;
+
+            // broadcasters
+            std::shared_ptr<tf2_ros::StaticTransformBroadcaster> torso_mocap_broadcaster_;
 
             // ------ Mujoco Debug ----- //
             mjModel* mj_model_;

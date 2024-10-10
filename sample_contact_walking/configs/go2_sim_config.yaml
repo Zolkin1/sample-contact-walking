@@ -17,18 +17,18 @@ onboard:
         default_stand_foot_height: 0.01
         apex_time: 0.7 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.003 #0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
-        max_mpc_solves: -40 #125 
+        mpc_loop_period_sec: 0.01 #0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
+        max_mpc_solves: -37 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.3 #1.
-        first_swing_time: 100.
+        first_swing_time: 1.
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
         right_frames: ["RL_foot", "FR_foot"]
         left_frames: ["FL_foot", "RR_foot"]
 # ---------- Targets ---------- #
-        target_config: [0, 0, 0.27,
+        target_config: [0, 0, 0.28,
                     0, 0, 0, 1,
                     0, 0.9, -1.8,
                     0, 0.9, -1.8,
@@ -40,7 +40,7 @@ onboard:
                     0, 0.0, 0.,
                     0, 0.0, 0.,
                     0, 0.0, 0.]
-        mpc_ic_config: [0, 0, 0.27,
+        mpc_ic_config: [0, 0, 0.28,
                     0, 0, 0, 1,         # Why is the quaternion flipped here?
                     0, 0.9, -1.8,
                     0, 0.9, -1.8,
@@ -69,20 +69,20 @@ onboard:
           non_obelisk: True
         # --- Debug Viz --- #
         - ros_parameter: state_viz_pub_setting
-          topic: /obelisk/go2/est_state
+          topic: /obelisk/go2/target_state # est_state
           history_depth: 10
           callback_group: None
           non_obelisk: False
         # --- Debug Forces --- #
-        - ros_parameter: force_pub_setting
-          topic: /obelisk/go2/force_debug
-          history_depth: 10
-          callback_group: None
-          non_obelisk: False
+        # - ros_parameter: force_pub_setting
+        #   topic: /obelisk/go2/force_debug
+        #   history_depth: 10
+        #   callback_group: None
+        #   non_obelisk: False
       subscribers:
         # Estimated state subscriber
         - ros_parameter: sub_est_setting
-          topic: /obelisk/go2/est_state
+          topic: /obelisk/go2/est_state # est_state, target_state
           history_depth: 10
           callback_group: estimation_cbg
           non_obelisk: False
@@ -243,14 +243,14 @@ onboard:
               base_mocap_pos_sensor: framepos
               base_mocap_quat_sensor: framequat
           # ---------- Force Sensors ---------- #
-          - topic: /obelisk/go2/force_sensors
-            dt: 0.002
-            msg_type: ObkForceSensor
-            sensor_names:
-              FL_force_sensor: force
-              FR_force_sensor: force
-              RL_force_sensor: force
-              RR_force_sensor: force
+          # - topic: /obelisk/go2/force_sensors
+          #   dt: 0.002
+          #   msg_type: ObkForceSensor
+          #   sensor_names:
+          #     FL_force_sensor: force
+          #     FR_force_sensor: force
+          #     RL_force_sensor: force
+          #     RR_force_sensor: force
   viz:
     on: True
     viz_tool: foxglove
@@ -265,6 +265,27 @@ onboard:
         subscribers:
           - ros_parameter: sub_viz_est_setting
             topic: /obelisk/go2/est_state
+            history_depth: 10
+            callback_group: None
+            non_obelisk: False
+        publishers:
+          - ros_parameter: pub_viz_joint_setting
+            topic: joint_states
+            history_depth: 10
+            callback_group: None
+        timers:
+          - ros_parameter: timer_viz_joint_setting
+            timer_period_sec: 0.01
+            callback_group: None
+      - pkg: obelisk_viz_cpp
+        executable: default_robot_viz
+        robot_pkg: go2_model
+        urdf: go2_description.urdf
+        robot_topic: robot_description_target
+        tf_prefix: target
+        subscribers:
+          - ros_parameter: sub_viz_est_setting
+            topic: /obelisk/go2/target_state
             history_depth: 10
             callback_group: None
             non_obelisk: False

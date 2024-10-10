@@ -4,6 +4,9 @@
 #include "obelisk_node.h"
 #include "obelisk_ros_utils.h"
 
+#include "tf2/LinearMath/Quaternion.h"
+#include "tf2_ros/static_transform_broadcaster.h"
+
 // TODO: remove
 #include "obelisk_estimator.h"
 
@@ -45,7 +48,7 @@ namespace robot
         this->RegisterObkPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub_setting", "state_viz_pub");
 
         // --- Debug Force Publisher --- //
-        this->RegisterObkPublisher<obelisk_sensor_msgs::msg::ObkForceSensor>("force_pub_setting", "force_pub");
+        // this->RegisterObkPublisher<obelisk_sensor_msgs::msg::ObkForceSensor>("force_pub_setting", "force_pub");
 
         this->declare_parameter<std::string>("viz_pub_setting");
         // RCLCPP_ERROR_STREAM(this->get_logger(), "viz pub settings: " << this->get_parameter("viz_pub_setting").as_string());
@@ -199,11 +202,17 @@ namespace robot
         // std::filesystem::path xml_path(xml_path_str);
 
         // this->declare_parameter("sample_loop_period_sec", 0.05);
+
+        // For target viz
+        torso_mocap_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
+        this->MakeTargetTorsoMocapTransform();
     }
 
     void MpcController::UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) {
         // Get the mutex to protect the states
         std::lock_guard<std::mutex> lock(est_state_mut_);
+
+        // RCLCPP_WARN_STREAM(this->get_logger(), "Updating xhat!");
         
         q_.resize(msg.q_base.size() + msg.q_joints.size());
         v_.resize(msg.v_base.size() + msg.v_joints.size());
@@ -378,7 +387,7 @@ namespace robot
         obelisk_control_msgs::msg::PDFeedForward msg;
 
         // For force debugging
-        obelisk_sensor_msgs::msg::ObkForceSensor force_msg;
+        // obelisk_sensor_msgs::msg::ObkForceSensor force_msg;
 
         if (GetState() != NoOutput) {
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Publishing first control.");
@@ -484,11 +493,10 @@ namespace robot
             }
 
             msg.header.stamp = this->now();
-            // TODO: Put back
             this->GetPublisher<obelisk_control_msgs::msg::PDFeedForward>(this->ctrl_key_)->publish(msg);
 
             // Publish desired forces for debugging         
-            force_msg.header.stamp = this->now();   
+            // force_msg.header.stamp = this->now();   
             // TODO: Put back
             // this->GetPublisher<obelisk_sensor_msgs::msg::ObkForceSensor>("force_pub")->publish(force_msg);
         }
@@ -716,64 +724,88 @@ namespace robot
         // }
 
         // ---------- Go2 ---------- //
-        // std::lock_guard<std::mutex> lock(traj_out_mut_);
+        std::lock_guard<std::mutex> lock(traj_out_mut_);
 
-        // if (traj_start_time_ < 0) {
-        //     traj_start_time_ = this->get_clock()->now().seconds();
-        // }
-        // obelisk_estimator_msgs::msg::EstimatedState msg;
+        if (traj_start_time_ < 0) {
+            traj_start_time_ = this->get_clock()->now().seconds();
+        }
+        obelisk_estimator_msgs::msg::EstimatedState msg;
 
-        // double time = this->get_clock()->now().seconds();
-        // // TODO: Do I need to use nanoseconds?
-        // double time_into_traj = time - traj_start_time_;
-        // // double time_into_traj = 0;
+        double time = this->get_clock()->now().seconds();
+        // TODO: Do I need to use nanoseconds?
+        // double time_into_traj = 0.1;
+        double time_into_traj = time - traj_start_time_;
+        // double time_into_traj = 0;
 
-        // // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
-        // vectorx_t q = vectorx_t::Zero(model_->GetConfigDim());
-        // vectorx_t v = vectorx_t::Zero(model_->GetVelDim());
-        // traj_out_.GetConfigInterp(time_into_traj, q);
-        // traj_out_.GetVelocityInterp(time_into_traj, v);
+        // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
+        vectorx_t q = vectorx_t::Zero(model_->GetConfigDim());
+        vectorx_t v = vectorx_t::Zero(model_->GetVelDim());
+        traj_out_.GetConfigInterp(time_into_traj, q);
+        traj_out_.GetVelocityInterp(time_into_traj, v);
 
-        // // traj_out_.GetConfigInterp(0.01, q);
-        // msg.base_link_name = "torso";
-        // vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
-        // vectorx_t q_tail = q.tail(model_->GetNumInputs());
-        // msg.q_base = torc::utils::EigenToStdVector(q_head);
-        // msg.q_joints = torc::utils::EigenToStdVector(q_tail);
+        // traj_out_.GetConfigInterp(0.01, q);
+        msg.base_link_name = "torso";
+        vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
+        vectorx_t q_tail = q.tail(model_->GetNumInputs());
+        msg.q_base = torc::utils::EigenToStdVector(q_head);
+        msg.q_joints = torc::utils::EigenToStdVector(q_tail);
 
-        // msg.joint_names.resize(q_tail.size());
-        // msg.joint_names[0] = "FL_hip_joint";
-        // msg.joint_names[1] = "FR_hip_joint";
-        // msg.joint_names[2] = "RL_hip_joint";
-        // msg.joint_names[3] = "RR_hip_joint";
-        // msg.joint_names[4] = "FL_thigh_joint";
-        // msg.joint_names[5] = "FR_thigh_joint";
-        // msg.joint_names[6] = "RL_thigh_joint";
-        // msg.joint_names[7] = "RR_thigh_joint";
-        // msg.joint_names[8] = "FL_calf_joint";
-        // msg.joint_names[9] = "FR_calf_joint";
-        // msg.joint_names[10] = "RL_calf_joint";
-        // msg.joint_names[11] = "RR_calf_joint";
+        msg.joint_names.resize(q_tail.size());
+        msg.joint_names[0] = "FL_hip_joint";
+        msg.joint_names[1] = "FR_hip_joint";
+        msg.joint_names[2] = "RL_hip_joint";
+        msg.joint_names[3] = "RR_hip_joint";
+        msg.joint_names[4] = "FL_thigh_joint";
+        msg.joint_names[5] = "FR_thigh_joint";
+        msg.joint_names[6] = "RL_thigh_joint";
+        msg.joint_names[7] = "RR_thigh_joint";
+        msg.joint_names[8] = "FL_calf_joint";
+        msg.joint_names[9] = "FR_calf_joint";
+        msg.joint_names[10] = "RL_calf_joint";
+        msg.joint_names[11] = "RR_calf_joint";
 
-        // for (int i = 0; i < msg.joint_names.size(); i++) {
-        //     const auto idx = model_->GetJointID(msg.joint_names[i]);
-        //     msg.q_joints[i] = q(5 + idx.value());
-        // }
+        for (int i = 0; i < msg.joint_names.size(); i++) {
+            const auto idx = model_->GetJointID(msg.joint_names[i]);
+            msg.q_joints[i] = q(5 + idx.value());
+        }
 
-        // // traj_out_.GetVelocityInterp(0.01, v);
-        // vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
-        // vectorx_t v_tail = v.tail(model_->GetNumInputs());
+        // traj_out_.GetVelocityInterp(0.01, v);
+        vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
+        vectorx_t v_tail = v.tail(model_->GetNumInputs());
 
-        // // vectorx_t temp = vectorx_t::Zero(6);
-        // msg.v_base = torc::utils::EigenToStdVector(v_head);
-        // msg.v_joints = torc::utils::EigenToStdVector(v_tail);
+        // vectorx_t temp = vectorx_t::Zero(6);
+        msg.v_base = torc::utils::EigenToStdVector(v_head);
+        msg.v_joints = torc::utils::EigenToStdVector(v_tail);
 
-        // msg.header.stamp = this->now();
+        msg.header.stamp = this->now();
 
-        // if (!sim_ready_) {
-        //     this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
-        // }
+        if (!sim_ready_) {
+            this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
+        }
     }
+
+    void MpcController::MakeTargetTorsoMocapTransform() {
+        geometry_msgs::msg::TransformStamped t;
+
+        t.header.stamp = this->get_clock()->now();
+        t.header.frame_id = "target/torso_mocap_site";     // This must match the base link in the estimated state
+        t.child_frame_id = "target/base_link";             // Must match the the base link in the urdf
+
+        t.transform.translation.x = 0.0;
+        t.transform.translation.y = 0.0;
+        t.transform.translation.z = 0.0;
+        tf2::Quaternion q;
+        q.setRPY(
+        0.0,
+        0.0, //3.14,
+        0.0); //3.14);
+        t.transform.rotation.x = q.x();
+        t.transform.rotation.y = q.y();
+        t.transform.rotation.z = q.z();
+        t.transform.rotation.w = q.w();
+
+        torso_mocap_broadcaster_->sendTransform(t);
+    } 
 
     void MpcController::AddPeriodicContacts() {
 

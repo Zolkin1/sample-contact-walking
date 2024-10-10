@@ -1,5 +1,5 @@
 general_settings:
-  nodes: 20 #32
+  nodes: 32
   verbose: True
   node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
   node_dt: 0.025 #0.025. Why does going to 0.015 hurt the performance?
@@ -9,7 +9,7 @@ general_settings:
   scale_cost: False
   max_initial_solves: 20
   initial_constraint_tol: 5e-4
-  nodes_full_dynamics: 4 #4   # Also determines how many nodes have torque constraints
+  nodes_full_dynamics: 3 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0 #-1e-2 #5e-3 # TODO: Tune or disable
   terminal_cost_weight: 1 #50 Having a smaller terminal weight seems to help for now
 solver_settings:
@@ -17,7 +17,7 @@ solver_settings:
   abs_tol: 1e-3
   verbose: False
   polish: False
-  rho: 0.05 #0.05 is a normal value. 0.01 seems to work really well for standing still in sim
+  rho: 0.01 #0.05 is a normal value. 0.01 seems to work really well for standing still in sim
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6 # 1e-10
   adaptive_rho: False
@@ -47,17 +47,17 @@ constraints:
 costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    weight:  [ 10.0, 10.0, 10, #1.0, 1.0, 10., # 10.0
-          1.5, 1.5, 1.5,
-          #1.5, 1.5, 1.5,
+    weight:  [ 2.0, 2.0, 10, #1.0, 1.0, 10., # 10.0
+          #0,0,0,
+          3.5, 3.5, 3.5,
           # 10, 10, 10,          # FL
           # 10, 10, 10,          # FR
           # 10, 10, 10,          # RL
           # 10, 10, 10]
-          0.001, 0.1, 0.001,          # FL
-          0.001, 0.1, 0.001,          # FR
-          0.001, 0.1, 0.001,          # RL
-          0.001, 0.1, 0.001,]          # RR
+          0.1, 0.01, 0.001,          # FL
+          0.1, 0.01, 0.001,          # FR
+          0.1, 0.01, 0.001,          # RL
+          0.1, 0.01, 0.001,]          # RR
   - type: VelocityTracking
     name: "VelocityTracking"
     weight: [1, 1, 5,
@@ -68,10 +68,10 @@ costs:
         0.1, 0.01, 0.0]         # RR
   - type: TorqueRegularization
     name: "TorqueReg"
-    weight: [.001, .001, .001,       # FL
-             .001, .001, .001,       # FR
-             .001, .001, .001,       # RL
-             .001, .001, .001]       # RR
+    weight: [.001, .001, .00,       # FL
+             .001, .001, .00,       # FR
+             .001, .001, .00,       # RL
+             .001, .001, .00]       # RR
   - type: ForceRegularization
     name: "ForceReg"
     weight: [0.0001, 0.0001, 0.01]

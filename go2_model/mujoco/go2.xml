@@ -18,58 +18,61 @@
 
       <!-- Hip joints -->
       <default class="hip">
-        <joint axis="1 0 0" range="-1.0472 1.0472" actuatorfrcrange="-23.7 23.7"/>
+        <!-- <joint axis="1 0 0" range="-1.0472 1.0472" actuatorfrcrange="-23.7 23.7"/> -->
+        <joint axis="1 0 0" range="-1.0472 1.0472"/>
 
         <!-- Position Control -->
         <default class="hip_pos">
           <!-- <position kp="0" ctrllimited="false"/> -->
-          <position kp="100" ctrllimited="false"/>
+          <position kp="300" ctrllimited="false"/>
         </default>
 
         <!-- Velocity Control -->
         <default class="hip_vel">
           <!-- <velocity kv="0" ctrllimited="false"/> -->
-          <velocity kv="2" ctrllimited="false"/>
+          <velocity kv="6" ctrllimited="false"/>
         </default>
       </default>
 
       <!-- Thigh joints -->
       <default class="thigh">
         <default class="front_thigh">
-          <joint range="-1.5708 3.4907" actuatorfrcrange="-23.7 23.7"/>
+          <!-- <joint range="-1.5708 3.4907" actuatorfrcrange="-23.7 23.7"/> -->
+          <joint range="-1.5708 3.4907"/>
         </default>
         <default class="back_thigh">
-          <joint range="-0.5236 4.5379" actuatorfrcrange="-23.7 23.7"/>
+          <!-- <joint range="-0.5236 4.5379" actuatorfrcrange="-23.7 23.7"/> -->
+          <joint range="-0.5236 4.5379"/>
         </default>
 
         <!-- Position Control -->
         <default class="thigh_pos">
           <!-- <position kp="0" ctrllimited="false"/> -->
-          <position kp="125" ctrllimited="false"/>
+          <position kp="325" ctrllimited="false"/>
         </default>
 
         <!-- Velocity Control -->
         <default class="thigh_vel">
           <!-- <velocity kv="0" ctrllimited="false"/> -->
-          <velocity kv="2" ctrllimited="false"/>
+          <velocity kv="6" ctrllimited="false"/>
         </default> 
       </default>
       
       <!-- Calf joints -->
       <default class="calf">
-        <joint range="-2.7227 -0.83776" actuatorfrcrange="-45.43 45.43"/>
         <!-- <joint range="-2.7227 -0.83776" actuatorfrcrange="-45.43 45.43"/> -->
+        <joint range="-2.7227 -0.83776"/>
 
         <!-- Position Control -->
         <default class="calf_pos">
           <!-- <position kp="0" ctrllimited="false"/> -->
-          <position kp="125" ctrllimited="false"/>
+          <position kp="325" ctrllimited="false"/>
         </default>
 
         <!-- Velocity Control -->
         <default class="calf_vel">
           <!-- <velocity kv="0" ctrllimited="false"/> -->
-          <velocity kv="2" ctrllimited="false"/>
+          <velocity kv="6" ctrllimited="false"/>
         </default>
       </default>
 
@@ -367,7 +370,7 @@
   </actuator>
 
   <keyframe>
-    <key name="home" qpos="0 0 0.27 0 0 0 0 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8"
+    <key name="home" qpos="0 0 0.28 0 0 0 0 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8"
       ctrl="0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8
             0 0 0 0 0 0 0 0 0 0 0 0
             0 0 0 0 0 0 0 0 0 0 0 0"/>

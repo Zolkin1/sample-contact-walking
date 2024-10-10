@@ -55,7 +55,9 @@ target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo Mpc Sample
 
 ament_target_dependencies(ll_controller
     PUBLIC
-    visualization_msgs)
+    visualization_msgs
+    tf2_ros
+    tf2)
 
 # ------- Estimator ------- #
 add_executable(state_estimator 
