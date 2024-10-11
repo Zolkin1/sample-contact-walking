@@ -47,20 +47,20 @@ constraints:
 costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    weight:  [ 2.0, 2.0, 10, #1.0, 1.0, 10., # 10.0
+    weight:  [ 2.0, 2.0, 15, #1.0, 1.0, 10., # 10.0
           #0,0,0,
           3.5, 3.5, 3.5,
           # 10, 10, 10,          # FL
           # 10, 10, 10,          # FR
           # 10, 10, 10,          # RL
           # 10, 10, 10]
-          0.1, 0.01, 0.001,          # FL
-          0.1, 0.01, 0.001,          # FR
-          0.1, 0.01, 0.001,          # RL
-          0.1, 0.01, 0.001,]          # RR
+          0.6, 0.1, 0.001,          # FL
+          0.6, 0.1, 0.001,          # FR
+          0.6, 0.1, 0.001,          # RL
+          0.6, 0.1, 0.001,]          # RR
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [2, 2, 5,
+    weight: [2, 2, 6,
         .5, .5, .5,
         0.1, 0.01, 0.0,         # FL
         0.1, 0.01, 0.0,         # FR

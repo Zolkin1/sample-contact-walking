@@ -280,6 +280,10 @@ namespace robot
                 if (first_loop) {
                     prev_time = this->now();
                     first_loop = false;
+
+                    // TODO: Fix this so that we transition to MPC after a button press.
+                    // Having the extra time allows the sim/robot to get to the nominal configuration.
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
                 }
 
                 vectorx_t q, v;
