@@ -7,6 +7,8 @@
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/static_transform_broadcaster.h"
 
+#include "sensor_msgs/msg/joy_feedback.hpp"
+
 // TODO: remove
 #include "obelisk_estimator.h"
 
@@ -54,6 +56,11 @@ namespace robot
         // RCLCPP_ERROR_STREAM(this->get_logger(), "viz pub settings: " << this->get_parameter("viz_pub_setting").as_string());
         auto viz_pub = this->CreatePublisherFromConfigStr<visualization_msgs::msg::MarkerArray>(this->get_parameter("viz_pub_setting").as_string());
         this->publishers_["viz_pub"] = std::make_shared<obelisk::internal::ObeliskPublisher<visualization_msgs::msg::MarkerArray>>(viz_pub);
+
+        // ----- Joystick Subscriber ----- //
+        this->RegisterObkSubscription<sensor_msgs::msg::Joy>(
+                    "joystick_sub_setting", "joystick_sub",
+                    std::bind(&MpcController::JoystickCallback, this, std::placeholders::_1));
 
         //  Update model
         this->declare_parameter<std::string>("urdf_path", "");
@@ -227,6 +234,9 @@ namespace robot
         for (size_t i = 0; i < msg.q_joints.size(); i++) {
             const auto joint_idx = model_->GetJointID(msg.joint_names[i]);
             if (joint_idx.has_value()) {
+                if (joint_idx.value() < 2) {
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Invalid joint name!");
+                }
                 q_(joint_idx.value() - 2 + msg.q_base.size()) = msg.q_joints.at(i);     // Offset for the root and base joints
             } else {
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Joint " << msg.joint_names[i] << " not found in the robot model!");
@@ -241,9 +251,17 @@ namespace robot
         }
 
         for (size_t i = 0; i < msg.v_joints.size(); i++) {
-            v_(i + msg.v_base.size()) = msg.v_joints.at(i);
+            const auto joint_idx = model_->GetJointID(msg.joint_names[i]);
+            if (joint_idx.has_value()) {
+                if (joint_idx.value() < 2) {
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Invalid joint name!");
+                }
+                v_(joint_idx.value() - 2 + msg.v_base.size()) = msg.v_joints.at(i);     // Offset for the root and base joints
+            } else {
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Joint " << msg.joint_names[i] << " not found in the robot model!");
+            }
+            // v_(i + msg.v_base.size()) = msg.v_joints.at(i);
         }
-
 
         if (q_.size() != model_->GetConfigDim()) {
             RCLCPP_ERROR_STREAM(this->get_logger(), "received q does not match the size of the model");
@@ -283,7 +301,7 @@ namespace robot
 
                     // TODO: Fix this so that we transition to MPC after a button press.
                     // Having the extra time allows the sim/robot to get to the nominal configuration.
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1000000));       // Need to remove for synthetic state estimates
                 }
 
                 vectorx_t q, v;
@@ -297,10 +315,10 @@ namespace robot
                 }
 
                 // TODO: remove
-                model_->FirstOrderFK(q);
-                for (int i = 0; i < 4; i++) {
-                    RCLCPP_INFO_STREAM(this->get_logger(), force_frames_[i] << " height: " << model_->GetFrameState(force_frames_[i]).placement.translation()(2));
-                }
+                // model_->FirstOrderFK(q);
+                // for (int i = 0; i < 4; i++) {
+                //     RCLCPP_INFO_STREAM(this->get_logger(), force_frames_[i] << " height: " << model_->GetFrameState(force_frames_[i]).placement.translation()(2));
+                // }
 
                 // RCLCPP_ERROR_STREAM(this->get_logger(), "q: " << q.transpose());
                 // RCLCPP_ERROR_STREAM(this->get_logger(), "v: " << v.transpose());
@@ -326,7 +344,10 @@ namespace robot
                 int frame_idx = 0;
                 for (const auto& frame : mpc_->GetContactFrames()) {
                     if (contact_schedule_.InContact(frame, 0)) {
-                        stance_height[frame_idx] = std::min(model_->GetFrameState(frame).placement.translation()(2), this->get_parameter("default_stand_foot_height").as_double());
+                        // stance_height[frame_idx] = model_->GetFrameState(frame).placement.translation()(2);
+                        stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
+                        // stance_height[frame_idx] = std::min(model_->GetFrameState(frame).placement.translation()(2), this->get_parameter("default_stand_foot_height").as_double());
+
                     } else {
                         stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
                     }
@@ -767,7 +788,8 @@ namespace robot
         vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
         vectorx_t q_tail = q.tail(model_->GetNumInputs());
         msg.q_base = torc::utils::EigenToStdVector(q_head);
-        msg.q_joints = torc::utils::EigenToStdVector(q_tail);
+        msg.q_joints.resize(model_->GetNumInputs());
+        msg.v_joints.resize(model_->GetNumInputs());
 
         msg.joint_names.resize(q_tail.size());
         msg.joint_names[0] = "FL_hip_joint";
@@ -785,16 +807,23 @@ namespace robot
 
         for (int i = 0; i < msg.joint_names.size(); i++) {
             const auto idx = model_->GetJointID(msg.joint_names[i]);
-            msg.q_joints[i] = q(5 + idx.value());
+            if (idx.has_value()) {
+                msg.q_joints[i] = q(5 + idx.value());
+                if (4 + idx.value() > v.size()) {
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "v idx out of bounds!");
+                } else {
+                    msg.v_joints[i] = v(4 + idx.value());
+                }
+            } else {
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Joint index not found!");
+            }
         }
 
         // traj_out_.GetVelocityInterp(0.01, v);
         vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
-        vectorx_t v_tail = v.tail(model_->GetNumInputs());
 
         // vectorx_t temp = vectorx_t::Zero(6);
         msg.v_base = torc::utils::EigenToStdVector(v_head);
-        msg.v_joints = torc::utils::EigenToStdVector(v_tail);
 
         msg.header.stamp = this->now();
 
@@ -914,6 +943,47 @@ namespace robot
         mpc_->PrintContactSchedule();
         for (const auto& frame : mpc_->GetContactFrames()) {
             mpc_->PrintSwingTraj(frame);
+        }
+    }
+
+    void MpcController::JoystickCallback(const sensor_msgs::msg::Joy& msg) {
+        // ----- Axes ----- //
+        constexpr int DPAD_VERTICAL = 7;
+        constexpr int DPAD_HORIZONTAL = 6;
+
+        constexpr int RIGHT_JOY_VERT = 4;
+        constexpr int RIGHT_JOY_HORZ = 3;
+
+        constexpr int LEFT_JOY_VERT = 1;
+        constexpr int LEFT_JOY_HORZ = 0;
+
+        constexpr int LEFT_TRIGGER = 2;
+        constexpr int RIGHT_TRIGGER = 5;
+
+        // ----- Buttons ----- //
+        constexpr int A = 0;
+        constexpr int B = 1;
+        constexpr int X = 2;
+        constexpr int Y = 3;
+
+        constexpr int LEFT_BUMPER = 4;
+        constexpr int RIGHT_BUMPER = 5;
+
+        constexpr int MENU = 7;
+        constexpr int STATE_MACHINE = 6;
+
+        static rclcpp::Time last_menu_press = this->now();
+
+        if (msg.buttons[MENU] && (this->now() - last_menu_press).seconds() > 1e-1) {
+            RCLCPP_INFO_STREAM(this->get_logger(), "Press the menu button (three horizontal lines) to recieve this message.\n"
+                "Press (X) to toggle between MPC and PD to the initial condition.\n"
+                "Press (A) to print the current settings.\n"
+                "Press (Y) to cycle through gaits.\n"
+                "Press the vertical DPAD to adjust the nominal standing height.\n"
+                "Right joystick to change the target angle.\n"
+                "Left joystick to adjust the desired velocity.");
+
+            last_menu_press = this->now();
         }
     }
 

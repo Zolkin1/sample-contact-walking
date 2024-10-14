@@ -3,6 +3,8 @@
 #include "rclcpp/rclcpp.hpp"
 #include "obelisk_controller.h"
 
+#include "sensor_msgs/msg/joy.hpp"
+
 #include "full_order_mpc.h"
 #include "cross_entropy.h"
 
@@ -32,6 +34,9 @@ namespace robot {
             // MPC Targets
             // TODO: Update when I have joystick access
             void UpdateMpcTargets(const vectorx_t& q);
+
+            // Joystick interface
+            void JoystickCallback(const sensor_msgs::msg::Joy& msg);
 
             // Contact schedule
             void AddPeriodicContacts();

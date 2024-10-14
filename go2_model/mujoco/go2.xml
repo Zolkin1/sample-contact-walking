@@ -24,13 +24,13 @@
         <!-- Position Control -->
         <default class="hip_pos">
           <!-- <position kp="0" ctrllimited="false"/> -->
-          <position kp="300" ctrllimited="false"/>
+          <position kp="100" ctrllimited="false"/>
         </default>
 
         <!-- Velocity Control -->
         <default class="hip_vel">
           <!-- <velocity kv="0" ctrllimited="false"/> -->
-          <velocity kv="6" ctrllimited="false"/>
+          <velocity kv="1" ctrllimited="false"/>
         </default>
       </default>
 
@@ -48,13 +48,13 @@
         <!-- Position Control -->
         <default class="thigh_pos">
           <!-- <position kp="0" ctrllimited="false"/> -->
-          <position kp="325" ctrllimited="false"/>
+          <position kp="125" ctrllimited="false"/>
         </default>
 
         <!-- Velocity Control -->
         <default class="thigh_vel">
           <!-- <velocity kv="0" ctrllimited="false"/> -->
-          <velocity kv="6" ctrllimited="false"/>
+          <velocity kv="1" ctrllimited="false"/>
         </default> 
       </default>
       
@@ -66,13 +66,13 @@
         <!-- Position Control -->
         <default class="calf_pos">
           <!-- <position kp="0" ctrllimited="false"/> -->
-          <position kp="325" ctrllimited="false"/>
+          <position kp="125" ctrllimited="false"/>
         </default>
 
         <!-- Velocity Control -->
         <default class="calf_vel">
           <!-- <velocity kv="0" ctrllimited="false"/> -->
-          <velocity kv="6" ctrllimited="false"/>
+          <velocity kv="1" ctrllimited="false"/>
         </default>
       </default>
 
@@ -85,6 +85,8 @@
         <default class="foot">
           <geom size="0.022" pos="-0.002 0 -0.213" priority="1" solimp="0.015 1 0.022" condim="6"
             friction="0.8 0.02 0.01"/>
+          <!-- <geom size="0.022" pos="-0.002 0 -0.213" priority="1" condim="6"
+            friction="0.8 0.02 0.01"/> -->
         </default>
       </default>
     </default>

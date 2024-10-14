@@ -11,7 +11,7 @@ general_settings:
   initial_constraint_tol: 5e-4
   nodes_full_dynamics: 3 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0 #-1e-2 #5e-3 # TODO: Tune or disable
-  terminal_cost_weight: 1 #50 Having a smaller terminal weight seems to help for now
+  terminal_cost_weight: 1 # 1 works
 solver_settings:
   rel_tol: 1e-3
   abs_tol: 1e-3
@@ -47,34 +47,42 @@ constraints:
 costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    weight:  [ 2.0, 2.0, 15, #1.0, 1.0, 10., # 10.0
+    weight:  [ 2.0, 2.0, 150, #1.0, 1.0, 10., # 10.0
           #0,0,0,
-          3.5, 3.5, 3.5,
+          12.5, 12.5, 12.5,
           # 10, 10, 10,          # FL
           # 10, 10, 10,          # FR
           # 10, 10, 10,          # RL
           # 10, 10, 10]
-          0.6, 0.1, 0.001,          # FL
-          0.6, 0.1, 0.001,          # FR
-          0.6, 0.1, 0.001,          # RL
-          0.6, 0.1, 0.001,]          # RR
+          0.6, 0.01, 0.0001,          # FL
+          0.6, 0.01, 0.0001,          # FR
+          0.6, 0.01, 0.0001,          # RL
+          0.6, 0.01, 0.0001,]
+          # 0.6, 0.0, 0.0,          # FL
+          # 0.6, 0.0, 0.0,          # FR
+          # 0.6, 0.0, 0.0,          # RL
+          # 0.6, 0.0, 0.0,]          # RR
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [2, 2, 6,
+    weight: [1, 1, 1,
         .5, .5, .5,
-        0.1, 0.01, 0.0,         # FL
-        0.1, 0.01, 0.0,         # FR
-        0.1, 0.01, 0.0,         # RL
-        0.1, 0.01, 0.0]         # RR
+        0.1, 0.01, 0.0001,         # FL
+        0.1, 0.01, 0.0001,         # FR
+        0.1, 0.01, 0.0001,         # RL
+        0.1, 0.01, 0.0001]         # RR
+        # 0.1, 0.0, 0.0,         # FL
+        # 0.1, 0.0, 0.0,         # FR
+        # 0.1, 0.0, 0.0,         # RL
+        # 0.1, 0.0, 0.0]         # RR
   - type: TorqueRegularization
     name: "TorqueReg"
-    weight: [.001, .001, .00,       # FL
-             .001, .001, .00,       # FR
-             .001, .001, .00,       # RL
-             .001, .001, .00]       # RR
+    weight: [.001, .001, .0001,       # FL
+             .001, .001, .0001,       # FR
+             .001, .001, .0001,       # RL
+             .001, .001, .0001]       # RR
   - type: ForceRegularization
     name: "ForceReg"
-    weight: [0.0001, 0.0001, 0.02]
+    weight: [0.0001, 0.0001, 0.001]
   # - type: ForwardKinematics
   #   name: "FLFoot"
   #   weight: [0.0, 0.0, 10]

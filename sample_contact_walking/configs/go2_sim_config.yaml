@@ -14,14 +14,14 @@ onboard:
         force_frames: ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
 # ---------- Swing trajectory ---------- #
         default_swing_height: 0.08
-        default_stand_foot_height: 0.01
-        apex_time: 0.7 # 0.7
+        default_stand_foot_height: 0.01 # 0.0075 also looked pretty good
+        apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
         mpc_loop_period_sec: 0.01 #0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
         max_mpc_solves: -37 #125 
 # ---------- Contact schedule ---------- #
-        swing_time: 0.3 #1.
-        first_swing_time: 10.
+        swing_time: 0.3 #0.25
+        first_swing_time: 3.
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -69,10 +69,13 @@ onboard:
           non_obelisk: True
         # --- Debug Viz --- #
         - ros_parameter: state_viz_pub_setting
-          topic: /obelisk/go2/target_state # est_state
+          topic: /obelisk/go2/target_state
           history_depth: 10
           callback_group: None
           non_obelisk: False
+        # ----- Joystick publisher ----- #
+        - ros_parameter: joystick_feedback_setting
+          topic: /obelisk/go2/joy_feedback
         # --- Debug Forces --- #
         # - ros_parameter: force_pub_setting
         #   topic: /obelisk/go2/force_debug
@@ -82,10 +85,14 @@ onboard:
       subscribers:
         # Estimated state subscriber
         - ros_parameter: sub_est_setting
-          topic: /obelisk/go2/est_state # est_state, target_state
+          topic: /obelisk/go2/target_state # est_state, target_state
           history_depth: 10
           callback_group: estimation_cbg
           non_obelisk: False
+        # ----- Joystick subscriber ----- #
+        - ros_parameter: joystick_sub_setting
+          topic: /obelisk/go2/joy
+
       timers:
         # Low level control timer
         - ros_parameter: timer_ctrl_setting
@@ -298,3 +305,7 @@ onboard:
           - ros_parameter: timer_viz_joint_setting
             timer_period_sec: 0.01
             callback_group: None
+  joystick:
+    on: True
+    pub_topic: /obelisk/go2/joy
+    sub_topic: /obelisk/go2/joy_feedback

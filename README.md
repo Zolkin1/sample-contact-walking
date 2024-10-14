@@ -62,5 +62,24 @@ obk-activate go2_sim
 
 If you have issues with others on the ROS network then set `ROS_LOCALHOST_ONLY`.
 
+## Connecting the joystick
+### USB
+Can verify that the the controller connects via
+```
+sudo apt-get update
+sudo apt-get install evtest
+sudo evtest /dev/input/eventX
+```
+where you replace eventX with the correct number. You can see these by looking at `/dev/input/`.
+
+Then you may need to change the permissions for the joystick:
+```
+sudo chmod 666 /dev/input/eventX
+```
+event24 seems to be consistent for the xbox remote for my machine.
+
+Can run `ros2 run joy joy_enumerate_devices` to see what devices are found.
+
+
 ## Random notes
-- Might need to move to the `cpp-sim-time` obelisk branch.
+- As of 10/14/2024 I need to work on the obelisk joystick branch, and until the docker container is re-build with these updates I will need to re-install `ros-humble-joy` from apt-get

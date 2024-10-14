@@ -15,6 +15,7 @@ find_package(ament_cmake REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(visualization_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 # find_package(obelisk_estimator_msgs REQUIRED)
 
 # ------- Fetch the Obelisk library ------- #
@@ -57,7 +58,8 @@ ament_target_dependencies(ll_controller
     PUBLIC
     visualization_msgs
     tf2_ros
-    tf2)
+    tf2
+    sensor_msgs)
 
 # ------- Estimator ------- #
 add_executable(state_estimator 
