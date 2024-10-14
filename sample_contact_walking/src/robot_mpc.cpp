@@ -97,6 +97,7 @@ namespace robot
         v_target_ = torc::mpc::SimpleTrajectory(model_->GetVelDim(), mpc_->GetNumNodes());
         q_target_->SetAllData(q_target_eig);
         v_target_->SetAllData(v_target_eig);
+        z_target_ = q_target_.value()[0](2);
 
         mpc_->SetConfigTarget(q_target_.value());
         mpc_->SetVelTarget(v_target_.value());
@@ -119,6 +120,8 @@ namespace robot
 
         this->declare_parameter<bool>("fixed_target", true);
         this->get_parameter("fixed_target", fixed_target_);
+        this->declare_parameter<bool>("controller_target", false);
+        this->get_parameter("controller_target", controller_target_);
 
         // Create default trajectory
         traj_out_.UpdateSizes(model_->GetConfigDim(), model_->GetVelDim(), model_->GetNumInputs(), mpc_->GetContactFrames(), mpc_->GetNumNodes());
@@ -351,7 +354,7 @@ namespace robot
                     this->get_parameter("apex_time").as_double());
                 AddPeriodicContacts();
 
-                if (!fixed_target_) {
+                if (!fixed_target_ || controller_target_) {
                     UpdateMpcTargets(q);
                     mpc_->SetConfigTarget(q_target_.value());
                     mpc_->SetVelTarget(v_target_.value());
@@ -519,11 +522,13 @@ namespace robot
 
     void MpcController::UpdateMpcTargets(const vectorx_t& q) {
         // For now, only update the desired x and y positions based on the x, y target vel
+        std::lock_guard<std::mutex> lock(target_state_mut_);
 
         const std::vector<double>& dt_vec = mpc_->GetDtVector();
 
         q_target_.value()[0](0) = q(0);
         q_target_.value()[0](1) = q(1);
+        q_target_.value()[0](2) = z_target_;
 
         for (int i = 1; i < q_target_->GetNumNodes(); i++) {
             const quat_t quat(q_target_.value()[i-1].segment<QUAT_VARS>(POS_VARS));
@@ -532,6 +537,7 @@ namespace robot
 
             q_target_.value()[i](0) = q_target_.value()[i - 1](0) + dt_vec[i-1]*v(0);
             q_target_.value()[i](1) = q_target_.value()[i - 1](1) + dt_vec[i-1]*v(1);
+            q_target_.value()[i](2) = z_target_;
         }
         
 
@@ -925,11 +931,12 @@ namespace robot
         constexpr int RIGHT_BUMPER = 5;
 
         constexpr int MENU = 7;
-        constexpr int STATE_MACHINE = 6;
+        constexpr int SQUARES = 6;
 
         static rclcpp::Time last_menu_press = this->now();
         static rclcpp::Time last_A_press = this->now();
         static rclcpp::Time last_X_press = this->now();
+        static rclcpp::Time last_target_update = this->now();
 
         if (msg.buttons[MENU] && (this->now() - last_menu_press).seconds() > 1e-1) {
             RCLCPP_INFO_STREAM(this->get_logger(), "Press the menu button (three horizontal lines) to recieve this message.\n"
@@ -956,8 +963,31 @@ namespace robot
         }
 
         if (msg.buttons[A] && (this->now() - last_A_press).seconds() > 1e-1) {
-            RCLCPP_INFO_STREAM(this->get_logger(), "Current state: " << GetStateString(GetState()));
+            std::lock_guard<std::mutex> lock(target_state_mut_);
+            RCLCPP_INFO_STREAM(this->get_logger(), "Current state: " << GetStateString(GetState())
+                    << "\nz target: " << z_target_ 
+                    << "\nx vel target: " << v_target_.value()[0](0)
+                    << "\ny vel target: " << v_target_.value()[0](1));
             last_A_press = this->now();
+        }
+
+        if (controller_target_ && (this->now() - last_target_update).seconds() > 1e-1) {
+            std::lock_guard<std::mutex> lock(target_state_mut_);
+            if (msg.axes[DPAD_VERTICAL] == 1) {
+                // Update target z height
+                z_target_ += 0.005;
+            } else if (msg.axes[DPAD_VERTICAL] == -1) {
+                // Update target z height
+                z_target_ -= 0.005;
+            }
+
+            // For now the joy stick in one ot one in velocity
+            // In the future we may want to cap the speed above or below 1 and/or we may want a different curve to map them (i.e. log or quadratic)
+            for (int i = 0; i < v_target_.value().GetNumNodes(); i++) {
+                v_target_.value()[i](0) = msg.axes[LEFT_JOY_VERT];
+                v_target_.value()[i](1) = msg.axes[LEFT_JOY_HORZ];
+            }
+            // TODO: Add a angular velocity target too using the right joystick
         }
     }
 

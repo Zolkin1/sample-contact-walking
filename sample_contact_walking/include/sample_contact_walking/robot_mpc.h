@@ -90,6 +90,7 @@ namespace robot {
             std::mutex est_state_mut_;
             std::mutex traj_out_mut_;
             std::mutex ctrl_state_mut_;
+            std::mutex target_state_mut_;
 
             // Estimated state vectors
             vectorx_t q_;        // position, quat (x, y, z, w), joints
@@ -98,9 +99,11 @@ namespace robot {
             // Target vectors
             std::optional<torc::mpc::SimpleTrajectory> q_target_;
             std::optional<torc::mpc::SimpleTrajectory> v_target_;
+            double z_target_;
             // vectorx_t q_target_;
             // vectorx_t v_target_;
             bool fixed_target_;
+            bool controller_target_;
 
             vectorx_t q_ic_;
             vectorx_t v_ic_;

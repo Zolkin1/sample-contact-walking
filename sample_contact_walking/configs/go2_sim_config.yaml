@@ -21,7 +21,7 @@ onboard:
         max_mpc_solves: -37 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.3 #0.25
-        first_swing_time: 3.
+        first_swing_time: 1.
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -53,6 +53,7 @@ onboard:
                     0, 0.0, 0.,
                     0, 0.0, 0.]
         fixed_target: True #True
+        controller_target: True #True
       callback_groups: 
         control_cbg: MutuallyExclusiveCallbackGroup
         estimation_cbg: MutuallyExclusiveCallbackGroup
