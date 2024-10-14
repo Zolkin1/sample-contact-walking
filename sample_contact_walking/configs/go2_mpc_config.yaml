@@ -1,6 +1,6 @@
 general_settings:
   nodes: 32
-  verbose: True
+  verbose: False #True
   node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
   node_dt: 0.025 #0.025. Why does going to 0.015 hurt the performance?
   first_node_dt: 0.01 # 0.01

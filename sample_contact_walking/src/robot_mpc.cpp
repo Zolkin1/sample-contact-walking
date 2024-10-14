@@ -149,13 +149,6 @@ namespace robot
         traj_mpc_ = traj_out_;
         RCLCPP_INFO_STREAM(this->get_logger(), "Warm start trajectory created...");
 
-        mpc_->ComputeNLP(q_ic_, v_ic_, traj_mpc_);
-        mpc_->PrintStatistics();
-        traj_out_ = traj_mpc_;
-        traj_start_time_ = -1;
-
-        // Compute an initial MPC at the initial condition
-
         // Go to initial condition
         TransitionState(SeekInitialCond);
         // TransitionState(Mpc);
@@ -272,6 +265,7 @@ namespace robot
         }
 
         if (!recieved_first_state_ && q_.size() == model_->GetConfigDim() && v_.size() == model_->GetVelDim() && q_.segment<QUAT_VARS>(POS_VARS).norm() > 0.99) {
+            RCLCPP_INFO_STREAM(this->get_logger(), "Recieved first message! q: " << q_.transpose());
             recieved_first_state_ = true;
         }
     }
@@ -292,26 +286,32 @@ namespace robot
             // Start the timer
             auto start_time = this->now();
 
-            if (recieved_first_state_) {
+            if (recieved_first_state_ && GetState() == Mpc) {
                 RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Computing first trajectory.");
 
+                vectorx_t q, v;
+
                 if (first_loop) {
+                    // TODO: Fix the state for when we re-enter this loop
+                    mpc_->ComputeNLP(q_ic_, v_ic_, traj_mpc_);
+                    traj_out_ = traj_mpc_;
+                    traj_start_time_ = this->now().seconds();
+
                     prev_time = this->now();
                     first_loop = false;
 
-                    // TODO: Fix this so that we transition to MPC after a button press.
-                    // Having the extra time allows the sim/robot to get to the nominal configuration.
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1000000));       // Need to remove for synthetic state estimates
-                }
+                    // Assign these to give state estimator more time for the fake data state estimator
+                    q = q_ic_;
+                    v = v_ic_;
+                } else {
+                    {
+                        // Get the mutex to protect the states
+                        std::lock_guard<std::mutex> lock(est_state_mut_);
 
-                vectorx_t q, v;
-                {
-                    // Get the mutex to protect the states
-                    std::lock_guard<std::mutex> lock(est_state_mut_);
-
-                    // Create current state
-                    q = q_;
-                    v = v_;
+                        // Create current state
+                        q = q_;
+                        v = v_;
+                    }
                 }
 
                 // TODO: remove
@@ -319,17 +319,6 @@ namespace robot
                 // for (int i = 0; i < 4; i++) {
                 //     RCLCPP_INFO_STREAM(this->get_logger(), force_frames_[i] << " height: " << model_->GetFrameState(force_frames_[i]).placement.translation()(2));
                 // }
-
-                // RCLCPP_ERROR_STREAM(this->get_logger(), "q: " << q.transpose());
-                // RCLCPP_ERROR_STREAM(this->get_logger(), "v: " << v.transpose());
-
-                // TODO: remove
-                // v.setZero();
-
-                // If in NLP mode, then pause the timer and compute the NLP
-                // Then restart the timer after the NLP is solved.
-                // Change state to normal MPC
-                // This only works if the robot can hold its position for the enough time for the computation
 
                 // Shift the contact schedule
                 auto current_time = this->now();
@@ -360,7 +349,6 @@ namespace robot
                     stance_height,
                     // this->get_parameter("default_stand_foot_height").as_double(),
                     this->get_parameter("apex_time").as_double());
-
                 AddPeriodicContacts();
 
                 if (!fixed_target_) {
@@ -370,8 +358,8 @@ namespace robot
                 }
 
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
-                    double time = this->get_clock()->now().seconds();
-                    double delay_start_time = this->now().seconds() - traj_start_time_;
+                    double time = this->now().seconds();
+                    double delay_start_time = 0; // this->now().seconds() - traj_start_time_;
                     mpc_->Compute(q, v, traj_mpc_, delay_start_time);
                     {
                         // Get the traj mutex to protect it
@@ -382,17 +370,8 @@ namespace robot
                         traj_start_time_ = time;
                     }
 
-                    // std::cout << "Left ankle pitch ic error: " << traj_mpc_.GetConfiguration(0)(11) - q(11) << std::endl;
-                    // std::cout << "Norm IC config error: " << (traj_mpc_.GetConfiguration(0) - q).norm() << std::endl;
-                    // std::cout << "Norm IC vel error: " << (traj_mpc_.GetVelocity(0) - v).norm() << std::endl;
-
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Config IC Error: " << (traj_out_.GetConfiguration(0) - q).norm());
                     // RCLCPP_INFO_STREAM(this->get_logger(), "Vel IC Error: " << (traj_out_.GetVelocity(0) - v).norm());
-
-                    // TODO: Put back
-                    if (GetState() != Mpc) {
-                        TransitionState(Mpc);
-                    }
                 } else {
                     static bool printed = false;
                     if (!printed) {
@@ -405,6 +384,8 @@ namespace robot
 
                 // TODO: If this is slow, then I need to move it
                 PublishTrajViz(traj_mpc_, viz_frames_);
+            } else {
+                first_loop = true;
             }
 
             // Stop timer
@@ -438,25 +419,14 @@ namespace robot
                 // Get the traj mutex to protect it
                 {
                     std::lock_guard<std::mutex> lock(traj_out_mut_);
-
-                    if (traj_start_time_ < 0) {
-                        traj_start_time_ = this->get_clock()->now().seconds();
+                    
+                    double time_into_traj = 0;
+                    if (traj_start_time_ >= 0) {
+                        double time = this->get_clock()->now().seconds();
+                        // TODO: Do I need to use nanoseconds?
+                        double time_into_traj = time - traj_start_time_;
                     }
-
-                    double time = this->get_clock()->now().seconds();
-                    // TODO: Do I need to use nanoseconds?
-                    double time_into_traj = time - traj_start_time_;
-                    // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
-
-                    // TODO: Remove
-                    // q = traj_out_.GetConfiguration(0);
-                    // v = traj_out_.GetVelocity(0);
-                    // q.head(v.size()) = traj_out_.GetVelocity(1);
-                    // std::cout << "traj node 1 vel: " << traj_out_.GetVelocity(1).transpose() << std::endl;
-                    // RCLCPP_INFO_STREAM(this->get_logger(), "traj v l knee diff: " << v(3) - traj_out_.GetVelocity(1)(3));
-                    // tau = traj_out_.GetTau(1);
-
-                    // TODO: Put back
+                    
                     traj_out_.GetConfigInterp(time_into_traj, q);
                     traj_out_.GetVelocityInterp(time_into_traj, v);
                     traj_out_.GetTorqueInterp(time_into_traj, tau);
@@ -475,28 +445,6 @@ namespace robot
                     // }
                     // ----- For force debugging
 
-                    // std::vector<torc::models::ExternalForce<double>> f_ext;
-                    // for (const auto& frame : mpc_->GetContactFrames()) {
-                    //     vector3_t force;
-                    //     traj_out_.GetForceInterp(time_into_traj, frame, force);
-                    //     f_ext.emplace_back(frame, force);
-                    // }
-
-                    // const double fd_delta = 1e-8;
-                    // vectorx_t v2;
-                    // traj_out_.GetVelocityInterp(time_into_traj + fd_delta, v2);
-                    // vectorx_t a = (v2 - v)/fd_delta;
-                    // tau = model_->InverseDynamics(q, v, a, f_ext);
-                    // tau = tau.tail(18);
-
-                    // std::cout << "a: " << a.transpose() << std::endl;
-                    // std::cout << "new id: " << tau.transpose() << std::endl;
-
-                    // vectorx_t tau2;
-                    // traj_out_.GetTorqueInterp(time_into_traj, tau2);
-                    // std::cout << "traj: " << tau2.transpose() << std::endl;
-                    // std::cout << "normed difference: " << (tau2 - tau).norm() << std::endl;
-
                     // This is a safety in case the interpolation time is too large
                     if (q.size() == 0) {
                         RCLCPP_WARN_STREAM(this->get_logger(), "Trajectory interpolation time is after the trajectory ends!");
@@ -510,10 +458,8 @@ namespace robot
                     if (tau.size() == 0) {
                         tau = traj_out_.GetTau(traj_out_.GetNumNodes()-1);
                     }
-                    // ---
                 }
             } else if (ctrl_state_ == SeekInitialCond) {
-                // RCLCPP_WARN_STREAM(this->get_logger(), "Seeking IC");
                 q = q_ic_;
                 v = v_ic_;
                 tau = vectorx_t::Zero(model_->GetNumInputs());
@@ -561,19 +507,7 @@ namespace robot
         std::lock_guard<std::mutex> lock(ctrl_state_mut_);
 
         ctrl_state_ = new_state;
-        std::string new_state_str;
-
-        switch (new_state) {
-        case SeekInitialCond:
-            new_state_str = "Seek Initial Condition";
-            break;
-        case Mpc:
-            new_state_str = "MPC";
-        case NoOutput:
-            new_state_str = "No Output";
-        default:
-            break;
-        }
+        std::string new_state_str = GetStateString(new_state);
 
         RCLCPP_INFO_STREAM(this->get_logger(), "Transitioning to state: " << new_state_str);
     }
@@ -603,6 +537,22 @@ namespace robot
 
         // In the future, we will want to be able to update the z height, and orientation
         // Also in the future we will get inputs from the joystick
+    }
+
+    std::string MpcController::GetStateString(const ControllerState& state) {
+        switch (state) {
+        case SeekInitialCond:
+            return "Seek Initial Condition";
+            break;
+        case Mpc:
+            return "MPC";
+        case NoOutput:
+            return "No Output";
+        default:
+            RCLCPP_ERROR_STREAM(this->get_logger(), "State cannot be printed!");
+            return "";
+            break;
+        }
     }
 
     void MpcController::PublishTrajViz(const torc::mpc::Trajectory& traj, const std::vector<std::string>& viz_frames) {
@@ -780,8 +730,13 @@ namespace robot
         // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
         vectorx_t q = vectorx_t::Zero(model_->GetConfigDim());
         vectorx_t v = vectorx_t::Zero(model_->GetVelDim());
-        traj_out_.GetConfigInterp(time_into_traj, q);
-        traj_out_.GetVelocityInterp(time_into_traj, v);
+        if (GetState() == Mpc) {
+            traj_out_.GetConfigInterp(time_into_traj, q);
+            traj_out_.GetVelocityInterp(time_into_traj, v);
+        } else {
+            q = q_ic_;
+            v = v_ic_;
+        }
 
         // traj_out_.GetConfigInterp(0.01, q);
         msg.base_link_name = "torso";
@@ -973,6 +928,8 @@ namespace robot
         constexpr int STATE_MACHINE = 6;
 
         static rclcpp::Time last_menu_press = this->now();
+        static rclcpp::Time last_A_press = this->now();
+        static rclcpp::Time last_X_press = this->now();
 
         if (msg.buttons[MENU] && (this->now() - last_menu_press).seconds() > 1e-1) {
             RCLCPP_INFO_STREAM(this->get_logger(), "Press the menu button (three horizontal lines) to recieve this message.\n"
@@ -984,6 +941,23 @@ namespace robot
                 "Left joystick to adjust the desired velocity.");
 
             last_menu_press = this->now();
+        }
+
+        if (msg.buttons[X] && (this->now() - last_X_press).seconds() > 2e-1) {
+            if (GetState() == SeekInitialCond) {
+                TransitionState(Mpc);
+            } else if (GetState() == NoOutput) {
+                TransitionState(Mpc);
+            } else if (GetState() == Mpc) {
+                TransitionState(SeekInitialCond);
+            }
+
+            last_X_press = this->now();
+        }
+
+        if (msg.buttons[A] && (this->now() - last_A_press).seconds() > 1e-1) {
+            RCLCPP_INFO_STREAM(this->get_logger(), "Current state: " << GetStateString(GetState()));
+            last_A_press = this->now();
         }
     }
 

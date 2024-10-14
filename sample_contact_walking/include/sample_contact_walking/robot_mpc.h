@@ -65,6 +65,7 @@ namespace robot {
             };
             void TransitionState(const ControllerState& new_state);
             ControllerState GetState();
+            std::string GetStateString(const ControllerState& state);
 
             // ---------- Member Variables ---------- //
             static constexpr int FLOATING_POS_SIZE = 7;
