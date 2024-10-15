@@ -38,7 +38,7 @@ namespace robot
 {
     MpcController::MpcController(const std::string& name) 
     : obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState>(name), 
-        recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(0), sim_ready_(false) {
+        recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(-1), sim_ready_(false) {
 
         mujoco_sim_instance_ = this;
 
@@ -296,9 +296,16 @@ namespace robot
 
                 if (first_loop) {
                     // TODO: Fix the state for when we re-enter this loop
+                    double time = this->now().seconds();
                     mpc_->ComputeNLP(q_ic_, v_ic_, traj_mpc_);
-                    traj_out_ = traj_mpc_;
-                    traj_start_time_ = this->now().seconds();
+                    {
+                        // Get the traj mutex to protect it
+                        std::lock_guard<std::mutex> lock(traj_out_mut_);
+                        traj_out_ = traj_mpc_;
+
+                        // Assign time time too
+                        traj_start_time_ = time;
+                    }
 
                     prev_time = this->now();
                     first_loop = false;
@@ -336,8 +343,8 @@ namespace robot
                 int frame_idx = 0;
                 for (const auto& frame : mpc_->GetContactFrames()) {
                     if (contact_schedule_.InContact(frame, 0)) {
-                        // stance_height[frame_idx] = model_->GetFrameState(frame).placement.translation()(2);
-                        stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
+                        stance_height[frame_idx] = model_->GetFrameState(frame).placement.translation()(2);
+                        // stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
                         // stance_height[frame_idx] = std::min(model_->GetFrameState(frame).placement.translation()(2), this->get_parameter("default_stand_foot_height").as_double());
 
                     } else {
@@ -359,6 +366,10 @@ namespace robot
                     mpc_->SetConfigTarget(q_target_.value());
                     mpc_->SetVelTarget(v_target_.value());
                 }
+
+                // Shift the MPC trajectory
+                // TODO: Unclear if this is helping or hurting
+                // mpc_->ShiftWarmStart(time_shift_sec);
 
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
                     double time = this->now().seconds();
@@ -413,6 +424,9 @@ namespace robot
         // For force debugging
         // obelisk_sensor_msgs::msg::ObkForceSensor force_msg;
 
+        // TODO: Remove
+        // static int count = 0;
+
         if (GetState() != NoOutput) {
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Publishing first control.");
             
@@ -427,12 +441,28 @@ namespace robot
                     if (traj_start_time_ >= 0) {
                         double time = this->get_clock()->now().seconds();
                         // TODO: Do I need to use nanoseconds?
-                        double time_into_traj = time - traj_start_time_;
+                        time_into_traj = time - traj_start_time_;
+                        // TODO: Remove!
+                        // time_into_traj = 0.75;
                     }
+
+                    // if (time_into_traj != 0.75) {
+                    //     RCLCPP_ERROR_STREAM(this->get_logger(), "Bad traj time!");
+                    // }
                     
                     traj_out_.GetConfigInterp(time_into_traj, q);
                     traj_out_.GetVelocityInterp(time_into_traj, v);
                     traj_out_.GetTorqueInterp(time_into_traj, tau);
+
+                    // if (count % 1000 == 0) {
+                    //     RCLCPP_INFO_STREAM(this->get_logger(), "\nq: " << q.transpose() << "\nqic: " << q_ic_.transpose());
+                    // }
+
+                    // count++;
+
+                    // TODO: Remove
+                    // q = q_ic_;
+                    // v = v_ic_;
 
                     // ----- For force debugging
                     // std::array<std::string, 4> frames = {"foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left"};
@@ -467,6 +497,9 @@ namespace robot
                 v = v_ic_;
                 tau = vectorx_t::Zero(model_->GetNumInputs());
             }
+
+            // TODO: Remove
+            // tau.setZero();
 
             // Make the message
             vectorx_t u_mujoco = ConvertControlToMujocoU(q.tail(model_->GetNumInputs()),
@@ -722,15 +755,16 @@ namespace robot
         // ---------- Go2 ---------- //
         std::lock_guard<std::mutex> lock(traj_out_mut_);
 
-        if (traj_start_time_ < 0) {
-            traj_start_time_ = this->get_clock()->now().seconds();
-        }
+        // TODO: Consider putting back
+        // if (traj_start_time_ < 0) {
+        //     traj_start_time_ = this->get_clock()->now().seconds();
+        // }
         obelisk_estimator_msgs::msg::EstimatedState msg;
 
         double time = this->get_clock()->now().seconds();
         // TODO: Do I need to use nanoseconds?
-        // double time_into_traj = 0.1;
-        double time_into_traj = time - traj_start_time_;
+        double time_into_traj = 0.75;
+        // double time_into_traj = time - traj_start_time_;
         // double time_into_traj = 0;
 
         // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);

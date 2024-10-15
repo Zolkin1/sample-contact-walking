@@ -2,7 +2,7 @@ general_settings:
   nodes: 32
   verbose: False #True
   node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
-  node_dt: 0.025 #0.025. Why does going to 0.015 hurt the performance?
+  node_dt: 0.025 #0.05 #0.025
   first_node_dt: 0.01 # 0.01
   compile_derivatives: False #True
   base_frame: "torso"
@@ -47,17 +47,17 @@ constraints:
 costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    weight:  [ 2.0, 2.0, 150, #1.0, 1.0, 10., # 10.0
-          #0,0,0,
-          12.5, 12.5, 12.5,
-          # 10, 10, 10,          # FL
-          # 10, 10, 10,          # FR
-          # 10, 10, 10,          # RL
-          # 10, 10, 10]
-          0.6, 0.01, 0.0001,          # FL
-          0.6, 0.01, 0.0001,          # FR
-          0.6, 0.01, 0.0001,          # RL
-          0.6, 0.01, 0.0001,]
+    weight:  [ 20.0, 20.0, 30, #2, 2, 150, or 2,2,30
+          5.5, 5.5, 5.5,
+          # 12.5, 12.5, 12.5,
+          10, 10, 10,          # FL
+          10, 10, 10,          # FR
+          10, 10, 10,          # RL
+          10, 10, 10]
+          # 0.6, 0.01, 0.0001,          # FL
+          # 0.6, 0.01, 0.0001,          # FR
+          # 0.6, 0.01, 0.0001,          # RL
+          # 0.6, 0.01, 0.0001,]
           # 0.6, 0.0, 0.0,          # FL
           # 0.6, 0.0, 0.0,          # FR
           # 0.6, 0.0, 0.0,          # RL
