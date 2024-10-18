@@ -22,16 +22,7 @@
 //  - Allow user to set the initial condition in the yaml
 //  - Check for paths first relative to $SAMPLE_WALKING_ROOT then as a global path
 //  - Add ROS diagonstic messages: https://docs.foxglove.dev/docs/visualization/panels/diagnostics#diagnosticarray
-//  - Try plotting just the first MPC solve and see what the trajectory is. Why does it swing its leg really far out
 //  - Add whole stack pausing
-//  - Sample planner causes an error eventually
-//  - Try tracking a single MPC traj with the floating base
-//  - Try getting it to stand with just mpc
-//  - Try smoothing the velocities with the cost funciton
-//  - Continue trying the MPC like a WBC. Determine why it stands up with torques only.
-//  - Try without a torque feedforward with the whole MPC problem
-//  - Why does it not even look like its trying to catch itself with torques only?
-//  - Fix the holonomic constraints
 
 
 namespace robot
@@ -48,9 +39,6 @@ namespace robot
         // --- Debug Publisher and Timer --- //
         this->RegisterObkTimer("state_viz_timer_setting", "state_viz_timer", std::bind(&MpcController::PublishTrajStateViz, this));
         this->RegisterObkPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub_setting", "state_viz_pub");
-
-        // --- Debug Force Publisher --- //
-        // this->RegisterObkPublisher<obelisk_sensor_msgs::msg::ObkForceSensor>("force_pub_setting", "force_pub");
 
         this->declare_parameter<std::string>("viz_pub_setting");
         // RCLCPP_ERROR_STREAM(this->get_logger(), "viz pub settings: " << this->get_parameter("viz_pub_setting").as_string());
@@ -179,32 +167,6 @@ namespace robot
 
         // Spin up MPC thread
         mpc_thread_ = std::thread(&MpcController::MpcThread, this);
-        // sched_param sch;
-        // int policy;
-        // pthread_getschedparam(mpc_thread_.native_handle(), &policy, &sch);
-        // RCLCPP_WARN_STREAM(this->get_logger(), "Sched prio: " << sch.sched_priority);
-        // sch.sched_priority = 20;
-        // if (int error = pthread_setschedparam(mpc_thread_.native_handle(), SCHED_FIFO, &sch)) {
-        //     RCLCPP_ERROR_STREAM(this->get_logger(), "Failed to set MPC thread prio!");
-        //     if (error == ESRCH) {
-        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Error: ESRCH");
-        //     } else if (error == EINVAL) {
-        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Error: EINVAL");
-        //     } else if (error == EPERM) {
-        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Error: EPERM");
-        //     } else {
-        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Error: not found!");
-        //     }
-        // }
-
-        // // Sample planning
-        // this->declare_parameter("simulation_samples", 50);
-        // this->declare_parameter<std::string>("xml_path");
-
-        // std::string xml_path_str = this->get_parameter("xml_path").as_string();
-        // std::filesystem::path xml_path(xml_path_str);
-
-        // this->declare_parameter("sample_loop_period_sec", 0.05);
 
         // For target viz
         torso_mocap_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
@@ -214,8 +176,6 @@ namespace robot
     void MpcController::UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) {
         // Get the mutex to protect the states
         std::lock_guard<std::mutex> lock(est_state_mut_);
-
-        // RCLCPP_WARN_STREAM(this->get_logger(), "Updating xhat!");
         
         q_.resize(msg.q_base.size() + msg.q_joints.size());
         v_.resize(msg.v_base.size() + msg.v_joints.size());
@@ -226,7 +186,6 @@ namespace robot
             q_(i) = msg.q_base.at(i);
         }
 
-        // TODO: Make this read in the joint names in case the message order does not match
         for (size_t i = 0; i < msg.q_joints.size(); i++) {
             const auto joint_idx = model_->GetJointID(msg.joint_names[i]);
             if (joint_idx.has_value()) {
@@ -238,8 +197,6 @@ namespace robot
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Joint " << msg.joint_names[i] << " not found in the robot model!");
             }
         }
-
-        // RCLCPP_INFO_STREAM(this->get_logger(), "q: " << q_.transpose());
 
         // Velocity
         for (size_t i = 0; i < msg.v_base.size(); i++) {
@@ -363,6 +320,7 @@ namespace robot
                 q_ref(2) = z_target_;
                 mpc_->GenerateCostReference(q_ref, v, v_target_.value()[0].head<3>());
 
+                // TODO: remove the max mpc solves when I no longer need it
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
                     double time = this->now().seconds();
                     double delay_start_time = 0; // this->now().seconds() - traj_start_time_;
@@ -410,12 +368,6 @@ namespace robot
 
         obelisk_control_msgs::msg::PDFeedForward msg;
 
-        // For force debugging
-        // obelisk_sensor_msgs::msg::ObkForceSensor force_msg;
-
-        // TODO: Remove
-        // static int count = 0;
-
         if (GetState() != NoOutput) {
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Publishing first control.");
             
@@ -431,41 +383,11 @@ namespace robot
                         double time = this->get_clock()->now().seconds();
                         // TODO: Do I need to use nanoseconds?
                         time_into_traj = time - traj_start_time_;
-                        // TODO: Remove!
-                        // time_into_traj = 0.75;
                     }
-
-                    // if (time_into_traj != 0.75) {
-                    //     RCLCPP_ERROR_STREAM(this->get_logger(), "Bad traj time!");
-                    // }
                     
                     traj_out_.GetConfigInterp(time_into_traj, q);
                     traj_out_.GetVelocityInterp(time_into_traj, v);
                     traj_out_.GetTorqueInterp(time_into_traj, tau);
-
-                    // if (count % 1000 == 0) {
-                    //     RCLCPP_INFO_STREAM(this->get_logger(), "\nq: " << q.transpose() << "\nqic: " << q_ic_.transpose());
-                    // }
-
-                    // count++;
-
-                    // TODO: Remove
-                    // q = q_ic_;
-                    // v = v_ic_;
-
-                    // ----- For force debugging
-                    // std::array<std::string, 4> frames = {"foot_front_right", "foot_rear_right", "foot_front_left", "foot_rear_left"};
-                    // for (const auto& frame : frames) {
-                    //     geometry_msgs::msg::Vector3 force;
-                    //     vector3_t force_traj;
-                    //     traj_out_.GetForceInterp(time_into_traj, frame, force_traj);
-                    //     force.x = force_traj(0);
-                    //     force.y = force_traj(1);
-                    //     force.z = force_traj(2);
-
-                    //     force_msg.forces.emplace_back(force);
-                    // }
-                    // ----- For force debugging
 
                     // This is a safety in case the interpolation time is too large
                     if (q.size() == 0) {
@@ -502,11 +424,6 @@ namespace robot
 
             msg.header.stamp = this->now();
             this->GetPublisher<obelisk_control_msgs::msg::PDFeedForward>(this->ctrl_key_)->publish(msg);
-
-            // Publish desired forces for debugging         
-            // force_msg.header.stamp = this->now();   
-            // TODO: Put back
-            // this->GetPublisher<obelisk_sensor_msgs::msg::ObkForceSensor>("force_pub")->publish(force_msg);
         }
 
         return msg;
@@ -853,17 +770,6 @@ namespace robot
 
             next_left_insertion_time_ += 2*swing_time_;
         }
-
-        // For each contact determine last contact
-        // If the last contact is within 1 second, then add another contact swing_time_ seconds later that lasts for swing_time_ + double_stance_time_
-        // for (const auto& frame : mpc_->GetContactFrames()) {
-        //     const double last_swing_time = contact_schedule_.GetLastSwingTime(frame);
-        //     // RCLCPP_INFO_STREAM(this->get_logger(), "Last contact time: " << last_contact_time);
-        //     if (last_swing_time < 1) {
-        //         // RCLCPP_INFO_STREAM(this->get_logger(), "Adding a contact for " << frame << " at time: " << last_contact_time + swing_time_ << " until time: " << last_contact_time + 2*swing_time_ + double_stance_time_);
-        //         contact_schedule_.InsertSwingByDuration(frame, last_swing_time + swing_time_ + double_stance_time_,  swing_time_);
-        //     }
-        // } 
     }
 
     void MpcController::ParseContactParameters() {
@@ -1004,6 +910,7 @@ namespace robot
             // For now the joy stick in one ot one in velocity
             // In the future we may want to cap the speed above or below 1 and/or we may want a different curve to map them (i.e. log or quadratic)
             for (int i = 0; i < v_target_.value().GetNumNodes(); i++) {
+                // TODO: Add some kind of "damping" so the target velocity doesnt change too much
                 v_target_.value()[i](0) = msg.axes[LEFT_JOY_VERT];
                 v_target_.value()[i](1) = msg.axes[LEFT_JOY_HORZ];
             }

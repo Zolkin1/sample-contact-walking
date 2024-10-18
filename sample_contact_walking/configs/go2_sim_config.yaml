@@ -14,10 +14,10 @@ onboard:
         force_frames: ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
 # ---------- Swing trajectory ---------- #
         default_swing_height: 0.08 # 0.1
-        default_stand_foot_height: 0.01 #0.01 # 0.0075 also looked pretty good
+        default_stand_foot_height: 0.01 #0.01
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.01 #0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
+        mpc_loop_period_sec: 0.01 #0.01
         max_mpc_solves: -37 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.2 #0.25
@@ -77,12 +77,6 @@ onboard:
         # ----- Joystick publisher ----- #
         - ros_parameter: joystick_feedback_setting
           topic: /obelisk/go2/joy_feedback
-        # --- Debug Forces --- #
-        # - ros_parameter: force_pub_setting
-        #   topic: /obelisk/go2/force_debug
-        #   history_depth: 10
-        #   callback_group: None
-        #   non_obelisk: False
       subscribers:
         # Estimated state subscriber
         - ros_parameter: sub_est_setting
@@ -99,10 +93,6 @@ onboard:
         - ros_parameter: timer_ctrl_setting
           timer_period_sec: 0.001
           callback_group: control_cbg
-        # MPC compute Timer - removed due to ros timing issues.
-        # - ros_parameter: timer_mpc_setting
-        #   timer_period_sec: 0.009
-        #   callback_group: mpc_cbg
         # --- Debug Viz --- #
         - ros_parameter: state_viz_timer_setting
           timer_period_sec: 0.002
@@ -118,12 +108,6 @@ onboard:
           history_depth: 10
           callback_group: None
           non_obelisk: False
-      # ---- DEBUG ---- #
-        # - ros_parameter: debug_pub_setting
-        #   topic: /obelisk/go2/debug_control
-        #   history_depth: 10
-        #   callback_group: None
-      # ---- DEBUG ---- #
       timers:
         - ros_parameter: timer_est_setting
           timer_period_sec: 0.002
@@ -134,23 +118,18 @@ onboard:
           topic: /obelisk/go2/joint_encoders
           # msg_type: ObkJointEncoders
           history_depth: 10
-          # callback_key: sub_callback1
           callback_group: None
           non_obelisk: False
       # ---------- Mocap ---------- #
         - ros_parameter: mocap_setting
           topic: /obelisk/go2/torso_pose
-          # msg_type: ObkFramePose
           history_depth: 10
-          # callback_key: sub_callback1
           callback_group: None
           non_obelisk: False
       # ---------- Torso IMU ---------- #
         - ros_parameter: torso_imu_setting
           topic: /obelisk/go2/torso_imu
-          # msg_type: ObkFramePose
           history_depth: 10
-          # callback_key: sub_callback1
           callback_group: None
           non_obelisk: False
       # ---------- True Sim State ---------- #
@@ -159,12 +138,6 @@ onboard:
           history_depth: 10
           callback_group: None
           non_obelisk: False
-      # ---- DEBUG ---- #
-        # - ros_parameter: debug_print_setting
-        #   topic: /obelisk/go2/low_level_control
-        #   history_depth: 10
-        #   callback_grou: Debug_cbg
-      # ---- DEBUG ---- #
   # sensing:
   robot:
     - is_simulated: True

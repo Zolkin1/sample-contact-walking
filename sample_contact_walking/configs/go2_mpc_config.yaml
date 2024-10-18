@@ -2,24 +2,24 @@ general_settings:
   nodes: 32
   verbose: False #True
   node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
-  node_dt: 0.025 #0.05 #0.025
-  first_node_dt: 0.01 # 0.01
+  node_dt: 0.025
+  first_node_dt: 0.01 
   compile_derivatives: False #True
   base_frame: "torso"
   scale_cost: False
   max_initial_solves: 20
   initial_constraint_tol: 5e-4
   nodes_full_dynamics: 3 #4   # Also determines how many nodes have torque constraints
-  delay_prediction_dt: 0 #-1e-2 #5e-3 # TODO: Tune or disable
-  terminal_cost_weight: 10 # 1 works, 10 seems to be better
+  delay_prediction_dt: 0
+  terminal_cost_weight: 10
 solver_settings:
   rel_tol: 1e-3
   abs_tol: 1e-3
   verbose: False
   polish: False
-  rho: 0.01 #0.05 is a normal value. 0.01 seems to work really well for standing still in sim
+  rho: 0.01
   alpha: 1.6 # 1.6, 1.1
-  sigma: 1e-6 # 1e-10
+  sigma: 1e-6
   adaptive_rho: False
   max_iter: 20 #20
   scaling: 10
@@ -44,7 +44,6 @@ constraints:
       frame2: "RL_foot"
       radius1: 0.06
       radius2: 0.06
-  # TODO: Add hand and knee collisions
 costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
@@ -71,10 +70,6 @@ costs:
         0.01, 0.01, 0.0001,         # FR
         0.01, 0.01, 0.0001,         # RL
         0.01, 0.01, 0.0001]         # RR
-        # 0.1, 0.0, 0.0,         # FL
-        # 0.1, 0.0, 0.0,         # FR
-        # 0.1, 0.0, 0.0,         # RL
-        # 0.1, 0.0, 0.0]         # RR
   - type: TorqueRegularization
     name: "TorqueReg"
     weight: [.001, .001, .0001,       # FL
@@ -83,24 +78,7 @@ costs:
              .001, .001, .0001]       # RR
   - type: ForceRegularization
     name: "ForceReg"
-    # weight: [0.0001, 0.0001, 0.001]
     weight: [0.001, 0.001, 0.01]
-  # - type: ForwardKinematics
-  #   name: "FLFoot"
-  #   weight: [0.0, 0.0, 10]
-  #   frame: "FL_foot"
-  # - type: ForwardKinematics
-  #   name: "FRFoot"
-  #   weight: [0.0, 0.0, 0]
-  #   frame: "FR_foot"
-  # - type: ForwardKinematics
-  #   name: "RLFoot"
-  #   weight: [0.0, 0.0, 10]
-  #   frame: "RL_foot"
-  # - type: ForwardKinematics
-  #   name: "RRFoot"
-  #   weight: [0.0, 0.0, 10]
-  #   frame: "RR_foot"
 contacts:
   contact_frames: ["RL_foot", "FR_foot", "FL_foot", "RR_foot"]
   # hip_offsets: [-0.1934, 0.142, 0.1934, -0.142, 0.1934, 0.142, -0.1934, -0.142]
@@ -113,9 +91,3 @@ line_search:
   constraint_reduction_mult: 1e-6
   alpha_step: 0.5 # Since the line search is high variance, lowering this helps
   armijo_constant: 1e-4
-
-  # Misc notes:
-  # When rho = 0.1 I seem to follow the trajectory better (i.e. better open loop performance), but I have more oscillations and drift
-  # When rho = 0.02 almost all of the drift and oscillations are removed but the open loop tracking is significantly worse.
-  # In reality I think the better open loop performance is probably due to have better constraint satisfaction on the dynamics (but that needs confirmation)
-  # Also unclear if it is just that the natural osciallations of the rho somehow help to stabilize
