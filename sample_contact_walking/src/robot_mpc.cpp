@@ -343,8 +343,9 @@ namespace robot
                 int frame_idx = 0;
                 for (const auto& frame : mpc_->GetContactFrames()) {
                     if (contact_schedule_.InContact(frame, 0)) {
-                        stance_height[frame_idx] = model_->GetFrameState(frame).placement.translation()(2);
-                        // stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
+                        // TODO: Put back!
+                        // stance_height[frame_idx] = model_->GetFrameState(frame).placement.translation()(2);
+                        stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
                         // stance_height[frame_idx] = std::min(model_->GetFrameState(frame).placement.translation()(2), this->get_parameter("default_stand_foot_height").as_double());
 
                     } else {
@@ -361,6 +362,7 @@ namespace robot
                     this->get_parameter("apex_time").as_double());
                 AddPeriodicContacts();
 
+                // TODO: Remove with the refernece generator below!
                 if (!fixed_target_ || controller_target_) {
                     UpdateMpcTargets(q);
                     mpc_->SetConfigTarget(q_target_.value());
@@ -370,6 +372,27 @@ namespace robot
                 // Shift the MPC trajectory
                 // TODO: Unclear if this is helping or hurting
                 // mpc_->ShiftWarmStart(time_shift_sec);
+
+                // TODO: Fix!
+                // Issues include: when run with high weights on the joints bad stuff happens. I think this is because of the cost being generated in bad.
+                // It could be that something is infeasible.
+                // When run with more iterations things almost get worse which implies infeasibility
+                // Need to visualize the cost sequence!
+                // vectorx_t q_ref = q; //q_ic_;
+                // q_ref(0) = q(0);
+                // q_ref(1) = q(1);
+                // q_ref(2) = z_target_;
+                // vector3_t vtemp = vector3_t::Zero();
+                // mpc_->GenerateCostReference(q_ref, v_target_.value()[0].head<3>());
+
+                // auto q_target = mpc_->GetConfigTargets();
+
+                // RCLCPP_INFO_STREAM(this->get_logger(), "q target[0]: " << q_target[0].transpose());
+                // RCLCPP_INFO_STREAM(this->get_logger(), "q target[1]: " << q_target[1].transpose());
+                // RCLCPP_INFO_STREAM(this->get_logger(), "q target[10]: " << q_target[10].transpose());
+                // RCLCPP_INFO_STREAM(this->get_logger(), "q target[19]: " << q_target[19].transpose());
+
+                // std::this_thread::sleep_for(std::chrono::seconds(10));
 
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
                     double time = this->now().seconds();
@@ -763,8 +786,8 @@ namespace robot
 
         double time = this->get_clock()->now().seconds();
         // TODO: Do I need to use nanoseconds?
-        double time_into_traj = 0.75;
-        // double time_into_traj = time - traj_start_time_;
+        // double time_into_traj = 0.75;
+        double time_into_traj = time - traj_start_time_;
         // double time_into_traj = 0;
 
         // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);

@@ -13,15 +13,15 @@ onboard:
         viz_force_scale: 0.01
         force_frames: ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
 # ---------- Swing trajectory ---------- #
-        default_swing_height: 0.08
+        default_swing_height: 0.1 # 0.08
         default_stand_foot_height: 0.01 #0.01 # 0.0075 also looked pretty good
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
         mpc_loop_period_sec: 0.01 #0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
         max_mpc_solves: -37 #125 
 # ---------- Contact schedule ---------- #
-        swing_time: 0.2 #0.25
-        first_swing_time: 100.
+        swing_time: 0.25 #0.25
+        first_swing_time: 5.
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs

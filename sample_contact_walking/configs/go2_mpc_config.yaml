@@ -11,7 +11,7 @@ general_settings:
   initial_constraint_tol: 5e-4
   nodes_full_dynamics: 3 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0 #-1e-2 #5e-3 # TODO: Tune or disable
-  terminal_cost_weight: 1 # 1 works
+  terminal_cost_weight: 100 # 1 works, 10 seems to be better
 solver_settings:
   rel_tol: 1e-3
   abs_tol: 1e-3
@@ -21,10 +21,11 @@ solver_settings:
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6 # 1e-10
   adaptive_rho: False
-  max_iter: 20
+  max_iter: 20 #20
   scaling: 10
 constraints:
-  friction_coef: 0.5  # TODO: Tune this
+  friction_coef: 0.7  # TODO: Tune this
+  friction_margin: 2
   max_grf: 800
   collisions:
     - frame1: "FR_foot"
@@ -47,29 +48,29 @@ constraints:
 costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    weight:  [ 20.0, 20.0, 30, #2, 2, 150, or 2,2,30
-          5.5, 5.5, 5.5,
+    weight:  [ 2.0, 2.0, 20, #2, 2, 150, or 2,2,30
+          15.5, 15.5, 15.5, # 5.5, 5.5, 5.5
           # 12.5, 12.5, 12.5,
-          10, 10, 10,          # FL
-          10, 10, 10,          # FR
-          10, 10, 10,          # RL
-          10, 10, 10]
-          # 0.6, 0.01, 0.0001,          # FL
-          # 0.6, 0.01, 0.0001,          # FR
-          # 0.6, 0.01, 0.0001,          # RL
-          # 0.6, 0.01, 0.0001,]
-          # 0.6, 0.0, 0.0,          # FL
-          # 0.6, 0.0, 0.0,          # FR
-          # 0.6, 0.0, 0.0,          # RL
-          # 0.6, 0.0, 0.0,]          # RR
+          # 10, 10, 10,          # FL
+          # 10, 10, 10,          # FR
+          # 10, 10, 10,          # RL
+          # 10, 10, 10]
+          0.4, 0.01, 0.0001,          # FL
+          0.4, 0.01, 0.0001,          # FR
+          0.4, 0.01, 0.0001,          # RL
+          0.4, 0.01, 0.0001,]
+          # 10, 10, 1,          # FL
+          # 10, 10, 1,          # FR
+          # 10, 10, 1,          # RL
+          # 10, 10, 1,]          # RR
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [1, 1, 1,
+    weight: [2, 2, 2,
         .5, .5, .5,
-        0.1, 0.01, 0.0001,         # FL
-        0.1, 0.01, 0.0001,         # FR
-        0.1, 0.01, 0.0001,         # RL
-        0.1, 0.01, 0.0001]         # RR
+        0.01, 0.01, 0.0001,         # FL
+        0.01, 0.01, 0.0001,         # FR
+        0.01, 0.01, 0.0001,         # RL
+        0.01, 0.01, 0.0001]         # RR
         # 0.1, 0.0, 0.0,         # FL
         # 0.1, 0.0, 0.0,         # FR
         # 0.1, 0.0, 0.0,         # RL
@@ -82,7 +83,8 @@ costs:
              .001, .001, .0001]       # RR
   - type: ForceRegularization
     name: "ForceReg"
-    weight: [0.0001, 0.0001, 0.001]
+    # weight: [0.0001, 0.0001, 0.001]
+    weight: [0.001, 0.001, 0.01]
   # - type: ForwardKinematics
   #   name: "FLFoot"
   #   weight: [0.0, 0.0, 10]
@@ -101,6 +103,8 @@ costs:
   #   frame: "RR_foot"
 contacts:
   contact_frames: ["RL_foot", "FR_foot", "FL_foot", "RR_foot"]
+  # hip_offsets: [-0.1934, 0.142, 0.1934, -0.142, 0.1934, 0.142, -0.1934, -0.142]
+  hip_offsets: [-0.1934, 0.142, 0.1734, -0.142, 0.1734, 0.142, -0.1934, -0.142]
 
 line_search:
   alpha_min: 1e-3
