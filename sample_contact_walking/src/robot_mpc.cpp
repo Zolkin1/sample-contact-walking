@@ -487,9 +487,6 @@ namespace robot
                 tau = vectorx_t::Zero(model_->GetNumInputs());
             }
 
-            // TODO: Remove
-            // tau.setZero();
-
             // Make the message
             vectorx_t u_mujoco = ConvertControlToMujocoU(q.tail(model_->GetNumInputs()),
                 v.tail(model_->GetNumInputs()), tau);
