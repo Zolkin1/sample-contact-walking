@@ -314,6 +314,33 @@ namespace robot
                     q = q_ic_;
                     v = v_ic_;
                 } else {
+                    // Do everything that does not need the measured state first
+
+                    // Shift the contact schedule
+                    auto current_time = this->now();
+                    double time_shift_sec = (current_time - prev_time).nanoseconds()/1e9;
+                    contact_schedule_.ShiftSwings(-time_shift_sec);    // TODO: Do I need a mutex on this later?
+                    next_left_insertion_time_ -= time_shift_sec;
+                    next_right_insertion_time_ -= time_shift_sec;
+
+
+                    // TODO: If I need to, I can go back to using the measured foot height
+                    std::vector<double> stance_height(mpc_->GetContactFrames().size());
+                    int frame_idx = 0;
+                    for (const auto& frame : mpc_->GetContactFrames()) {
+                        stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
+                        frame_idx++;
+                    }
+
+                    prev_time = this->now();
+                    mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
+                        this->get_parameter("default_swing_height").as_double(),
+                        stance_height,
+                        this->get_parameter("apex_time").as_double());
+                    AddPeriodicContacts();
+
+
+                    // Read in state
                     {
                         // Get the mutex to protect the states
                         std::lock_guard<std::mutex> lock(est_state_mut_);
@@ -323,76 +350,18 @@ namespace robot
                         v = v_;
                     }
                 }
-
-                // TODO: remove
-                // model_->FirstOrderFK(q);
-                // for (int i = 0; i < 4; i++) {
-                //     RCLCPP_INFO_STREAM(this->get_logger(), force_frames_[i] << " height: " << model_->GetFrameState(force_frames_[i]).placement.translation()(2));
+                
+                // TODO: Remove with the refernece generator below!
+                // if (!fixed_target_ || controller_target_) {
+                //     UpdateMpcTargets(q);
+                //     mpc_->SetConfigTarget(q_target_.value());
+                //     mpc_->SetVelTarget(v_target_.value());
                 // }
 
-                // Shift the contact schedule
-                auto current_time = this->now();
-                double time_shift_sec = (current_time - prev_time).nanoseconds()/1e9;
-                contact_schedule_.ShiftSwings(-time_shift_sec);    // TODO: Do I need a mutex on this later?
-                next_left_insertion_time_ -= time_shift_sec;
-                next_right_insertion_time_ -= time_shift_sec;
-                
-                // Assign stance heights based on measurements
-                model_->FirstOrderFK(q);
-                std::vector<double> stance_height(mpc_->GetContactFrames().size());
-                int frame_idx = 0;
-                for (const auto& frame : mpc_->GetContactFrames()) {
-                    if (contact_schedule_.InContact(frame, 0)) {
-                        // TODO: Put back!
-                        // stance_height[frame_idx] = model_->GetFrameState(frame).placement.translation()(2);
-                        stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
-                        // stance_height[frame_idx] = std::min(model_->GetFrameState(frame).placement.translation()(2), this->get_parameter("default_stand_foot_height").as_double());
-
-                    } else {
-                        stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
-                    }
-                    frame_idx++;
-                }
-
-                prev_time = this->now();
-                mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
-                    this->get_parameter("default_swing_height").as_double(),
-                    stance_height,
-                    // this->get_parameter("default_stand_foot_height").as_double(),
-                    this->get_parameter("apex_time").as_double());
-                AddPeriodicContacts();
-
-                // TODO: Remove with the refernece generator below!
-                if (!fixed_target_ || controller_target_) {
-                    UpdateMpcTargets(q);
-                    mpc_->SetConfigTarget(q_target_.value());
-                    mpc_->SetVelTarget(v_target_.value());
-                }
-
-                // Shift the MPC trajectory
-                // TODO: Unclear if this is helping or hurting
-                // mpc_->ShiftWarmStart(time_shift_sec);
-
-                // TODO: Fix!
-                // Issues include: when run with high weights on the joints bad stuff happens. I think this is because of the cost being generated in bad.
-                // It could be that something is infeasible.
-                // When run with more iterations things almost get worse which implies infeasibility
-                // Need to visualize the cost sequence!
-                // vectorx_t q_ref = q; //q_ic_;
-                // q_ref(0) = q(0);
-                // q_ref(1) = q(1);
-                // q_ref(2) = z_target_;
-                // vector3_t vtemp = vector3_t::Zero();
-                // mpc_->GenerateCostReference(q_ref, v_target_.value()[0].head<3>());
-
-                // auto q_target = mpc_->GetConfigTargets();
-
-                // RCLCPP_INFO_STREAM(this->get_logger(), "q target[0]: " << q_target[0].transpose());
-                // RCLCPP_INFO_STREAM(this->get_logger(), "q target[1]: " << q_target[1].transpose());
-                // RCLCPP_INFO_STREAM(this->get_logger(), "q target[10]: " << q_target[10].transpose());
-                // RCLCPP_INFO_STREAM(this->get_logger(), "q target[19]: " << q_target[19].transpose());
-
-                // std::this_thread::sleep_for(std::chrono::seconds(10));
+                // TODO: Unclear if this really provides a performance improvement as the stack works without it.
+                vectorx_t q_ref = q;
+                q_ref(2) = z_target_;
+                mpc_->GenerateCostReference(q_ref, v, v_target_.value()[0].head<3>());
 
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
                     double time = this->now().seconds();
@@ -406,9 +375,6 @@ namespace robot
                         // Assign time time too
                         traj_start_time_ = time;
                     }
-
-                    // RCLCPP_INFO_STREAM(this->get_logger(), "Config IC Error: " << (traj_out_.GetConfiguration(0) - q).norm());
-                    // RCLCPP_INFO_STREAM(this->get_logger(), "Vel IC Error: " << (traj_out_.GetVelocity(0) - v).norm());
                 } else {
                     static bool printed = false;
                     if (!printed) {

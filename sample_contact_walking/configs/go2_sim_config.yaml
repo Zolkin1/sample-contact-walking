@@ -20,8 +20,8 @@ onboard:
         mpc_loop_period_sec: 0.01 #0.01 # Note that the faster I run it, the more consistent (and faster, up to a limit) it is
         max_mpc_solves: -37 #125 
 # ---------- Contact schedule ---------- #
-        swing_time: 0.25 #0.25
-        first_swing_time: 5.
+        swing_time: 0.2 #0.25
+        first_swing_time: 2.
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
