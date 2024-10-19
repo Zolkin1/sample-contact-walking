@@ -177,7 +177,7 @@ Stephen Brawner (brawner@gmail.com)
       lower="-1.0472"
       upper="1.0472"
       effort="23.7"
-      velocity="6" />
+      velocity="10" />
   </joint>
   <link name="FL_hip_rotor">
     <inertial>
@@ -244,7 +244,7 @@ Stephen Brawner (brawner@gmail.com)
       lower="-1.5708"
       upper="3.4907"
       effort="23.7"
-      velocity="6" />
+      velocity="10" />
   </joint>
   <link name="FL_thigh_rotor">
     <inertial>
@@ -311,7 +311,7 @@ Stephen Brawner (brawner@gmail.com)
       lower="-2.7227"
       upper="-0.83776"
       effort="45.43"
-      velocity="6" />
+      velocity="10" />
   </joint>
   <link
     name="FL_calflower">
@@ -472,7 +472,7 @@ Stephen Brawner (brawner@gmail.com)
       lower="-1.0472"
       upper="1.0472"
       effort="23.7"
-      velocity="6" />
+      velocity="10" />
   </joint>
   <link name="FR_hip_rotor">
     <inertial>
@@ -539,7 +539,7 @@ Stephen Brawner (brawner@gmail.com)
       lower="-1.5708"
       upper="3.4907"
       effort="23.7"
-      velocity="6" />
+      velocity="10" />
   </joint>
   <link name="FR_thigh_rotor">
     <inertial>
@@ -606,7 +606,7 @@ Stephen Brawner (brawner@gmail.com)
       lower="-2.7227"
       upper="-0.83776"
       effort="45.43"
-      velocity="6" />
+      velocity="10" />
   </joint>
   <link
     name="FR_calflower">
@@ -767,7 +767,7 @@ Stephen Brawner (brawner@gmail.com)
       lower="-1.0472"
       upper="1.0472"
       effort="23.7"
-      velocity="6" />
+      velocity="10" />
   </joint>
   <link name="RL_hip_rotor">
     <inertial>
@@ -834,7 +834,7 @@ Stephen Brawner (brawner@gmail.com)
       lower="-0.5236"
       upper="4.5379"
       effort="23.7"
-      velocity="6" />
+      velocity="10" />
   </joint>
   <link name="RL_thigh_rotor">
     <inertial>
@@ -901,7 +901,7 @@ Stephen Brawner (brawner@gmail.com)
       lower="-2.7227"
       upper="-0.83776"
       effort="45.43"
-      velocity="6" />
+      velocity="10" />
   </joint>
   <link
     name="RL_calflower">
@@ -1062,7 +1062,7 @@ Stephen Brawner (brawner@gmail.com)
       lower="-1.0472"
       upper="1.0472"
       effort="23.7"
-      velocity="6" />
+      velocity="10" />
   </joint>
   <link name="RR_hip_rotor">
     <inertial>
@@ -1129,7 +1129,7 @@ Stephen Brawner (brawner@gmail.com)
       lower="-0.5236"
       upper="4.5379"
       effort="23.7"
-      velocity="6" />
+      velocity="10" />
   </joint>
   <link name="RR_thigh_rotor">
     <inertial>
@@ -1196,7 +1196,7 @@ Stephen Brawner (brawner@gmail.com)
       lower="-2.7227"
       upper="-0.83776"
       effort="45.43"
-      velocity="6" />
+      velocity="10" />
   </joint>
   <link
     name="RR_calflower">
