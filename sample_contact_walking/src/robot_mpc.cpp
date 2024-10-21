@@ -656,78 +656,78 @@ namespace robot
         // }
 
         // ---------- Go2 ---------- //
-        std::lock_guard<std::mutex> lock(traj_out_mut_);
+        // std::lock_guard<std::mutex> lock(traj_out_mut_);
 
-        // TODO: Consider putting back
-        // if (traj_start_time_ < 0) {
-        //     traj_start_time_ = this->get_clock()->now().seconds();
+        // // TODO: Consider putting back
+        // // if (traj_start_time_ < 0) {
+        // //     traj_start_time_ = this->get_clock()->now().seconds();
+        // // }
+        // obelisk_estimator_msgs::msg::EstimatedState msg;
+
+        // double time = this->get_clock()->now().seconds();
+        // // TODO: Do I need to use nanoseconds?
+        // // double time_into_traj = 0.75;
+        // double time_into_traj = time - traj_start_time_;
+        // // double time_into_traj = 0;
+
+        // // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
+        // vectorx_t q = vectorx_t::Zero(model_->GetConfigDim());
+        // vectorx_t v = vectorx_t::Zero(model_->GetVelDim());
+        // if (GetState() == Mpc) {
+        //     traj_out_.GetConfigInterp(time_into_traj, q);
+        //     traj_out_.GetVelocityInterp(time_into_traj, v);
+        // } else {
+        //     q = q_ic_;
+        //     v = v_ic_;
         // }
-        obelisk_estimator_msgs::msg::EstimatedState msg;
 
-        double time = this->get_clock()->now().seconds();
-        // TODO: Do I need to use nanoseconds?
-        // double time_into_traj = 0.75;
-        double time_into_traj = time - traj_start_time_;
-        // double time_into_traj = 0;
+        // // traj_out_.GetConfigInterp(0.01, q);
+        // msg.base_link_name = "torso";
+        // vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
+        // vectorx_t q_tail = q.tail(model_->GetNumInputs());
+        // msg.q_base = torc::utils::EigenToStdVector(q_head);
+        // msg.q_joints.resize(model_->GetNumInputs());
+        // msg.v_joints.resize(model_->GetNumInputs());
 
-        // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
-        vectorx_t q = vectorx_t::Zero(model_->GetConfigDim());
-        vectorx_t v = vectorx_t::Zero(model_->GetVelDim());
-        if (GetState() == Mpc) {
-            traj_out_.GetConfigInterp(time_into_traj, q);
-            traj_out_.GetVelocityInterp(time_into_traj, v);
-        } else {
-            q = q_ic_;
-            v = v_ic_;
-        }
+        // msg.joint_names.resize(q_tail.size());
+        // msg.joint_names[0] = "FL_hip_joint";
+        // msg.joint_names[1] = "FR_hip_joint";
+        // msg.joint_names[2] = "RL_hip_joint";
+        // msg.joint_names[3] = "RR_hip_joint";
+        // msg.joint_names[4] = "FL_thigh_joint";
+        // msg.joint_names[5] = "FR_thigh_joint";
+        // msg.joint_names[6] = "RL_thigh_joint";
+        // msg.joint_names[7] = "RR_thigh_joint";
+        // msg.joint_names[8] = "FL_calf_joint";
+        // msg.joint_names[9] = "FR_calf_joint";
+        // msg.joint_names[10] = "RL_calf_joint";
+        // msg.joint_names[11] = "RR_calf_joint";
 
-        // traj_out_.GetConfigInterp(0.01, q);
-        msg.base_link_name = "torso";
-        vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
-        vectorx_t q_tail = q.tail(model_->GetNumInputs());
-        msg.q_base = torc::utils::EigenToStdVector(q_head);
-        msg.q_joints.resize(model_->GetNumInputs());
-        msg.v_joints.resize(model_->GetNumInputs());
+        // for (int i = 0; i < msg.joint_names.size(); i++) {
+        //     const auto idx = model_->GetJointID(msg.joint_names[i]);
+        //     if (idx.has_value()) {
+        //         msg.q_joints[i] = q(5 + idx.value());
+        //         if (4 + idx.value() > v.size()) {
+        //             RCLCPP_ERROR_STREAM(this->get_logger(), "v idx out of bounds!");
+        //         } else {
+        //             msg.v_joints[i] = v(4 + idx.value());
+        //         }
+        //     } else {
+        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Joint index not found!");
+        //     }
+        // }
 
-        msg.joint_names.resize(q_tail.size());
-        msg.joint_names[0] = "FL_hip_joint";
-        msg.joint_names[1] = "FR_hip_joint";
-        msg.joint_names[2] = "RL_hip_joint";
-        msg.joint_names[3] = "RR_hip_joint";
-        msg.joint_names[4] = "FL_thigh_joint";
-        msg.joint_names[5] = "FR_thigh_joint";
-        msg.joint_names[6] = "RL_thigh_joint";
-        msg.joint_names[7] = "RR_thigh_joint";
-        msg.joint_names[8] = "FL_calf_joint";
-        msg.joint_names[9] = "FR_calf_joint";
-        msg.joint_names[10] = "RL_calf_joint";
-        msg.joint_names[11] = "RR_calf_joint";
+        // // traj_out_.GetVelocityInterp(0.01, v);
+        // vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
 
-        for (int i = 0; i < msg.joint_names.size(); i++) {
-            const auto idx = model_->GetJointID(msg.joint_names[i]);
-            if (idx.has_value()) {
-                msg.q_joints[i] = q(5 + idx.value());
-                if (4 + idx.value() > v.size()) {
-                    RCLCPP_ERROR_STREAM(this->get_logger(), "v idx out of bounds!");
-                } else {
-                    msg.v_joints[i] = v(4 + idx.value());
-                }
-            } else {
-                RCLCPP_ERROR_STREAM(this->get_logger(), "Joint index not found!");
-            }
-        }
+        // // vectorx_t temp = vectorx_t::Zero(6);
+        // msg.v_base = torc::utils::EigenToStdVector(v_head);
 
-        // traj_out_.GetVelocityInterp(0.01, v);
-        vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
+        // msg.header.stamp = this->now();
 
-        // vectorx_t temp = vectorx_t::Zero(6);
-        msg.v_base = torc::utils::EigenToStdVector(v_head);
-
-        msg.header.stamp = this->now();
-
-        if (!sim_ready_) {
-            this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
-        }
+        // if (!sim_ready_) {
+        //     this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
+        // }
     }
 
     void MpcController::MakeTargetTorsoMocapTransform() {

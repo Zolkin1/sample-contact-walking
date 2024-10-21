@@ -54,6 +54,7 @@
   </joint>
 
   <!-- Legs -->
+  <!-- Left Leg -->
   <link name="left_hip_pitch_link">
     <inertial>
       <origin xyz="0.002741 0.047791 -0.02606" rpy="0 0 0"/>
@@ -246,6 +247,24 @@
     <axis xyz="1 0 0"/>
     <limit lower="-0.2618" upper="0.2618" effort="50" velocity="37"/>
   </joint>
+
+  <!-- Left Foot contact frames -->
+  <!-- TODO: Consider adding two more contacts -->
+  <link name="left_toe"/>
+  <joint name="left_toe_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0.12 0 -0.03"/>
+    <parent link="left_ankle_roll_link"/>
+    <child link="left_toe"/>
+  </joint>
+
+  <link name="left_heel"/>
+  <joint name="left_heel_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.05 0 -0.03"/>
+    <parent link="left_ankle_roll_link"/>
+    <child link="left_heel"/>
+  </joint>
+
+  <!-- Right Leg -->
   <link name="right_hip_pitch_link">
     <inertial>
       <origin xyz="0.002741 -0.047791 -0.02606" rpy="0 0 0"/>
@@ -437,6 +456,22 @@
     <child link="right_ankle_roll_link"/>
     <axis xyz="1 0 0"/>
     <limit lower="-0.2618" upper="0.2618" effort="50" velocity="37"/>
+  </joint>
+
+  <!-- Right Foot contact frames -->
+  <!-- TODO: Consider adding two more contacts -->
+  <link name="right_toe"/>
+  <joint name="right_toe_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0.12 0 -0.03"/>
+    <parent link="right_ankle_roll_link"/>
+    <child link="right_toe"/>
+  </joint>
+
+  <link name="right_heel"/>
+  <joint name="right_heel_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.05 0 -0.03"/>
+    <parent link="right_ankle_roll_link"/>
+    <child link="right_heel"/>
   </joint>
 
   <!-- Torso -->

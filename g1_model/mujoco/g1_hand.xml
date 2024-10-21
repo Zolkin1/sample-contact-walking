@@ -265,6 +265,7 @@ Position and velocity actuators added. -->
       <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.2 0.2 0.2 1" mesh="pelvis"/>
       <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="pelvis_contour_link"/>
       <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="pelvis_contour_link"/>
+      <site name="pelvis_mocap_site" pos="0 0 0" euler="0 0 0"/>
 
       <!-- Left Leg -->
       <body name="left_hip_pitch_link" pos="0 0.064452 -0.1027">
@@ -737,8 +738,135 @@ Position and velocity actuators added. -->
   </actuator>
 
   <sensor>
-    <gyro name="imu-angular-velocity" site="imu" noise="5e-4" cutoff="34.9"/>
-    <accelerometer name="imu-linear-acceleration" site="imu" noise="1e-2" cutoff="157"/>
+    <!-- ###################### -->
+    <!-- Joint position sensors -->
+    <!-- ###################### -->
+    <!-- Left Leg -->
+    <jointpos name="left_hip_pitch_joint_pos_sensor" joint="left_hip_pitch_joint" noise="0.001"/>
+    <jointpos name="left_hip_roll_joint_pos_sensor" joint="left_hip_roll_joint" noise="0.001"/>
+    <jointpos name="left_hip_yaw_joint_pos_sensor" joint="left_hip_yaw_joint" noise="0.001"/>
+    <jointpos name="left_knee_joint_pos_sensor" joint="left_knee_joint" noise="0.001"/>
+    <jointpos name="left_ankle_pitch_joint_pos_sensor" joint="left_ankle_pitch_joint" noise="0.001"/>
+    <jointpos name="left_ankle_roll_joint_pos_sensor" joint="left_ankle_roll_joint" noise="0.001"/>
+
+    <!-- Right Leg -->
+    <jointpos name="right_hip_pitch_joint_pos_sensor" joint="right_hip_pitch_joint" noise="0.001"/>
+    <jointpos name="right_hip_roll_joint_pos_sensor" joint="right_hip_roll_joint" noise="0.001"/>
+    <jointpos name="right_hip_yaw_joint_pos_sensor" joint="right_hip_yaw_joint" noise="0.001"/>
+    <jointpos name="right_knee_joint_pos_sensor" joint="right_knee_joint" noise="0.001"/>
+    <jointpos name="right_ankle_pitch_joint_pos_sensor" joint="right_ankle_pitch_joint" noise="0.001"/>
+    <jointpos name="right_ankle_roll_joint_pos_sensor" joint="right_ankle_roll_joint" noise="0.001"/>
+
+    <!-- Waist -->
+    <jointpos name="waist_yaw_joint_pos_sensor" joint="waist_yaw_joint" noise="0.001"/>
+    <jointpos name="waist_roll_joint_pos_sensor" joint="waist_roll_joint" noise="0.001"/>
+    <jointpos name="waist_pitch_joint_pos_sensor" joint="waist_pitch_joint" noise="0.001"/>
+
+    <!-- Left Arm -->
+    <jointpos name="left_shoulder_pitch_joint_pos_sensor" joint="left_shoulder_pitch_joint" noise="0.001"/>
+    <jointpos name="left_shoulder_roll_joint_pos_sensor" joint="left_shoulder_roll_joint" noise="0.001"/>
+    <jointpos name="left_shoulder_yaw_joint_pos_sensor" joint="left_shoulder_yaw_joint" noise="0.001"/>
+    <jointpos name="left_elbow_joint_pos_sensor" joint="left_elbow_joint" noise="0.001"/>
+    <jointpos name="left_wrist_roll_joint_pos_sensor" joint="left_wrist_roll_joint" noise="0.001"/>
+    <jointpos name="left_wrist_pitch_joint_pos_sensor" joint="left_wrist_pitch_joint" noise="0.001"/>
+    <jointpos name="left_wrist_yaw_joint_pos_sensor" joint="left_wrist_yaw_joint" noise="0.001"/>
+
+    <!-- Left Hand -->
+    <jointpos name="left_hand_thumb_0_joint_pos_sensor" joint="left_hand_thumb_0_joint"/>
+    <jointpos name="left_hand_thumb_1_joint_pos_sensor" joint="left_hand_thumb_1_joint"/>
+    <jointpos name="left_hand_thumb_2_joint_pos_sensor" joint="left_hand_thumb_2_joint"/>
+    <jointpos name="left_hand_middle_0_joint_pos_sensor" joint="left_hand_middle_0_joint"/>
+    <jointpos name="left_hand_middle_1_joint_pos_sensor" joint="left_hand_middle_1_joint"/>
+    <jointpos name="left_hand_index_0_joint_pos_sensor" joint="left_hand_index_0_joint"/>
+    <jointpos name="left_hand_index_1_joint_pos_sensor" joint="left_hand_index_1_joint"/>
+
+    <!-- Right Arm -->
+    <jointpos name="right_shoulder_pitch_joint_pos_sensor" joint="right_shoulder_pitch_joint"/>
+    <jointpos name="right_shoulder_roll_joint_pos_sensor" joint="right_shoulder_roll_joint"/>
+    <jointpos name="right_shoulder_yaw_joint_pos_sensor" joint="right_shoulder_yaw_joint"/>
+    <jointpos name="right_elbow_joint_pos_sensor" joint="right_elbow_joint"/>
+    <jointpos name="right_wrist_roll_joint_pos_sensor" joint="right_wrist_roll_joint"/>
+    <jointpos name="right_wrist_pitch_joint_pos_sensor" joint="right_wrist_pitch_joint"/>
+    <jointpos name="right_wrist_yaw_joint_pos_sensor" joint="right_wrist_yaw_joint"/>
+
+    <!-- Right Hand -->
+    <jointpos name="right_hand_thumb_0_joint_pos_sensor" joint="right_hand_thumb_0_joint"/>
+    <jointpos name="right_hand_thumb_1_joint_pos_sensor" joint="right_hand_thumb_1_joint"/>
+    <jointpos name="right_hand_thumb_2_joint_pos_sensor" joint="right_hand_thumb_2_joint"/>
+    <jointpos name="right_hand_index_0_joint_pos_sensor" joint="right_hand_index_0_joint"/>
+    <jointpos name="right_hand_index_1_joint_pos_sensor" joint="right_hand_index_1_joint"/>
+    <jointpos name="right_hand_middle_0_joint_pos_sensor" joint="right_hand_middle_0_joint"/>
+    <jointpos name="right_hand_middle_1_joint_pos_sensor" joint="right_hand_middle_1_joint"/>
+
+    <!-- ###################### -->
+    <!-- Joint velocity sensors -->
+    <!-- ###################### -->
+    <!-- Left Leg -->
+    <jointvel name="left_hip_pitch_joint_vel_sensor" joint="left_hip_pitch_joint" noise="0.001"/>
+    <jointvel name="left_hip_roll_joint_vel_sensor" joint="left_hip_roll_joint" noise="0.001"/>
+    <jointvel name="left_hip_yaw_joint_vel_sensor" joint="left_hip_yaw_joint" noise="0.001"/>
+    <jointvel name="left_knee_joint_vel_sensor" joint="left_knee_joint" noise="0.001"/>
+    <jointvel name="left_ankle_pitch_joint_vel_sensor" joint="left_ankle_pitch_joint" noise="0.001"/>
+    <jointvel name="left_ankle_roll_joint_vel_sensor" joint="left_ankle_roll_joint" noise="0.001"/>
+
+    <!-- Right Leg -->
+    <jointvel name="right_hip_pitch_joint_vel_sensor" joint="right_hip_pitch_joint" noise="0.001"/>
+    <jointvel name="right_hip_roll_joint_vel_sensor" joint="right_hip_roll_joint" noise="0.001"/>
+    <jointvel name="right_hip_yaw_joint_vel_sensor" joint="right_hip_yaw_joint" noise="0.001"/>
+    <jointvel name="right_knee_joint_vel_sensor" joint="right_knee_joint" noise="0.001"/>
+    <jointvel name="right_ankle_pitch_joint_vel_sensor" joint="right_ankle_pitch_joint" noise="0.001"/>
+    <jointvel name="right_ankle_roll_joint_vel_sensor" joint="right_ankle_roll_joint" noise="0.001"/>
+
+    <!-- Waist -->
+    <jointvel name="waist_yaw_joint_vel_sensor" joint="waist_yaw_joint" noise="0.001"/>
+    <jointvel name="waist_roll_joint_vel_sensor" joint="waist_roll_joint" noise="0.001"/>
+    <jointvel name="waist_pitch_joint_vel_sensor" joint="waist_pitch_joint" noise="0.001"/>
+
+    <!-- Left Arm -->
+    <jointvel name="left_shoulder_pitch_joint_vel_sensor" joint="left_shoulder_pitch_joint" noise="0.001"/>
+    <jointvel name="left_shoulder_roll_joint_vel_sensor" joint="left_shoulder_roll_joint" noise="0.001"/>
+    <jointvel name="left_shoulder_yaw_joint_vel_sensor" joint="left_shoulder_yaw_joint" noise="0.001"/>
+    <jointvel name="left_elbow_joint_vel_sensor" joint="left_elbow_joint" noise="0.001"/>
+    <jointvel name="left_wrist_roll_joint_vel_sensor" joint="left_wrist_roll_joint" noise="0.001"/>
+    <jointvel name="left_wrist_pitch_joint_vel_sensor" joint="left_wrist_pitch_joint" noise="0.001"/>
+    <jointvel name="left_wrist_yaw_joint_vel_sensor" joint="left_wrist_yaw_joint" noise="0.001"/>
+
+    <!-- Left Hand -->
+    <jointvel name="left_hand_thumb_0_joint_vel_sensor" joint="left_hand_thumb_0_joint"/>
+    <jointvel name="left_hand_thumb_1_joint_vel_sensor" joint="left_hand_thumb_1_joint"/>
+    <jointvel name="left_hand_thumb_2_joint_vel_sensor" joint="left_hand_thumb_2_joint"/>
+    <jointvel name="left_hand_middle_0_joint_vel_sensor" joint="left_hand_middle_0_joint"/>
+    <jointvel name="left_hand_middle_1_joint_vel_sensor" joint="left_hand_middle_1_joint"/>
+    <jointvel name="left_hand_index_0_joint_vel_sensor" joint="left_hand_index_0_joint"/>
+    <jointvel name="left_hand_index_1_joint_vel_sensor" joint="left_hand_index_1_joint"/>
+
+    <!-- Right Arm -->
+    <jointvel name="right_shoulder_pitch_joint_vel_sensor" joint="right_shoulder_pitch_joint"/>
+    <jointvel name="right_shoulder_roll_joint_vel_sensor" joint="right_shoulder_roll_joint"/>
+    <jointvel name="right_shoulder_yaw_joint_vel_sensor" joint="right_shoulder_yaw_joint"/>
+    <jointvel name="right_elbow_joint_vel_sensor" joint="right_elbow_joint"/>
+    <jointvel name="right_wrist_roll_joint_vel_sensor" joint="right_wrist_roll_joint"/>
+    <jointvel name="right_wrist_pitch_joint_vel_sensor" joint="right_wrist_pitch_joint"/>
+    <jointvel name="right_wrist_yaw_joint_vel_sensor" joint="right_wrist_yaw_joint"/>
+
+    <!-- Right Hand -->
+    <jointvel name="right_hand_thumb_0_joint_vel_sensor" joint="right_hand_thumb_0_joint"/>
+    <jointvel name="right_hand_thumb_1_joint_vel_sensor" joint="right_hand_thumb_1_joint"/>
+    <jointvel name="right_hand_thumb_2_joint_vel_sensor" joint="right_hand_thumb_2_joint"/>
+    <jointvel name="right_hand_index_0_joint_vel_sensor" joint="right_hand_index_0_joint"/>
+    <jointvel name="right_hand_index_1_joint_vel_sensor" joint="right_hand_index_1_joint"/>
+    <jointvel name="right_hand_middle_0_joint_vel_sensor" joint="right_hand_middle_0_joint"/>
+    <jointvel name="right_hand_middle_1_joint_vel_sensor" joint="right_hand_middle_1_joint"/> 
+
+
+    <!-- IMU sensors -->
+    <accelerometer name="imu_acc_sensor" site="imu" noise="0.1"/>
+    <gyro name="imu_gyro_sensor" site="imu" noise="0.01"/>
+    <framequat name="imu_quat_sensor" objtype="site" objname="imu" noise="0.01"/>
+
+    <!-- Mocap sensors -->
+    <framepos name="base_mocap_pos_sensor" objtype="site" objname="pelvis_mocap_site" noise="0.01"/>
+    <framequat name="base_mocap_quat_sensor" objtype="site" objname="pelvis_mocap_site" noise="0.01"/>
   </sensor>
 
   <keyframe>

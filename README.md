@@ -60,6 +60,16 @@ Wait for the viz software to connect then run in a seperate terminal:
 obk-activate go2_sim
 ```
 
+## Launch the G1 stack:
+```
+obk-launch config_file_path=${SAMPLE_WALKING_ROOT}/sample_contact_walking/configs/g1_sim_config.yaml device_name=onboard auto_start=configure bag=false
+```
+
+Wait for the viz software to connect then run in a seperate terminal:
+```
+obk-activate g1_sim
+```
+
 If you have issues with others on the ROS network then set `ROS_LOCALHOST_ONLY`.
 
 ## Connecting the joystick
