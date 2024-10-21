@@ -100,6 +100,8 @@ onboard:
   estimation:
     - pkg: sample_contact_walking
       executable: state_estimator
+      params:
+        base_link_name: "base_link"
       callback_groups:
         debug_cbg: MutuallyExclusiveCallbackGroup 
       publishers:

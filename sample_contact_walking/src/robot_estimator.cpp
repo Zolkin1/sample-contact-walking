@@ -35,6 +35,8 @@ namespace robot {
             "true_sim_sub_setting", "true_sim_state",
             std::bind(&RobotEstimator::TrueStateCallback, this, std::placeholders::_1));
 
+        this->declare_parameter<std::string>("base_link_name");
+
         // ------ DEBUG ------ //
         // this->RegisterObkSubscription<obelisk_control_msgs::msg::PDFeedForward>("debug_print_setting",
         //     "debug_print", std::bind(&RobotEstimator::ReceiveControlDebug, this, std::placeholders::_1));
@@ -184,7 +186,7 @@ namespace robot {
 
         t.header.stamp = this->get_clock()->now();
         t.header.frame_id = "torso_mocap_site";     // This must match the base link in the estimated state
-        t.child_frame_id = "base_link";             // Must match the the base link in the urdf
+        t.child_frame_id = this->get_parameter("base_link_name").as_string();             // Must match the the base link in the urdf
 
         t.transform.translation.x = 0.0;
         t.transform.translation.y = 0.0;

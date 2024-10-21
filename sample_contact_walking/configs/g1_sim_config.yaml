@@ -1,4 +1,4 @@
-config: go2_sim
+config: g1_sim
 onboard:
   control:
     - pkg: sample_contact_walking
@@ -113,6 +113,8 @@ onboard:
   estimation:
     - pkg: sample_contact_walking
       executable: state_estimator
+      params:
+        base_link_name: "pelvis"
       callback_groups:
         debug_cbg: MutuallyExclusiveCallbackGroup 
       publishers:
@@ -172,7 +174,7 @@ onboard:
       subscribers:
         - ros_parameter: sub_ctrl_setting
           # key: sub1
-          topic: /obelisk/go2/low_level_control
+          topic: /obelisk/g1/low_level_control
           # msg_type: PD_FF
           history_depth: 10
           # callback_key: sub_callback1
@@ -306,15 +308,6 @@ onboard:
             sensor_names:
               base_mocap_pos_sensor: framepos
               base_mocap_quat_sensor: framequat
-          # ---------- Force Sensors ---------- #
-          # - topic: /obelisk/go2/force_sensors
-          #   dt: 0.002
-          #   msg_type: ObkForceSensor
-          #   sensor_names:
-          #     FL_force_sensor: force
-          #     FR_force_sensor: force
-          #     RL_force_sensor: force
-          #     RR_force_sensor: force
   viz:
     on: True
     viz_tool: foxglove
