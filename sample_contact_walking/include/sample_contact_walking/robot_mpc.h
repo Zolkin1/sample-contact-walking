@@ -125,8 +125,13 @@ namespace robot {
             double next_left_insertion_time_;
 
             std::shared_ptr<torc::mpc::FullOrderMpc> mpc_;
-            std::unique_ptr<torc::models::FullOrderRigidBody> model_;
+            std::unique_ptr<torc::models::FullOrderRigidBody> model_;               // Full model
+            std::unique_ptr<torc::models::FullOrderRigidBody> mpc_model_;           // Potentially reduced model for the MPC
             torc::mpc::ContactSchedule contact_schedule_;
+
+            // MPC Skipped joint indexes
+            // TODO: Find a better way to do this
+            std::vector<long int> skipped_joint_indexes_;
 
             // Threads
             std::thread mpc_thread_;
@@ -135,6 +140,7 @@ namespace robot {
             // broadcasters
             std::shared_ptr<tf2_ros::StaticTransformBroadcaster> torso_mocap_broadcaster_;
 
+            // TODO: Remove
             // ------ Mujoco Debug ----- //
             mjModel* mj_model_;
             mjData* data_;

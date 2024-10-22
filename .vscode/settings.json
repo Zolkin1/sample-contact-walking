@@ -80,6 +80,7 @@
         "span": "cpp",
         "typeindex": "cpp",
         "*.inc": "cpp",
-        "*.ipp": "cpp"
+        "*.ipp": "cpp",
+        "ranges": "cpp"
     }
 }

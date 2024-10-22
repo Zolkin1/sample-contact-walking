@@ -68,6 +68,15 @@ namespace robot
         mpc_->Configure();
         RCLCPP_INFO_STREAM(this->get_logger(), "MPC Configured...");
 
+        // Create MPC model
+        mpc_model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path, mpc_->GetJointSkipNames(), mpc_->GetJointSkipValues());
+
+        this->declare_parameter<std::vector<long int>>("skip_indexes");
+        skipped_joint_indexes_ = this->get_parameter("skip_indexes").as_integer_array();
+        if (skipped_joint_indexes_.size() != model_->GetConfigDim() - mpc_model_->GetConfigDim()) {
+            RCLCPP_ERROR_STREAM(this->get_logger(), "Provided skip indexes don't match the model differences!");
+        }
+
         // Parse contact schedule info
         ParseContactParameters();
 
@@ -81,8 +90,8 @@ namespace robot
 
         vectorx_t q_target_eig = torc::utils::StdToEigenVector(q_targ_temp);
         vectorx_t v_target_eig = torc::utils::StdToEigenVector(v_targ_temp);
-        q_target_ = torc::mpc::SimpleTrajectory(model_->GetConfigDim(), mpc_->GetNumNodes());
-        v_target_ = torc::mpc::SimpleTrajectory(model_->GetVelDim(), mpc_->GetNumNodes());
+        q_target_ = torc::mpc::SimpleTrajectory(mpc_model_->GetConfigDim(), mpc_->GetNumNodes());
+        v_target_ = torc::mpc::SimpleTrajectory(mpc_model_->GetVelDim(), mpc_->GetNumNodes());
         q_target_->SetAllData(q_target_eig);
         v_target_->SetAllData(v_target_eig);
         z_target_ = q_target_.value()[0](2);
@@ -112,7 +121,7 @@ namespace robot
         this->get_parameter("controller_target", controller_target_);
 
         // Create default trajectory
-        traj_out_.UpdateSizes(model_->GetConfigDim(), model_->GetVelDim(), model_->GetNumInputs(), mpc_->GetContactFrames(), mpc_->GetNumNodes());
+        traj_out_.UpdateSizes(mpc_model_->GetConfigDim(), mpc_model_->GetVelDim(), mpc_model_->GetNumInputs(), mpc_->GetContactFrames(), mpc_->GetNumNodes());
         traj_out_.SetDefault(q_ic_);
         traj_out_.SetDtVector(mpc_->GetDtVector());
 
@@ -129,7 +138,7 @@ namespace robot
 
             for (const auto& frame : mpc_->GetContactFrames()) {
                 if (contact_schedule_.InContact(frame, time)) {
-                    traj_out_.SetForce(i, frame, {0, 0, 9.81*model_->GetMass()/num_contacts});
+                    traj_out_.SetForce(i, frame, {0, 0, 9.81*mpc_model_->GetMass()/num_contacts});
                 }
             }
 
@@ -177,8 +186,8 @@ namespace robot
         // Get the mutex to protect the states
         std::lock_guard<std::mutex> lock(est_state_mut_);
         
-        q_.resize(msg.q_base.size() + msg.q_joints.size());
-        v_.resize(msg.v_base.size() + msg.v_joints.size());
+        q_.resize(mpc_model_->GetConfigDim());
+        v_.resize(mpc_model_->GetVelDim());
 
 
         // Configuration
@@ -186,15 +195,16 @@ namespace robot
             q_(i) = msg.q_base.at(i);
         }
 
+        // Only receive the joints that we use in the MPC
         for (size_t i = 0; i < msg.q_joints.size(); i++) {
-            const auto joint_idx = model_->GetJointID(msg.joint_names[i]);
+            const auto joint_idx = mpc_model_->GetJointID(msg.joint_names[i]);
             if (joint_idx.has_value()) {
                 if (joint_idx.value() < 2) {
                     RCLCPP_ERROR_STREAM(this->get_logger(), "Invalid joint name!");
                 }
                 q_(joint_idx.value() - 2 + msg.q_base.size()) = msg.q_joints.at(i);     // Offset for the root and base joints
-            } else {
-                RCLCPP_ERROR_STREAM(this->get_logger(), "Joint " << msg.joint_names[i] << " not found in the robot model!");
+            } else if (!model_->GetJointID(msg.joint_names[i]).has_value()) {
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Joint " << msg.joint_names[i] << " not found in the full robot model!");
             }
         }
 
@@ -204,27 +214,27 @@ namespace robot
         }
 
         for (size_t i = 0; i < msg.v_joints.size(); i++) {
-            const auto joint_idx = model_->GetJointID(msg.joint_names[i]);
+            const auto joint_idx = mpc_model_->GetJointID(msg.joint_names[i]);
             if (joint_idx.has_value()) {
                 if (joint_idx.value() < 2) {
                     RCLCPP_ERROR_STREAM(this->get_logger(), "Invalid joint name!");
                 }
                 v_(joint_idx.value() - 2 + msg.v_base.size()) = msg.v_joints.at(i);     // Offset for the root and base joints
-            } else {
-                RCLCPP_ERROR_STREAM(this->get_logger(), "Joint " << msg.joint_names[i] << " not found in the robot model!");
+            } else if (!model_->GetJointID(msg.joint_names[i]).has_value()) {
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Joint " << msg.joint_names[i] << " not found in the full robot model!");
             }
             // v_(i + msg.v_base.size()) = msg.v_joints.at(i);
         }
 
-        if (q_.size() != model_->GetConfigDim()) {
-            RCLCPP_ERROR_STREAM(this->get_logger(), "received q does not match the size of the model");
-        }
+        // if (q_.size() != mpc_model_->GetConfigDim()) {
+        //     RCLCPP_ERROR_STREAM(this->get_logger(), "received q does not match the size of the model");
+        // }
 
-        if (v_.size() != model_->GetVelDim()) {
-            RCLCPP_ERROR_STREAM(this->get_logger(), "received v does not match the size of the model");
-        }
+        // if (v_.size() != model_->GetVelDim()) {
+        //     RCLCPP_ERROR_STREAM(this->get_logger(), "received v does not match the size of the model");
+        // }
 
-        if (!recieved_first_state_ && q_.size() == model_->GetConfigDim() && v_.size() == model_->GetVelDim() && q_.segment<QUAT_VARS>(POS_VARS).norm() > 0.99) {
+        if (!recieved_first_state_ && q_.size() == mpc_model_->GetConfigDim() && v_.size() == mpc_model_->GetVelDim() && q_.segment<QUAT_VARS>(POS_VARS).norm() > 0.99) {
             RCLCPP_INFO_STREAM(this->get_logger(), "Recieved first message! q: " << q_.transpose());
             recieved_first_state_ = true;
         }
@@ -309,16 +319,17 @@ namespace robot
                 }
                 
                 // TODO: Remove with the refernece generator below!
-                // if (!fixed_target_ || controller_target_) {
-                //     UpdateMpcTargets(q);
-                //     mpc_->SetConfigTarget(q_target_.value());
-                //     mpc_->SetVelTarget(v_target_.value());
-                // }
+                if (!fixed_target_ || controller_target_) {
+                    UpdateMpcTargets(q);
+                    mpc_->SetConfigTarget(q_target_.value());
+                    mpc_->SetVelTarget(v_target_.value());
+                }
 
-                // TODO: Unclear if this really provides a performance improvement as the stack works without it.
-                vectorx_t q_ref = q;
-                q_ref(2) = z_target_;
-                mpc_->GenerateCostReference(q_ref, v, v_target_.value()[0].head<3>());
+                // // TODO: Unclear if this really provides a performance improvement as the stack works without it.
+                // TODO: Investigate this for the G1
+                // vectorx_t q_ref = q;
+                // q_ref(2) = z_target_;
+                // mpc_->GenerateCostReference(q_ref, v, v_target_.value()[0].head<3>());
 
                 // TODO: remove the max mpc solves when I no longer need it
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
@@ -406,8 +417,33 @@ namespace robot
             } else if (ctrl_state_ == SeekInitialCond) {
                 q = q_ic_;
                 v = v_ic_;
-                tau = vectorx_t::Zero(model_->GetNumInputs());
+                tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
             }
+
+            // Check if we need to insert other elements into the targets
+            if (q.size() != model_->GetConfigDim()) {
+                const auto joint_skip_values = mpc_->GetJointSkipValues();
+                std::vector<double> q_vec(q.data(), q.data() + q.size());
+                std::vector<double> v_vec(v.data(), v.data() + v.size());
+                std::vector<double> tau_vec(tau.data(), tau.data() + tau.size());
+
+                for (int i = 0; i < skipped_joint_indexes_.size(); i++) {
+                    q_vec.insert(q_vec.begin() + FLOATING_POS_SIZE + skipped_joint_indexes_[i], joint_skip_values[i]);
+                    v_vec.insert(v_vec.begin() + FLOATING_VEL_SIZE + skipped_joint_indexes_[i], 0);
+                    tau_vec.insert(tau_vec.begin() + skipped_joint_indexes_[i], 0);
+                }
+
+                Eigen::Map<Eigen::VectorXd> q_map(q_vec.data(), q_vec.size());
+                Eigen::Map<Eigen::VectorXd> v_map(v_vec.data(), v_vec.size());
+                Eigen::Map<Eigen::VectorXd> tau_map(tau_vec.data(), tau_vec.size());
+
+                q = q_map;
+                v = v_map;
+                tau = tau_map;
+            }
+
+            // TODO: Remove
+            tau.setZero();
 
             // Make the message
             vectorx_t u_mujoco = ConvertControlToMujocoU(q.tail(model_->GetNumInputs()),
@@ -514,10 +550,10 @@ namespace robot
 
 
         for (int node = 0; node < traj.GetNumNodes(); node++) {
-            model_->FirstOrderFK(traj.GetConfiguration(node));
+            mpc_model_->FirstOrderFK(traj.GetConfiguration(node));
 
             for (int i = 0; i < viz_frames.size(); i++) {
-                vector3_t frame_pos = model_->GetFrameState(viz_frames[i]).placement.translation();
+                vector3_t frame_pos = mpc_model_->GetFrameState(viz_frames[i]).placement.translation();
                 geometry_msgs::msg::Point point;
                 point.x = frame_pos(0);
                 point.y = frame_pos(1);
@@ -544,7 +580,7 @@ namespace robot
         if (viz_forces_ && traj_start_time_ >= 0) {
             visualization_msgs::msg::MarkerArray force_msg;
             force_msg.markers.resize(force_frames_.size());
-            model_->FirstOrderFK(traj.GetConfiguration(0));
+            mpc_model_->FirstOrderFK(traj.GetConfiguration(0));
             for (int i = 0; i < force_frames_.size(); i++) {
                 force_msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
                 force_msg.markers[i].header.frame_id = "world";
@@ -555,7 +591,7 @@ namespace robot
 
                 force_msg.markers[i].scale.x = 0.01; // Width of the arrows
 
-                vector3_t frame_pos = model_->GetFrameState(force_frames_[i]).placement.translation();
+                vector3_t frame_pos = mpc_model_->GetFrameState(force_frames_[i]).placement.translation();
                 geometry_msgs::msg::Point start_point;
                 start_point.x = frame_pos(0);
                 start_point.y = frame_pos(1);
@@ -728,6 +764,131 @@ namespace robot
         // if (!sim_ready_) {
         //     this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
         // }
+
+        // ---------- G1 ---------- //
+        std::lock_guard<std::mutex> lock(traj_out_mut_);
+
+        obelisk_estimator_msgs::msg::EstimatedState msg;
+
+        double time = this->get_clock()->now().seconds();
+        // TODO: Do I need to use nanoseconds?
+        // double time_into_traj = 0.75;
+        double time_into_traj = time - traj_start_time_;
+        // double time_into_traj = 0;
+
+        // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
+        vectorx_t q = vectorx_t::Zero(mpc_model_->GetConfigDim());
+        vectorx_t v = vectorx_t::Zero(mpc_model_->GetVelDim());
+        if (GetState() == Mpc) {
+            traj_out_.GetConfigInterp(time_into_traj, q);
+            traj_out_.GetVelocityInterp(time_into_traj, v);
+        } else {
+            q = q_ic_;
+            v = v_ic_;
+        }
+
+        // traj_out_.GetConfigInterp(0.01, q);
+        msg.base_link_name = "pelvis";
+        vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
+        vectorx_t q_tail = q.tail(model_->GetNumInputs());
+        msg.q_base = torc::utils::EigenToStdVector(q_head);
+        msg.q_joints.resize(model_->GetNumInputs());
+        msg.v_joints.resize(model_->GetNumInputs());
+
+        msg.joint_names.resize(q_tail.size());
+        // Left Leg
+        msg.joint_names[0] = "left_hip_pitch_joint";
+        msg.joint_names[1] = "left_hip_roll_joint";
+        msg.joint_names[2] = "left_hip_yaw_joint";
+        msg.joint_names[3] = "left_knee_joint";
+        msg.joint_names[4] = "left_ankle_pitch_joint";
+        msg.joint_names[5] = "left_ankle_roll_joint";
+
+        // Right Leg
+        msg.joint_names[6] = "right_hip_pitch_joint";
+        msg.joint_names[7] = "right_hip_roll_joint";
+        msg.joint_names[8] = "right_hip_yaw_joint";
+        msg.joint_names[9] = "right_knee_joint";
+        msg.joint_names[10] = "right_ankle_pitch_joint";
+        msg.joint_names[11] = "right_ankle_roll_joint";
+
+        // Torso
+        msg.joint_names[12] = "waist_yaw_joint";
+        msg.joint_names[13] = "waist_roll_joint";
+        msg.joint_names[14] = "waist_pitch_joint";
+
+        // Left Arm
+        msg.joint_names[15] = "left_shoulder_pitch_joint";
+        msg.joint_names[16] = "left_shoulder_roll_joint";
+        msg.joint_names[17] = "left_shoulder_yaw_joint";
+        msg.joint_names[18] = "left_elbow_joint";
+        msg.joint_names[19] = "left_wrist_roll_joint";
+        msg.joint_names[20] = "left_wrist_pitch_joint";
+        msg.joint_names[21] = "left_wrist_yaw_joint";
+
+        // Left Hand
+        msg.joint_names[22] = "left_hand_thumb_0_joint";
+        msg.joint_names[23] = "left_hand_thumb_1_joint";
+        msg.joint_names[24] = "left_hand_thumb_2_joint";
+        msg.joint_names[25] = "left_hand_middle_0_joint";
+        msg.joint_names[26] = "left_hand_middle_1_joint";
+        msg.joint_names[27] = "left_hand_index_0_joint";
+        msg.joint_names[28] = "left_hand_index_1_joint";
+
+        // Right Arm
+        msg.joint_names[29] = "right_shoulder_pitch_joint";
+        msg.joint_names[30] = "right_shoulder_roll_joint";
+        msg.joint_names[31] = "right_shoulder_yaw_joint";
+        msg.joint_names[32] = "right_elbow_joint";
+        msg.joint_names[33] = "right_wrist_roll_joint";
+        msg.joint_names[34] = "right_wrist_pitch_joint";
+        msg.joint_names[35] = "right_wrist_yaw_joint";
+
+        // Right Hand
+        msg.joint_names[36] = "right_hand_thumb_0_joint";
+        msg.joint_names[37] = "right_hand_thumb_1_joint";
+        msg.joint_names[38] = "right_hand_thumb_2_joint";
+        msg.joint_names[39] = "right_hand_middle_0_joint";
+        msg.joint_names[40] = "right_hand_middle_1_joint";
+        msg.joint_names[41] = "right_hand_index_0_joint";
+        msg.joint_names[42] = "right_hand_index_1_joint";
+
+        const auto joint_skip_names = mpc_->GetJointSkipNames();
+        const auto joint_skip_values = mpc_->GetJointSkipValues();
+
+        for (int i = 0; i < msg.joint_names.size(); i++) {
+            const auto idx = mpc_model_->GetJointID(msg.joint_names[i]);
+            if (idx.has_value()) {
+                msg.q_joints[i] = q(5 + idx.value());
+                if (4 + idx.value() > v.size()) {
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "v idx out of bounds!");
+                } else {
+                    msg.v_joints[i] = v(4 + idx.value());
+                }
+            } else if (std::find(joint_skip_names.begin(), joint_skip_names.end(), msg.joint_names[i]) != joint_skip_names.end()) {     // Check if the joint is a skipped joint
+                // Find the index
+                for (int skip_idx = 0; skip_idx < joint_skip_names.size(); skip_idx++) {
+                    if (joint_skip_names[skip_idx] == msg.joint_names[i]) {
+                        msg.q_joints[i] = joint_skip_values[skip_idx];
+                        break;
+                    }
+                } 
+            } else {
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Joint index not found!");
+            }
+        }
+
+        // traj_out_.GetVelocityInterp(0.01, v);
+        vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
+
+        // vectorx_t temp = vectorx_t::Zero(6);
+        msg.v_base = torc::utils::EigenToStdVector(v_head);
+
+        msg.header.stamp = this->now();
+
+        if (!sim_ready_) {
+            this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
+        }
     }
 
     void MpcController::MakeTargetTorsoMocapTransform() {
