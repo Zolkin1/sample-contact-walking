@@ -26,16 +26,16 @@ solver_settings:
 constraints:
   friction_coef: 0.7  # TODO: Tune this
   friction_margin: 2
-  max_grf: 800
+  max_grf: 8000
   collisions:
     - frame1: "left_toe"
       frame2: "right_toe"
-      radius1: 0.06
-      radius2: 0.06
+      radius1: 0.1
+      radius2: 0.1
     - frame1: "left_heel"
       frame2: "right_heel"
-      radius1: 0.06
-      radius2: 0.06
+      radius1: 0.1
+      radius2: 0.1
     - frame1: "left_wrist_yaw_link"
       frame2: "waist_support_link"
       radius1: 0.1
@@ -56,7 +56,7 @@ costs:
     #           1, 1, 1, 1,      # Left Arm
     #           1, 1, 1, 1]      # Right Arm
     weight:  [1, 1, 15, 
-          10, 10, 10,
+          5, 5, 5,
           1, 4, 4, 1, 1, #1,         # Left Leg
           1, 4, 4, 1, 1, #1,         # Right Leg
           # 1, 1, 1,                  # Waist
@@ -64,10 +64,10 @@ costs:
           1, 1, 1, 1]      # Right Arm
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [2, 2, 5, 
-            10, 10, 10,
-            0.1, 0.1, 0.1, 0.01, 0.1, #0.001,         # Left Leg
-            0.1, 0.1, 0.1, 0.01, 0.1, #0.001,         # Right Leg
+    weight: [1.7, 1.7, 5, 
+            5, 5, 5,
+            0.1, 0.7, 0.7, 0.01, 0.1, #0.001,         # Left Leg
+            0.1, 0.7, 0.7, 0.01, 0.1, #0.001,         # Right Leg
             # 0.001, 0.001, 0.001, 0.001, 0.001, #0.001,         # Left Leg
             # 0.001, 0.001, 0.001, 0.001, 0.001, #0.001,         # Right Leg
             # 1, 1, 1,                  # Waist
@@ -82,7 +82,7 @@ costs:
             0.01, 0.01, 0.01, 0.01,]                          # Right Arm
   - type: ForceRegularization
     name: "ForceReg"
-    weight: [0.01, 0.01, 0.01]
+    weight: [0.02, 0.02, 0.01]
 contacts:
   # contact_frames: ["left_heel", "right_heel"]
   contact_frames: ["left_toe", "left_heel", "right_toe", "right_heel"]

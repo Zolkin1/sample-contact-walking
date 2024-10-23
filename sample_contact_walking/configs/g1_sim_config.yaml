@@ -21,7 +21,7 @@ onboard:
         max_mpc_solves: -500 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.3 #0.25
-        first_swing_time: 1. #0.5
+        first_swing_time: 5. #0.5
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs

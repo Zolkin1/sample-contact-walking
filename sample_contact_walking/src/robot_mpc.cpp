@@ -331,17 +331,17 @@ namespace robot
                 }
                 
                 // TODO: Remove with the refernece generator below!
-                // if (!fixed_target_ || controller_target_) {
-                //     UpdateMpcTargets(q);
-                //     mpc_->SetConfigTarget(q_target_.value());
-                //     mpc_->SetVelTarget(v_target_.value());
-                // }
+                if (!fixed_target_ || controller_target_) {
+                    UpdateMpcTargets(q);
+                    mpc_->SetConfigTarget(q_target_.value());
+                    mpc_->SetVelTarget(v_target_.value());
+                }
 
                 // // TODO: Unclear if this really provides a performance improvement as the stack works without it.
                 // TODO: Investigate this for the G1
-                vectorx_t q_ref = q;
-                q_ref(2) = z_target_;
-                mpc_->GenerateCostReference(q_ref, v, v_target_.value()[0].head<3>());
+                // vectorx_t q_ref = q;
+                // q_ref(2) = z_target_;
+                // mpc_->GenerateCostReference(q_ref, v, v_target_.value()[0].head<3>());
 
                 // TODO: remove the max mpc solves when I no longer need it
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
