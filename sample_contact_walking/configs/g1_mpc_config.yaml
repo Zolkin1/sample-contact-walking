@@ -2,7 +2,7 @@ general_settings:
   nodes: 32
   verbose: True #True
   node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
-  node_dt: 0.025
+  node_dt: 0.025 #0.025
   first_node_dt: 0.01 
   compile_derivatives: False #True
   base_frame: "pelvis"
@@ -21,7 +21,7 @@ solver_settings:
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6
   adaptive_rho: False
-  max_iter: 20 #20
+  max_iter: 100 #20
   scaling: 10
 constraints:
   friction_coef: 0.7  # TODO: Tune this
@@ -45,39 +45,50 @@ constraints:
       radius1: 0.1
       radius2: 0.1
 costs:
+# NOTE: The resulting behaviour is suprisingly sensitive
   - type: ConfigurationTracking
     name: "ConfigTracking"
+    # weight:  [10, 10, 20, 
+    #           10, 10, 10,
+    #           1, 10, 10, 0.001, 1, #1,         # Left Leg
+    #           1, 10, 10, 0.001, 1, #1,         # Right Leg
+    #           # 100, 100, 100,                  # Waist
+    #           1, 1, 1, 1,      # Left Arm
+    #           1, 1, 1, 1]      # Right Arm
     weight:  [1, 1, 20, 
-              10, 10, 10,
-              1, 1, 1, 1, 1, 1,         # Left Leg
-              1, 1, 1, 1, 1, 1,         # Right Leg
-              # 100, 100, 100,                  # Waist
-              1, 1, 1, 1,      # Left Arm
-              1, 1, 1, 1]      # Right Arm
+          10, 10, 10,
+          1, 1, 1, 1, 1, #1,         # Left Leg
+          1, 1, 1, 1, 1, #1,         # Right Leg
+          # 1, 1, 1,                  # Waist
+          1, 1, 1, 1,      # Left Arm
+          1, 1, 1, 1]      # Right Arm
   - type: VelocityTracking
     name: "VelocityTracking"
     weight: [1, 1, 20, 
             10, 10, 10,
-            1, 1, 1, 1, 1, 1,         # Left Leg
-            1, 1, 1, 1, 1, 1,         # Right Leg
+            0.001, 0.001, 0.001, 0.001, 0.001, #0.001,         # Left Leg
+            0.001, 0.001, 0.001, 0.001, 0.001, #0.001,         # Right Leg
             # 1, 1, 1,                  # Waist
             1, 1, 1, 1,      # Left Arm
             1, 1, 1, 1]      # Right Arm
   - type: TorqueRegularization
     name: "TorqueReg"
-    weight: [0.001, 0.001, 0.001, 0.001, 0.001, 0.001,            # Left Leg
-            0.001, 0.001, 0.001, 0.001, 0.001, 0.001,             # Right Leg
+    weight: [0.001, 0.001, 0.00001, 0.001, 0.001, #0.001,            # Left Leg
+            0.001, 0.001, 0.00001, 0.001, 0.001, #0.001,             # Right Leg
             # 0.001, 0.001, 0.001,                                  # Waist
-            0.001, 0.001, 0.001, 0.001,                           # Left Arm
-            0.001, 0.001, 0.001, 0.001,]                          # Right Arm
+            0.01, 0.01, 0.01, 0.01,                           # Left Arm
+            0.01, 0.01, 0.01, 0.01,]                          # Right Arm
   - type: ForceRegularization
     name: "ForceReg"
     weight: [0.001, 0.001, 0.01]
 contacts:
+  # contact_frames: ["left_heel", "right_heel"]
   contact_frames: ["left_toe", "left_heel", "right_toe", "right_heel"]
-  hip_offsets: [0.145, 0.1164, -0.025, 0.1164, 0.145, 0.1164, -0.025, 0.1164,]
+  # hip_offsets: [-0.025, 0.1164, -0.025, -0.1164]
+  hip_offsets: [0.145, 0.1164, -0.025, 0.1164, 0.145, -0.1164, -0.025, -0.1164]
 joint_defaults:
-  joints: ["waist_yaw_joint", "waist_roll_joint", "waist_pitch_joint", 
+  joints: ["left_ankle_roll_joint", "right_ankle_roll_joint",
+           "waist_yaw_joint", "waist_roll_joint", "waist_pitch_joint", 
            "left_wrist_roll_joint", "left_wrist_pitch_joint", "left_wrist_yaw_joint",
            "right_wrist_roll_joint", "right_wrist_pitch_joint", "right_wrist_yaw_joint",
            "left_hand_thumb_0_joint", "left_hand_thumb_1_joint", "left_hand_thumb_2_joint",
@@ -86,13 +97,14 @@ joint_defaults:
            "right_hand_thumb_0_joint", "right_hand_thumb_1_joint", "right_hand_thumb_2_joint",
            "right_hand_middle_0_joint", "right_hand_middle_1_joint",
            "right_hand_index_0_joint", "right_hand_index_1_joint",]
-  values: [0, 0, 0,
+  values: [0, 0,
            0, 0, 0,
            0, 0, 0,
            0, 0, 0,
+           0, 1, 1,
            0, 0,
            0, 0,
-           0, 0, 0,
+           0, -1, -1,
            0, 0,
            0, 0,]
 line_search:

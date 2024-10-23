@@ -71,10 +71,22 @@ namespace robot
         // Create MPC model
         mpc_model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path, mpc_->GetJointSkipNames(), mpc_->GetJointSkipValues());
 
-        this->declare_parameter<std::vector<long int>>("skip_indexes");
+        // Model debugging
+        // for (int i = 0; i < mpc_model_->GetNumJoints(); i++) {
+        //     RCLCPP_INFO_STREAM(this->get_logger(), "MPC Model frame " << i << ": " << mpc_model_->GetJointName(i));
+        // } 
+
+        // for (int i = 0; i < model_->GetNumJoints(); i++) {
+        //     RCLCPP_INFO_STREAM(this->get_logger(), "Full Model frame " << i << ": " << model_->GetJointName(i));
+        // }
+
+        this->declare_parameter<std::vector<long int>>("skip_indexes", {-1});
         skipped_joint_indexes_ = this->get_parameter("skip_indexes").as_integer_array();
-        if (skipped_joint_indexes_.size() != model_->GetConfigDim() - mpc_model_->GetConfigDim()) {
-            RCLCPP_ERROR_STREAM(this->get_logger(), "Provided skip indexes don't match the model differences!");
+        if (skipped_joint_indexes_[0] == -1 && (model_->GetConfigDim() == mpc_model_->GetConfigDim())) {
+            RCLCPP_INFO_STREAM(this->get_logger(), "No joint to skip.");
+        } else if (skipped_joint_indexes_.size() != model_->GetConfigDim() - mpc_model_->GetConfigDim()) {
+            RCLCPP_ERROR_STREAM(this->get_logger(), "Provided skip indexes don't match the model differences! Got size: " << skipped_joint_indexes_.size() << ", expected: " 
+                << model_->GetConfigDim() - mpc_model_->GetConfigDim());
         }
 
         // Parse contact schedule info
@@ -319,17 +331,17 @@ namespace robot
                 }
                 
                 // TODO: Remove with the refernece generator below!
-                if (!fixed_target_ || controller_target_) {
-                    UpdateMpcTargets(q);
-                    mpc_->SetConfigTarget(q_target_.value());
-                    mpc_->SetVelTarget(v_target_.value());
-                }
+                // if (!fixed_target_ || controller_target_) {
+                //     UpdateMpcTargets(q);
+                //     mpc_->SetConfigTarget(q_target_.value());
+                //     mpc_->SetVelTarget(v_target_.value());
+                // }
 
                 // // TODO: Unclear if this really provides a performance improvement as the stack works without it.
                 // TODO: Investigate this for the G1
-                // vectorx_t q_ref = q;
-                // q_ref(2) = z_target_;
-                // mpc_->GenerateCostReference(q_ref, v, v_target_.value()[0].head<3>());
+                vectorx_t q_ref = q;
+                q_ref(2) = z_target_;
+                mpc_->GenerateCostReference(q_ref, v, v_target_.value()[0].head<3>());
 
                 // TODO: remove the max mpc solves when I no longer need it
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
@@ -441,9 +453,6 @@ namespace robot
                 v = v_map;
                 tau = tau_map;
             }
-
-            // TODO: Remove
-            tau.setZero();
 
             // Make the message
             vectorx_t u_mujoco = ConvertControlToMujocoU(q.tail(model_->GetNumInputs()),
@@ -961,13 +970,19 @@ namespace robot
         contact_schedule_.SetFrames(mpc_->GetContactFrames());
 
         if (right_foot_first_) {
-            contact_schedule_.InsertSwingByDuration(right_frames_[0], first_swing_time_, swing_time_);
-            contact_schedule_.InsertSwingByDuration(right_frames_[1], first_swing_time_, swing_time_);
+            for (const auto& rf : right_frames_) {
+                contact_schedule_.InsertSwingByDuration(rf, first_swing_time_, swing_time_);
+            }
+            // contact_schedule_.InsertSwingByDuration(right_frames_[0], first_swing_time_, swing_time_);
+            // contact_schedule_.InsertSwingByDuration(right_frames_[1], first_swing_time_, swing_time_);
             next_right_insertion_time_ = first_swing_time_ + 2*swing_time_;
             next_left_insertion_time_ = first_swing_time_ + swing_time_;
         } else {
-            contact_schedule_.InsertSwingByDuration(left_frames_[0], first_swing_time_, swing_time_);
-            contact_schedule_.InsertSwingByDuration(left_frames_[1], first_swing_time_, swing_time_);
+            for (const auto& lf : right_frames_) {
+                contact_schedule_.InsertSwingByDuration(lf, first_swing_time_, swing_time_);
+            }
+            // contact_schedule_.InsertSwingByDuration(left_frames_[0], first_swing_time_, swing_time_);
+            // contact_schedule_.InsertSwingByDuration(left_frames_[1], first_swing_time_, swing_time_);
             next_left_insertion_time_ = first_swing_time_ + 2*swing_time_;
             next_right_insertion_time_ = first_swing_time_ + swing_time_;
         }

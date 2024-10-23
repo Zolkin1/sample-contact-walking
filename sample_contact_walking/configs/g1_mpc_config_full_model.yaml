@@ -1,6 +1,6 @@
 general_settings:
   nodes: 32
-  verbose: False #True
+  verbose: True #True
   node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
   node_dt: 0.025
   first_node_dt: 0.01 
@@ -21,7 +21,7 @@ solver_settings:
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6
   adaptive_rho: False
-  max_iter: 20 #20
+  max_iter: 100 #20
   scaling: 10
 constraints:
   friction_coef: 0.7  # TODO: Tune this
@@ -60,8 +60,15 @@ costs:
     name: "VelocityTracking"
     weight: [1, 1, 20, 
             10, 10, 10,
-            1, 1, 1, 1, 1, 1,         # Left Leg
-            1, 1, 1, 1, 1, 1,         # Right Leg
+            # 1, 1, 1, 1, 1, 1,         # Left Leg
+            # 1, 1, 1, 1, 1, 1,         # Right Leg
+            # 1, 1, 1,                  # Waist
+            # 1, 1, 1, 1, 1, 1, 1,      # Left Arm
+            # 1, 1, 1, 1, 1, 1, 1,      # Left Hand
+            # 1, 1, 1, 1, 1, 1, 1,      # Right Arm
+            # 1, 1, 1, 1, 1, 1, 1]      # Right Hand
+            0.001, 0.001, 0.001, 0.001, 0.001, 0.001,         # Left Leg
+            0.001, 0.001, 0.001, 0.001, 0.001, 0.001,         # Right Leg
             1, 1, 1,                  # Waist
             1, 1, 1, 1, 1, 1, 1,      # Left Arm
             1, 1, 1, 1, 1, 1, 1,      # Left Hand
@@ -81,24 +88,24 @@ costs:
     weight: [0.001, 0.001, 0.01]
 contacts:
   contact_frames: ["left_toe", "left_heel", "right_toe", "right_heel"]
-  hip_offsets: [0.145, 0.1164, -0.025, 0.1164, 0.145, 0.1164, -0.025, 0.1164,]
-joint_defaults:
-  joints: ["left_wrist_roll_joint", "left_wrist_pitch_joint", "left_wrist_yaw_joint",
-           "right_wrist_roll_joint", "right_wrist_pitch_joint", "left_wrist_yaw_joint",
-           "left_hand_thumb_0_joint", "left_hand_thumb_1_joint", "left_hand_thumb_2_joint",
-           "left_hand_middle_0_joint", "left_hand_middle_1_joint",
-           "left_hand_index_0_joint", "left_hand_index_1_joint",
-           "right_hand_thumb_0_joint", "right_hand_thumb_1_joint", "right_hand_thumb_2_joint",
-           "right_hand_middle_0_joint", "right_hand_middle_1_joint",
-           "right_hand_index_0_joint", "right_hand_index_1_joint",]
-  values: [0, 0, 0,
-           0, 0, 0,
-           0, 0, 0,
-           0, 0,
-           0, 0,
-           0, 0, 0,
-           0, 0,
-           0, 0,]
+  hip_offsets: [0.145, 0.1164, -0.025, 0.1164, 0.145, -0.1164, -0.025, -0.1164]
+# joint_defaults:
+  # joints: ["left_wrist_roll_joint", "left_wrist_pitch_joint", "left_wrist_yaw_joint",
+  #          "right_wrist_roll_joint", "right_wrist_pitch_joint", "left_wrist_yaw_joint",
+  #          "left_hand_thumb_0_joint", "left_hand_thumb_1_joint", "left_hand_thumb_2_joint",
+  #          "left_hand_middle_0_joint", "left_hand_middle_1_joint",
+  #          "left_hand_index_0_joint", "left_hand_index_1_joint",
+  #          "right_hand_thumb_0_joint", "right_hand_thumb_1_joint", "right_hand_thumb_2_joint",
+  #          "right_hand_middle_0_joint", "right_hand_middle_1_joint",
+  #          "right_hand_index_0_joint", "right_hand_index_1_joint",]
+  # values: [0, 0, 0,
+  #          0, 0, 0,
+  #          0, 0, 0,
+  #          0, 0,
+  #          0, 0,
+  #          0, 0, 0,
+  #          0, 0,
+  #          0, 0,]
 line_search:
   alpha_min: 1e-3
   large_constraint_vio: 1e-2

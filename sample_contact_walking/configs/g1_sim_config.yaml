@@ -17,43 +17,43 @@ onboard:
         default_stand_foot_height: 0.0 #0.01
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.01 #0.01
-        max_mpc_solves: -20 #125 
+        mpc_loop_period_sec: 0.03 #0.01
+        max_mpc_solves: -41 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.3 #0.25
-        first_swing_time: 5.
+        first_swing_time: 1. #0.5
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
         right_frames: ["right_toe", "right_heel"]
         left_frames: ["left_toe", "left_heel"]
 # ---------- Targets ---------- #
-        target_config: [0, 0, 0.793, 
+        target_config: [0, 0, 0.77, #0.793, if the height is too high we get some singularity issues
                         0, 0, 0, 1,
-                        0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0,
+                        -0.3, 0, 0, 0.52, -0.23, #0,
+                        -0.3, 0, 0, 0.52, -0.23, #0,
                         # 0, 0, 0,  # Removing the waist joints for now
                         0, 0, 0, 1.1,
                         0, 0, 0, 1.1]
         target_vel: [0., 0, 0, 
                     0, 0, 0,
-                    0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, #0,
+                    0, 0, 0, 0, 0, #0,
                     # 0, 0, 0,
                     0, 0, 0, 0,
                     0, 0, 0, 0,]
         # TODO: Remove these
-        mpc_ic_config: [0, 0, 0.793, 
+        mpc_ic_config: [0, 0, 0.77, 
                         0, 0, 0, 1,
-                        0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0,
+                        -0.3, 0, 0, 0.52, -0.23, #0,
+                        -0.3, 0, 0, 0.52, -0.23, #0,
                         # 0, 0, 0,
                         0, 0, 0, 1.1,
                         0, 0, 0, 1.1]
         mpc_ic_vel: [0., 0, 0, 
                     0, 0, 0,
-                    0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, #0,
+                    0, 0, 0, 0, 0, #0,
                     # 0, 0, 0,
                     0, 0, 0, 0,
                     0, 0, 0, 0]
@@ -61,7 +61,8 @@ onboard:
         controller_target: True #True
 # ---------- Skip Indexes ---------- #
 # TODO: Find a better way to do this
-        skip_indexes: [12, 13, 14,
+        skip_indexes: [5, 11,
+                       12, 13, 14,
                        19, 20, 21,
                        22, 23, 24, 25, 26, 27, 28,
                        33, 34, 35,

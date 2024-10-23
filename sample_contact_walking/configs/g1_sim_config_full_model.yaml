@@ -3,10 +3,10 @@ onboard:
   control:
     - pkg: sample_contact_walking
       executable: ll_controller
-      params_path: /home/zolkin/sample-contact-walking/sample_contact_walking/configs/g1_mpc_config.yaml
+      params_path: /home/zolkin/sample-contact-walking/sample_contact_walking/configs/g1_mpc_config_full_model.yaml
       params:
         urdf_path: /home/zolkin/sample-contact-walking/g1_model/urdf/g1_hand.urdf
-        robot_name: "g1"
+        robot_name: "g1_full_model"
 # ---------- Viz ---------- #
         viz_frames: ["pelvis", "left_toe", "left_heel", "right_toe", "right_heel"]
         viz_forces: True
@@ -14,24 +14,24 @@ onboard:
         force_frames: ["left_toe", "left_heel", "right_toe", "right_heel"]
 # ---------- Swing trajectory ---------- #
         default_swing_height: 0.08 # 0.1
-        default_stand_foot_height: 0.02 #0.01
+        default_stand_foot_height: 0.0 #0.01
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
         mpc_loop_period_sec: 0.03 #0.01
         max_mpc_solves: -20 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.3 #0.25
-        first_swing_time: 10.
+        first_swing_time: 1.
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
         right_frames: ["right_toe", "right_heel"]
         left_frames: ["left_toe", "left_heel"]
 # ---------- Targets ---------- #
-        target_config: [0, 0, 0.793, 
+        target_config: [0, 0, 0.77, 
                         0, 0, 0, 1,
-                        0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0,
+                        -0.3, 0, 0, 0.52, -0.23, 0,
+                        -0.3, 0, 0, 0.52, -0.23, 0,
                         0, 0, 0,
                         0, 0, 0, 1.1, 0, 0, 0,
                         0, 0, 0, 0, 0, 0, 0,
@@ -49,8 +49,8 @@ onboard:
         # TODO: Remove these
         mpc_ic_config: [0, 0, 0.793, 
                         0, 0, 0, 1,
-                        0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0,
+                        -0.3, 0, 0, 0.52, -0.23, 0,
+                        -0.3, 0, 0, 0.52, -0.23, 0,
                         0, 0, 0,
                         0, 0, 0, 1.1, 0, 0, 0,
                         0, 0, 0, 0, 0, 0, 0,
