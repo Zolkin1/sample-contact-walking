@@ -21,7 +21,7 @@ solver_settings:
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6
   adaptive_rho: False
-  max_iter: 100 #20
+  max_iter: 20 #20
   scaling: 10
 constraints:
   friction_coef: 0.7  # TODO: Tune this
@@ -55,19 +55,21 @@ costs:
     #           # 100, 100, 100,                  # Waist
     #           1, 1, 1, 1,      # Left Arm
     #           1, 1, 1, 1]      # Right Arm
-    weight:  [1, 1, 20, 
+    weight:  [1, 1, 15, 
           10, 10, 10,
-          1, 1, 1, 1, 1, #1,         # Left Leg
-          1, 1, 1, 1, 1, #1,         # Right Leg
+          1, 4, 4, 1, 1, #1,         # Left Leg
+          1, 4, 4, 1, 1, #1,         # Right Leg
           # 1, 1, 1,                  # Waist
           1, 1, 1, 1,      # Left Arm
           1, 1, 1, 1]      # Right Arm
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [1, 1, 20, 
+    weight: [2, 2, 5, 
             10, 10, 10,
-            0.001, 0.001, 0.001, 0.001, 0.001, #0.001,         # Left Leg
-            0.001, 0.001, 0.001, 0.001, 0.001, #0.001,         # Right Leg
+            0.1, 0.1, 0.1, 0.01, 0.1, #0.001,         # Left Leg
+            0.1, 0.1, 0.1, 0.01, 0.1, #0.001,         # Right Leg
+            # 0.001, 0.001, 0.001, 0.001, 0.001, #0.001,         # Left Leg
+            # 0.001, 0.001, 0.001, 0.001, 0.001, #0.001,         # Right Leg
             # 1, 1, 1,                  # Waist
             1, 1, 1, 1,      # Left Arm
             1, 1, 1, 1]      # Right Arm
@@ -80,7 +82,7 @@ costs:
             0.01, 0.01, 0.01, 0.01,]                          # Right Arm
   - type: ForceRegularization
     name: "ForceReg"
-    weight: [0.001, 0.001, 0.01]
+    weight: [0.01, 0.01, 0.01]
 contacts:
   # contact_frames: ["left_heel", "right_heel"]
   contact_frames: ["left_toe", "left_heel", "right_toe", "right_heel"]

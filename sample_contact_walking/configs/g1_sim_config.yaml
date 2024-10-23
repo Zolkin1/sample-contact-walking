@@ -17,8 +17,8 @@ onboard:
         default_stand_foot_height: 0.0 #0.01
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.03 #0.01
-        max_mpc_solves: -41 #125 
+        mpc_loop_period_sec: 0.012 #0.01
+        max_mpc_solves: -500 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.3 #0.25
         first_swing_time: 1. #0.5
@@ -28,7 +28,7 @@ onboard:
         right_frames: ["right_toe", "right_heel"]
         left_frames: ["left_toe", "left_heel"]
 # ---------- Targets ---------- #
-        target_config: [0, 0, 0.77, #0.793, if the height is too high we get some singularity issues
+        target_config: [0, 0, 0.73, #0.77, #0.793, if the height is too high we get some singularity issues
                         0, 0, 0, 1,
                         -0.3, 0, 0, 0.52, -0.23, #0,
                         -0.3, 0, 0, 0.52, -0.23, #0,
