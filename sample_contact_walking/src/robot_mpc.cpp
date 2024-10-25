@@ -274,9 +274,23 @@ namespace robot
                 vectorx_t q, v;
 
                 if (first_loop) {
+                    // Read in state
+                    {
+                        // Get the mutex to protect the states
+                        std::lock_guard<std::mutex> lock(est_state_mut_);
+
+                        // Create current state
+                        q = q_;
+                        v = v_;
+                    }
+
+                    // TODO: Remove
+                    q = q_ic_;
+                    v = v_ic_;
+
                     // TODO: Fix the state for when we re-enter this loop
                     double time = this->now().seconds();
-                    mpc_->ComputeNLP(q_ic_, v_ic_, traj_mpc_);
+                    mpc_->ComputeNLP(q, v, traj_mpc_);
                     {
                         // Get the traj mutex to protect it
                         std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -290,8 +304,8 @@ namespace robot
                     first_loop = false;
 
                     // Assign these to give state estimator more time for the fake data state estimator
-                    q = q_ic_;
-                    v = v_ic_;
+                    // q = q_ic_;
+                    // v = v_ic_;
                 } else {
                     // Do everything that does not need the measured state first
 
@@ -329,6 +343,10 @@ namespace robot
                         v = v_;
                     }
                 }
+
+                // TODO: Remove
+                // q = q_ic_;
+                // v.setZero();
                 
                 // TODO: Remove with the refernece generator below!
                 if (!fixed_target_ || controller_target_) {
@@ -453,6 +471,10 @@ namespace robot
                 v = v_map;
                 tau = tau_map;
             }
+
+            // TODO: Remove
+            // tau.setZero();
+            // v.setZero();
 
             // Make the message
             vectorx_t u_mujoco = ConvertControlToMujocoU(q.tail(model_->GetNumInputs()),

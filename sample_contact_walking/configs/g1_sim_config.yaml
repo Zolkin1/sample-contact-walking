@@ -14,27 +14,27 @@ onboard:
         force_frames: ["left_toe", "left_heel", "right_toe", "right_heel"]
 # ---------- Swing trajectory ---------- #
         default_swing_height: 0.08 # 0.1
-        default_stand_foot_height: 0.0 #0.01
+        default_stand_foot_height: 0.005 #0.01
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.012 #0.01
+        mpc_loop_period_sec: 0.015 #0.012 #0.01
         max_mpc_solves: -500 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.3 #0.25
-        first_swing_time: 5. #0.5
+        first_swing_time: 2. #0.5
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
         right_frames: ["right_toe", "right_heel"]
         left_frames: ["left_toe", "left_heel"]
 # ---------- Targets ---------- #
-        target_config: [0, 0, 0.73, #0.77, #0.793, if the height is too high we get some singularity issues
+        target_config: [0, 0, 0.74, #0.73, #0.77, #0.793, if the height is too high we get some singularity issues
                         0, 0, 0, 1,
                         -0.3, 0, 0, 0.52, -0.23, #0,
                         -0.3, 0, 0, 0.52, -0.23, #0,
                         # 0, 0, 0,  # Removing the waist joints for now
-                        0, 0, 0, 1.1,
-                        0, 0, 0, 1.1]
+                        0, 0, 0, 0.2,
+                        0, 0, 0, 0.2]
         target_vel: [0., 0, 0, 
                     0, 0, 0,
                     0, 0, 0, 0, 0, #0,
@@ -48,8 +48,8 @@ onboard:
                         -0.3, 0, 0, 0.52, -0.23, #0,
                         -0.3, 0, 0, 0.52, -0.23, #0,
                         # 0, 0, 0,
-                        0, 0, 0, 1.1,
-                        0, 0, 0, 1.1]
+                        0, 0, 0, 0.2,
+                        0, 0, 0, 0.2]
         mpc_ic_vel: [0., 0, 0, 
                     0, 0, 0,
                     0, 0, 0, 0, 0, #0,
@@ -93,7 +93,7 @@ onboard:
       subscribers:
         # Estimated state subscriber
         - ros_parameter: sub_est_setting
-          topic: /obelisk/g1/target_state # est_state, target_state
+          topic: /obelisk/g1/est_state # est_state, target_state
           history_depth: 10
           callback_group: estimation_cbg
           non_obelisk: False
@@ -184,9 +184,9 @@ onboard:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model
           model_xml_path: g1_hand.xml
-          n_u: 36
-          time_step: 0.001
-          num_steps_per_viz: 16 # No longer used
+          n_u: 129
+          time_step: 0.0005
+          num_steps_per_viz: 32 #16 # No longer used
           sensor_settings:
           # ---------- Joint Encoders ---------- #
           - topic: /obelisk/g1/joint_encoders
