@@ -14,42 +14,62 @@ Position and velocity actuators added. -->
     <!-- ############## -->
     <!-- Hip Pitch -->
     <default class="hip_pitch_pos">
-      <position kp="2000" ctrllimited="false"/>
+      <!-- <position kp="700" ctrllimited="false"/> -->
+      <position kp="200" ctrllimited="false"/>
+      <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="hip_pitch_vel">
-      <position kv="5" ctrllimited="false"/>
+      <!-- <position kv="5" ctrllimited="false"/> -->
+      <position kv="4" ctrllimited="false"/>
+      <!-- <position kv="0" ctrllimited="false"/> -->
     </default>
 
     <!-- Hip Roll -->
     <default class="hip_roll_pos">
-      <position kp="2000" ctrllimited="false"/>
+      <!-- <position kp="700" ctrllimited="false"/> -->
+      <position kp="120" ctrllimited="false"/>
+      <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="hip_roll_vel">
-      <position kv="3" ctrllimited="false"/>
+      <!-- <position kv="0" ctrllimited="false"/> -->
+      <position kv="2" ctrllimited="false"/>
+      <!-- <position kv="3" ctrllimited="false"/> -->
     </default>
 
     <!-- Hip Yaw -->
     <default class="hip_yaw_pos">
-      <position kp="2000" ctrllimited="false"/>
+      <!-- <position kp="700" ctrllimited="false"/> -->
+      <position kp="120" ctrllimited="false"/>
+      <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="hip_yaw_vel">
-      <position kv="3" ctrllimited="false"/>
+      <!-- <position kv="0" ctrllimited="false"/> -->
+      <position kv="2" ctrllimited="false"/>
+      <!-- <position kv="3" ctrllimited="false"/> -->
     </default>
 
     <!-- Knee -->
     <default class="knee_pos">
-      <position kp="2000" ctrllimited="false"/>
+      <!-- <position kp="700" ctrllimited="false"/> -->
+      <position kp="200" ctrllimited="false"/>
+      <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="knee_vel">
-      <position kv="5" ctrllimited="false"/>
+      <!-- <position kv="0" ctrllimited="false"/> -->
+      <position kv="4" ctrllimited="false"/>
+      <!-- <position kv="10" ctrllimited="false"/> -->
     </default>
 
     <!-- Ankle Pitch -->
     <default class="ankle_pitch_pos">
-      <position kp="700" ctrllimited="false"/>
+      <!-- <position kp="0" ctrllimited="false"/> -->
+      <position kp="80" ctrllimited="false"/>
+      <!-- <position kp="700" ctrllimited="false"/> -->
     </default>
     <default class="ankle_pitch_vel">
+      <!-- <position kv="3" ctrllimited="false"/> -->
       <position kv="2" ctrllimited="false"/>
+      <!-- <position kv="0" ctrllimited="false"/> -->
     </default>
 
     <!-- Ankle Roll -->

@@ -450,6 +450,13 @@ namespace robot
                 tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
             }
 
+
+            // TODO: Remove
+            // tau.setZero();
+            // v.setZero();
+            // q = q_ic_;
+            // v = v_ic_;
+
             // Check if we need to insert other elements into the targets
             if (q.size() != model_->GetConfigDim()) {
                 const auto joint_skip_values = mpc_->GetJointSkipValues();
@@ -471,10 +478,6 @@ namespace robot
                 v = v_map;
                 tau = tau_map;
             }
-
-            // TODO: Remove
-            // tau.setZero();
-            // v.setZero();
 
             // Make the message
             vectorx_t u_mujoco = ConvertControlToMujocoU(q.tail(model_->GetNumInputs()),

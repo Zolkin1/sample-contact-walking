@@ -1,5 +1,5 @@
 general_settings:
-  nodes: 20 #32
+  nodes: 32
   verbose: True #True
   node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
   node_dt: 0.025 #0.025
@@ -24,26 +24,34 @@ solver_settings:
   max_iter: 20 #20
   scaling: 10
 constraints:
-  friction_coef: 0.3 #0.7  # TODO: Tune this
+  friction_coef: 0.6 #0.7  # TODO: Tune this
   friction_margin: 2
   max_grf: 8000
   collisions:
     - frame1: "left_toe"
       frame2: "right_toe"
+      radius1: 0.15
+      radius2: 0.15
+    - frame1: "left_heel"
+      frame2: "right_heel"
+      radius1: 0.15
+      radius2: 0.15
+    - frame1: "left_toe"
+      frame2: "right_heel"
       radius1: 0.1
       radius2: 0.1
     - frame1: "left_heel"
-      frame2: "right_heel"
+      frame2: "right_toe"
       radius1: 0.1
       radius2: 0.1
     - frame1: "left_wrist_yaw_link"
       frame2: "waist_support_link"
-      radius1: 0.1
-      radius2: 0.1
+      radius1: 0.06
+      radius2: 0.06
     - frame1: "right_wrist_yaw_link"
       frame2: "waist_support_link"
-      radius1: 0.1
-      radius2: 0.1
+      radius1: 0.06
+      radius2: 0.06
 costs:
 # NOTE: The resulting behaviour is suprisingly sensitive
   - type: ConfigurationTracking
@@ -55,25 +63,25 @@ costs:
     #           # 100, 100, 100,                  # Waist
     #           1, 1, 1, 1,      # Left Arm
     #           1, 1, 1, 1]      # Right Arm
-    weight:  [2, 2, 15, 
+    weight:  [2, 2, 20, #15, 
           8, 8, 8,
           # 10, 40, 40, 10, 10, #1,         # Left Leg
           # 10, 40, 40, 10, 10, #1,         # Right Leg
-          1, 1, 4, 1, 1, #1,         # Left Leg
-          1, 1, 4, 1, 1, #1,         # Right Leg
+          0.01, 4, 4, 0.01, 1, #1,         # Left Leg
+          0.01, 4, 4, 0.01, 1, #1,         # Right Leg
           # 1, 1, 1,                  # Waist
           1, 1, 1, 1,      # Left Arm
           1, 1, 1, 1]      # Right Arm
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [1.7, 1.7, 5, 
+    weight: [4, 4, 5, 
             5, 5, 5,
             # These are gains for testing with sim:
-            1, 0.8, 2, .1, 1, #0.001,         # Left Leg
-            1, 0.8, 2, .1, 1, #0.001,         # Right Leg
+            # 0.8, 0.6, 2, .1, 1, #0.001,         # Left Leg
+            # 0.8, 0.6, 2, .1, 1, #0.001,         # Right Leg
             # These are good gains for no sim:
-            # 0.1, 0.7, 0.7, 0.01, 0.1, #0.001,         # Left Leg
-            # 0.1, 0.7, 0.7, 0.01, 0.1, #0.001,         # Right Leg
+            0.1, 2, 2, 0.1, 0.1, #0.001,         # Left Leg
+            0.1, 2, 2, 0.1, 0.1, #0.001,         # Right Leg
             # 0.001, 0.001, 0.001, 0.001, 0.001, #0.001,         # Left Leg
             # 0.001, 0.001, 0.001, 0.001, 0.001, #0.001,         # Right Leg
             # 1, 1, 1,                  # Waist
@@ -81,14 +89,14 @@ costs:
             1, 1, 1, 1]      # Right Arm
   - type: TorqueRegularization
     name: "TorqueReg"
-    weight: [0.001, 0.001, 0.001, 0.0001, 0.001, #0.001,            # Left Leg
-            0.001, 0.001, 0.001, 0.0001, 0.001, #0.001,             # Right Leg
+    weight: [0.001, 0.001, 0.001, 0.001, 0.001, #0.001,            # Left Leg
+            0.001, 0.001, 0.001, 0.001, 0.001, #0.001,             # Right Leg
             # 0.001, 0.001, 0.001,                                  # Waist
             0.01, 0.01, 0.01, 0.01,                           # Left Arm
             0.01, 0.01, 0.01, 0.01,]                          # Right Arm
   - type: ForceRegularization
     name: "ForceReg"
-    weight: [0.03, 0.03, 0.001]
+    weight: [0.02, 0.02, 0.001]
     # weight: [0.2, 0.2, 0.1]
 contacts:
   # contact_frames: ["left_heel", "right_heel"]
