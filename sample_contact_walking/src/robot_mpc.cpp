@@ -465,6 +465,7 @@ namespace robot
                 std::vector<double> tau_vec(tau.data(), tau.data() + tau.size());
 
                 for (int i = 0; i < skipped_joint_indexes_.size(); i++) {
+                    // TODO: Compute angle so that ankle is parallel to the ground
                     q_vec.insert(q_vec.begin() + FLOATING_POS_SIZE + skipped_joint_indexes_[i], joint_skip_values[i]);
                     v_vec.insert(v_vec.begin() + FLOATING_VEL_SIZE + skipped_joint_indexes_[i], 0);
                     tau_vec.insert(tau_vec.begin() + skipped_joint_indexes_[i], 0);

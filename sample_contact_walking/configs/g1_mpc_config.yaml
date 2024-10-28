@@ -9,7 +9,7 @@ general_settings:
   scale_cost: False
   max_initial_solves: 20
   initial_constraint_tol: 5e-4
-  nodes_full_dynamics: 3 #4   # Also determines how many nodes have torque constraints
+  nodes_full_dynamics: 4 #3 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0
   terminal_cost_weight: 2 #10
 solver_settings:
@@ -30,12 +30,12 @@ constraints:
   collisions:
     - frame1: "left_toe"
       frame2: "right_toe"
-      radius1: 0.15
-      radius2: 0.15
+      radius1: 0.13
+      radius2: 0.13
     - frame1: "left_heel"
       frame2: "right_heel"
-      radius1: 0.15
-      radius2: 0.15
+      radius1: 0.13
+      radius2: 0.13
     - frame1: "left_toe"
       frame2: "right_heel"
       radius1: 0.1
@@ -56,32 +56,28 @@ costs:
 # NOTE: The resulting behaviour is suprisingly sensitive
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    # weight:  [10, 10, 20, 
-    #           10, 10, 10,
-    #           1, 10, 10, 0.001, 1, #1,         # Left Leg
-    #           1, 10, 10, 0.001, 1, #1,         # Right Leg
-    #           # 100, 100, 100,                  # Waist
-    #           1, 1, 1, 1,      # Left Arm
-    #           1, 1, 1, 1]      # Right Arm
-    weight:  [2, 2, 20, #15, 
+    weight:  [2, 2, 15, #15, 
           8, 8, 8,
+          # 3, 3, 3,
           # 10, 40, 40, 10, 10, #1,         # Left Leg
           # 10, 40, 40, 10, 10, #1,         # Right Leg
-          0.01, 4, 4, 0.01, 1, #1,         # Left Leg
-          0.01, 4, 4, 0.01, 1, #1,         # Right Leg
+          0.005, 6, 4, 0.01, 1, #1,         # Left Leg
+          0.005, 6, 4, 0.01, 1, #1,         # Right Leg
           # 1, 1, 1,                  # Waist
+          # 1, 1, 1, 1,      # Left Arm
+          # 1, 1, 1, 1]      # Right Arm
           1, 1, 1, 1,      # Left Arm
           1, 1, 1, 1]      # Right Arm
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [4, 4, 5, 
+    weight: [3, 3, 5, 
             5, 5, 5,
             # These are gains for testing with sim:
             # 0.8, 0.6, 2, .1, 1, #0.001,         # Left Leg
             # 0.8, 0.6, 2, .1, 1, #0.001,         # Right Leg
             # These are good gains for no sim:
-            0.1, 2, 2, 0.1, 0.1, #0.001,         # Left Leg
-            0.1, 2, 2, 0.1, 0.1, #0.001,         # Right Leg
+            0.05, 3, 2, 0.01, 0.1, #0.001,         # Left Leg
+            0.05, 3, 2, 0.01, 0.1, #0.001,         # Right Leg
             # 0.001, 0.001, 0.001, 0.001, 0.001, #0.001,         # Left Leg
             # 0.001, 0.001, 0.001, 0.001, 0.001, #0.001,         # Right Leg
             # 1, 1, 1,                  # Waist
@@ -115,7 +111,7 @@ joint_defaults:
            "right_hand_middle_0_joint", "right_hand_middle_1_joint",
            "right_hand_index_0_joint", "right_hand_index_1_joint",]
   values: [0, 0,
-           0, 0, 0,
+           0, 0, 0.03,
            0, 0, 0,
            0, 1, 1,
            0, 0,
