@@ -37,14 +37,6 @@ namespace robot {
 
         this->declare_parameter<std::string>("base_link_name");
 
-        // ------ DEBUG ------ //
-        // this->RegisterObkSubscription<obelisk_control_msgs::msg::PDFeedForward>("debug_print_setting",
-        //     "debug_print", std::bind(&RobotEstimator::ReceiveControlDebug, this, std::placeholders::_1));
-        // this->RegisterObkPublisher<obelisk_control_msgs::msg::PDFeedForward>("debug_pub_setting", "debug_pub");
-        // ------ DEBUG ------ //
-        
-        // Create broadcasters to map Mujoco Sites to frames
-
         // Reset values
         joint_names_.clear();
         joint_pos_.clear();
@@ -109,30 +101,6 @@ namespace robot {
             double d_nano_sec = base_nanosec_ - prev_base_nanosec_;
             double dt = ((d_sec * 1e9) + d_nano_sec)/1e9;
 
-            if (dt > 0) {
-                // TODO: Base velocity is in world frame from mujoco, but the MPC needs it in local frame
-                // TODO: This is quite a bad estimate, need to clean it up
-                // For now, I will just grab the true velocity
-
-                // Calculate base velocity via simple euler
-                // for (size_t i = 0; i < POS_VARS; i++) {
-                //     base_vel_.at(i) = (base_pos_.at(i) - prev_base_pos_.at(i))/dt;
-                // }
-
-                // base_quat_.normalize();
-                // prev_base_quat_.normalize();
-
-                // Eigen::Vector3d tangent_vec = pinocchio::quaternion::log3(base_quat_); // prev_quat.inverse()*
-
-                // for (size_t i = 0; i < 3; i++) {
-                //     base_vel_.at(i + POS_VARS) = tangent_vec(i)/dt;
-                // }
-
-                // est_state_msg_.v_base.clear();
-                // for (int i = 0; i < FLOATING_VEL_SIZE; i++) {
-                //     est_state_msg_.v_base.emplace_back(base_vel_.at(i));
-                // }
-            }
             est_state_msg_.q_joints = joint_pos_;
 
             est_state_msg_.q_base.clear();
@@ -209,16 +177,6 @@ namespace robot {
             base_vel_[i] = msg.v_base[i];
         }
     }
-
-    // TODO: Remove after debug
-    // void RobotEstimator::ReceiveControlDebug(const obelisk_control_msgs::msg::PDFeedForward& msg) {
-    //     auto time = this->now();
-    //     obelisk_control_msgs::msg::PDFeedForward msg2;
-    //     msg2 = msg;
-    //     msg2.header.stamp = time;
-    //     this->GetPublisher<obelisk_control_msgs::msg::PDFeedForward>("debug_pub")->publish(msg2);
-    // }
-
 } // namespace robot
 
 int main(int argc, char* argv[]) {
