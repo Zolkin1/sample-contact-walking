@@ -96,3 +96,4 @@ Can run `ros2 run joy joy_enumerate_devices` to see what devices are found.
 ```
 sudo apt-get install ros-humble-joy
 ```
+- As of 11/11/2024 I need to be om the obelisk branch with simulation geom viz
