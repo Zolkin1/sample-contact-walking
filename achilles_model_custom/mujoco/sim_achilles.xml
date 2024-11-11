@@ -1,0 +1,8 @@
+<mujoco model="sim_achilles">
+<!-- TODO:
+    Consider going back to pyramidal if elliptic is slow
+    Fast implicit seems to be causing some kind of jitter, RK4 looks a bit better -->
+  <!-- <option timestep="0.001" integrator = "RK4" cone="pyramidal"/> -->
+    <option timestep="0.0005" integrator = "implicitfast" cone="pyramidal"/>
+  <include file="achilles.xml"/>
+</mujoco>

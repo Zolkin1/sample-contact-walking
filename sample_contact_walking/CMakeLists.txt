@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 project(sample_contact_walking)
 
+set(CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 20)
+
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 #   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -11,6 +14,8 @@ set(CMAKE_BUILD_TYPE Release)
 find_package(ament_cmake REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(visualization_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 # find_package(obelisk_estimator_msgs REQUIRED)
 
 # ------- Fetch the Obelisk library ------- #
@@ -36,6 +41,8 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(TORC)
 
+message(STATUS TORC_)
+
 # ------- Pinocchio ------- #
 find_package(pinocchio 3.0.0 REQUIRED)
 
@@ -44,12 +51,19 @@ include_directories(include)
 ament_export_include_directories(include)
 
 # ------- Controller ------- #
-add_executable(ll_controller src/achilles_mpc.cpp)
-target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo Mpc)
+add_executable(ll_controller src/robot_mpc.cpp)
+target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo Mpc SamplePlanner)
+
+ament_target_dependencies(ll_controller
+    PUBLIC
+    visualization_msgs
+    tf2_ros
+    tf2
+    sensor_msgs)
 
 # ------- Estimator ------- #
 add_executable(state_estimator 
-    src/achilles_estimator.cpp
+    src/robot_estimator.cpp
     )
 target_link_libraries(state_estimator PUBLIC Obelisk::Core pinocchio::pinocchio)
 
@@ -60,7 +74,7 @@ ament_target_dependencies(
 )
 
 # ------- Simulation ------- #
-add_executable(simulation src/achilles_sim.cpp)
+add_executable(simulation src/robot_sim.cpp)
 target_link_libraries(simulation PUBLIC Obelisk::Core)
 
 # ------- Install ------- #

@@ -1,0 +1,93 @@
+general_settings:
+  nodes: 32
+  verbose: False #True
+  node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
+  node_dt: 0.025
+  first_node_dt: 0.01 
+  compile_derivatives: False #True
+  base_frame: "torso"
+  scale_cost: False
+  max_initial_solves: 20
+  initial_constraint_tol: 5e-4
+  nodes_full_dynamics: 3 #4   # Also determines how many nodes have torque constraints
+  delay_prediction_dt: 0
+  terminal_cost_weight: 10
+solver_settings:
+  rel_tol: 1e-3
+  abs_tol: 1e-3
+  verbose: False
+  polish: False
+  rho: 0.01
+  alpha: 1.6 # 1.6, 1.1
+  sigma: 1e-6
+  adaptive_rho: False
+  max_iter: 20 #20
+  scaling: 10
+constraints:
+  friction_coef: 0.7  # TODO: Tune this
+  friction_margin: 2
+  max_grf: 800
+  collisions:
+    - frame1: "FR_foot"
+      frame2: "FL_foot"
+      radius1: 0.06
+      radius2: 0.06
+    - frame1: "RR_foot"
+      frame2: "RL_foot"
+      radius1: 0.06
+      radius2: 0.06
+    - frame1: "FR_foot"
+      frame2: "RR_foot"
+      radius1: 0.06
+      radius2: 0.06
+    - frame1: "FL_foot"
+      frame2: "RL_foot"
+      radius1: 0.06
+      radius2: 0.06
+costs:
+  - type: ConfigurationTracking
+    name: "ConfigTracking"
+    weight:  [ 2.0, 2.0, 20, #2, 2, 150, or 2,2,30
+          25.5, 25.5, 25.5, # 5.5, 5.5, 5.5
+          # 12.5, 12.5, 12.5,
+          # 10, 10, 10,          # FL
+          # 10, 10, 10,          # FR
+          # 10, 10, 10,          # RL
+          # 10, 10, 10]
+          # 0.4, 0.01, 0.0001,          # FL
+          # 0.4, 0.01, 0.0001,          # FR
+          # 0.4, 0.01, 0.0001,          # RL
+          # 0.4, 0.01, 0.0001,]
+          1, 1, 1,          # FL
+          1, 1, 1,          # FR
+          1, 1, 1,          # RL
+          1, 1, 1,]          # RR
+  - type: VelocityTracking
+    name: "VelocityTracking"
+    weight: [2, 2, 2,
+        .5, .5, .5,
+        0.01, 0.01, 0.0001,         # FL
+        0.01, 0.01, 0.0001,         # FR
+        0.01, 0.01, 0.0001,         # RL
+        0.01, 0.01, 0.0001]         # RR
+  - type: TorqueRegularization
+    name: "TorqueReg"
+    weight: [.001, .001, .0001,       # FL
+             .001, .001, .0001,       # FR
+             .001, .001, .0001,       # RL
+             .001, .001, .0001]       # RR
+  - type: ForceRegularization
+    name: "ForceReg"
+    weight: [0.001, 0.001, 0.01]
+contacts:
+  contact_frames: ["RL_foot", "FR_foot", "FL_foot", "RR_foot"]
+  # hip_offsets: [-0.1934, 0.142, 0.1934, -0.142, 0.1934, 0.142, -0.1934, -0.142]
+  hip_offsets: [-0.1934, 0.142, 0.1734, -0.142, 0.1734, 0.142, -0.1934, -0.142]
+
+line_search:
+  alpha_min: 1e-3
+  large_constraint_vio: 1e-2
+  small_constraint_vio: 1e-6
+  constraint_reduction_mult: 1e-6
+  alpha_step: 0.5 # Since the line search is high variance, lowering this helps
+  armijo_constant: 1e-4
