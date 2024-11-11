@@ -1,0 +1,17 @@
+<mujoco model="stairs">
+    <asset>
+        <material name="box_material" shininess="0.1" specular="0.5" roughness="0.3" />
+    </asset>
+
+    <worldbody>
+        <body pos="2 0 0.095">
+          <geom name="stair_1" type="box" contype="4" conaffinity="1" size="1 0.6 0.095" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        </body>
+        <body pos="2.2667 0 0.285">
+          <geom name="stair_2" type="box" contype="4" conaffinity="1" size="0.733 0.6 0.095" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        </body>
+        <body pos="2.5334 0 0.475">
+          <geom name="stair_3" type="box" contype="4" conaffinity="1" size="0.4666 0.6 0.095" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        </body>
+    </worldbody>
+</mujoco>

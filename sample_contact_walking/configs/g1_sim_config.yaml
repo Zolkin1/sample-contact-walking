@@ -183,9 +183,11 @@ onboard:
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model
-          model_xml_path: g1_hand.xml
-          n_u: 129
-          time_step: 0.0005
+          # model_xml_path: basic_scene.xml
+          model_xml_path: stairs_scene.xml
+          # model_xml_path: g1_29dof_with_hand.xml
+          # n_u: 129
+          # time_step: 0.0005
           num_steps_per_viz: 32 #16 # No longer used
           sensor_settings:
           # ---------- Joint Encoders ---------- #
@@ -308,6 +310,11 @@ onboard:
             sensor_names:
               base_mocap_pos_sensor: framepos
               base_mocap_quat_sensor: framequat
+          viz_geoms:
+            dt: 1
+            stair_1: box
+            stair_2: box
+            stair_3: box
   viz:
     on: True
     viz_tool: foxglove

@@ -85,8 +85,8 @@ costs:
             1, 1, 1, 1]      # Right Arm
   - type: TorqueRegularization
     name: "TorqueReg"
-    weight: [0.001, 0.001, 0.001, 0.001, 0.001, #0.001,            # Left Leg
-            0.001, 0.001, 0.001, 0.001, 0.001, #0.001,             # Right Leg
+    weight: [0.001, 0.001, 0.001, 0.0001, 0.001, #0.001,            # Left Leg
+            0.001, 0.001, 0.001, 0.0001, 0.001, #0.001,             # Right Leg
             # 0.001, 0.001, 0.001,                                  # Waist
             0.01, 0.01, 0.01, 0.01,                           # Left Arm
             0.01, 0.01, 0.01, 0.01,]                          # Right Arm
