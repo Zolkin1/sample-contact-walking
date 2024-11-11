@@ -19,11 +19,9 @@
 #include "sample_contact_walking/robot_mpc.h"
 
 // TODO:
-//  - Allow user to set the initial condition in the yaml
 //  - Check for paths first relative to $SAMPLE_WALKING_ROOT then as a global path
 //  - Add ROS diagonstic messages: https://docs.foxglove.dev/docs/visualization/panels/diagnostics#diagnosticarray
-//  - Add whole stack pausing
-
+//  - Add angular velocity command
 
 namespace robot
 {
@@ -70,15 +68,6 @@ namespace robot
 
         // Create MPC model
         mpc_model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path, mpc_->GetJointSkipNames(), mpc_->GetJointSkipValues());
-
-        // Model debugging
-        // for (int i = 0; i < mpc_model_->GetNumJoints(); i++) {
-        //     RCLCPP_INFO_STREAM(this->get_logger(), "MPC Model frame " << i << ": " << mpc_model_->GetJointName(i));
-        // } 
-
-        // for (int i = 0; i < model_->GetNumJoints(); i++) {
-        //     RCLCPP_INFO_STREAM(this->get_logger(), "Full Model frame " << i << ": " << model_->GetJointName(i));
-        // }
 
         this->declare_parameter<std::vector<long int>>("skip_indexes", {-1});
         skipped_joint_indexes_ = this->get_parameter("skip_indexes").as_integer_array();
@@ -235,16 +224,7 @@ namespace robot
             } else if (!model_->GetJointID(msg.joint_names[i]).has_value()) {
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Joint " << msg.joint_names[i] << " not found in the full robot model!");
             }
-            // v_(i + msg.v_base.size()) = msg.v_joints.at(i);
         }
-
-        // if (q_.size() != mpc_model_->GetConfigDim()) {
-        //     RCLCPP_ERROR_STREAM(this->get_logger(), "received q does not match the size of the model");
-        // }
-
-        // if (v_.size() != model_->GetVelDim()) {
-        //     RCLCPP_ERROR_STREAM(this->get_logger(), "received v does not match the size of the model");
-        // }
 
         if (!recieved_first_state_ && q_.size() == mpc_model_->GetConfigDim() && v_.size() == mpc_model_->GetVelDim() && q_.segment<QUAT_VARS>(POS_VARS).norm() > 0.99) {
             RCLCPP_INFO_STREAM(this->get_logger(), "Recieved first message! q: " << q_.transpose());
@@ -343,10 +323,6 @@ namespace robot
                         v = v_;
                     }
                 }
-
-                // TODO: Remove
-                // q = q_ic_;
-                // v.setZero();
                 
                 // TODO: Remove with the refernece generator below!
                 if (!fixed_target_ || controller_target_) {
@@ -449,13 +425,6 @@ namespace robot
                 v = v_ic_;
                 tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
             }
-
-
-            // TODO: Remove
-            // tau.setZero();
-            // v.setZero();
-            // q = q_ic_;
-            // v = v_ic_;
 
             // Check if we need to insert other elements into the targets
             if (q.size() != model_->GetConfigDim()) {
@@ -999,16 +968,12 @@ namespace robot
             for (const auto& rf : right_frames_) {
                 contact_schedule_.InsertSwingByDuration(rf, first_swing_time_, swing_time_);
             }
-            // contact_schedule_.InsertSwingByDuration(right_frames_[0], first_swing_time_, swing_time_);
-            // contact_schedule_.InsertSwingByDuration(right_frames_[1], first_swing_time_, swing_time_);
             next_right_insertion_time_ = first_swing_time_ + 2*swing_time_;
             next_left_insertion_time_ = first_swing_time_ + swing_time_;
         } else {
             for (const auto& lf : right_frames_) {
                 contact_schedule_.InsertSwingByDuration(lf, first_swing_time_, swing_time_);
             }
-            // contact_schedule_.InsertSwingByDuration(left_frames_[0], first_swing_time_, swing_time_);
-            // contact_schedule_.InsertSwingByDuration(left_frames_[1], first_swing_time_, swing_time_);
             next_left_insertion_time_ = first_swing_time_ + 2*swing_time_;
             next_right_insertion_time_ = first_swing_time_ + swing_time_;
         }
