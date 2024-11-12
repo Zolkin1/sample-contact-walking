@@ -27,7 +27,7 @@ namespace robot
 {
     MpcController::MpcController(const std::string& name) 
     : obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState>(name), 
-        recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(-1), sim_ready_(false) {
+        recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(-1) {
 
         mujoco_sim_instance_ = this;
 
@@ -890,9 +890,9 @@ namespace robot
 
         msg.header.stamp = this->now();
 
-        if (!sim_ready_) {
-            this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
-        }
+        // if (!sim_ready_) {
+        this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
+        // }
     }
 
     void MpcController::MakeTargetTorsoMocapTransform() {

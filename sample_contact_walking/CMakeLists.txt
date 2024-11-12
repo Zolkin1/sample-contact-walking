@@ -52,7 +52,7 @@ ament_export_include_directories(include)
 
 # ------- Controller ------- #
 add_executable(ll_controller src/robot_mpc.cpp)
-target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo Mpc SamplePlanner)
+target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo Mpc)
 
 ament_target_dependencies(ll_controller
     PUBLIC

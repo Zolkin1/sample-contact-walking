@@ -4,7 +4,8 @@ Position and velocity actuators added. -->
   <compiler angle="radian" meshdir="../meshes"/>
 
   <!-- TODO: Tune the impratio -->
-  <option cone="elliptic" impratio="100" integrator="implicitfast" timestep="0.0005"/>
+  <option cone="elliptic" impratio="100" integrator="implicitfast" timestep="0.001"/>
+  <!-- <option cone="elliptic" impratio="100" integrator="implicitfast" timestep="0.0005"/> -->
   <!-- <option cone="pyramidal" integrator="implicitfast" timestep="0.0005"/> -->
 
   <!-- Defaults -->

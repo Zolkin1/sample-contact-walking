@@ -6,7 +6,7 @@
 #include "sensor_msgs/msg/joy.hpp"
 
 #include "full_order_mpc.h"
-#include "cross_entropy.h"
+// #include "cross_entropy.h"
 
 namespace robot {
     using torc::mpc::vectorx_t;
@@ -142,29 +142,29 @@ namespace robot {
 
             // TODO: Remove
             // ------ Mujoco Debug ----- //
-            mjModel* mj_model_;
-            mjData* data_;
-            mjvCamera cam;          // abstract camera
-            mjvOption opt;          // visualization options
-            mjvScene scn;           // abstract scene
-            mjrContext con;         // custom GPU context
+            // mjModel* mj_model_;
+            // mjData* data_;
+            // mjvCamera cam;          // abstract camera
+            // mjvOption opt;          // visualization options
+            // mjvScene scn;           // abstract scene
+            // mjrContext con;         // custom GPU context
 
-            std::atomic<bool> sim_ready_;
-            std::mutex mj_data_mut_;
+            // std::atomic<bool> sim_ready_;
+            // std::mutex mj_data_mut_;
 
-            GLFWwindow* window;
+            // GLFWwindow* window;
 
-            // mouse interaction
-            bool button_left   = false;
-            bool button_middle = false;
-            bool button_right  = false;
-            double lastx       = 0;
-            double lasty       = 0;
+            // // mouse interaction
+            // bool button_left   = false;
+            // bool button_middle = false;
+            // bool button_right  = false;
+            // double lastx       = 0;
+            // double lasty       = 0;
 
-            bool pause = false;
+            // bool pause = false;
 
-            static constexpr int WINDOW_WIDTH_DEFAULT  = 1200;
-            static constexpr int WINDOW_LENGTH_DEFAULT = 900;
+            // static constexpr int WINDOW_WIDTH_DEFAULT  = 1200;
+            // static constexpr int WINDOW_LENGTH_DEFAULT = 900;
             // ------ Mujoco Debug ----- //
     };
 
