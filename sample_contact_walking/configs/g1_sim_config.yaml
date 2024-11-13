@@ -183,8 +183,8 @@ onboard:
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model
-          # model_xml_path: basic_scene.xml
-          model_xml_path: stairs_scene.xml
+          model_xml_path: basic_scene.xml
+          # model_xml_path: stairs_scene.xml
           # model_xml_path: g1_29dof_with_hand.xml
           # n_u: 129
           # time_step: 0.0005

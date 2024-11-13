@@ -28,7 +28,7 @@ Position and velocity actuators added. -->
     <!-- Hip Roll -->
     <default class="hip_roll_pos">
       <!-- <position kp="700" ctrllimited="false"/> -->
-      <position kp="160" ctrllimited="false"/>
+      <position kp="200" ctrllimited="false"/>
       <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="hip_roll_vel">
@@ -40,12 +40,12 @@ Position and velocity actuators added. -->
     <!-- Hip Yaw -->
     <default class="hip_yaw_pos">
       <!-- <position kp="700" ctrllimited="false"/> -->
-      <position kp="120" ctrllimited="false"/>
+      <position kp="160" ctrllimited="false"/>
       <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="hip_yaw_vel">
       <!-- <position kv="0" ctrllimited="false"/> -->
-      <position kv="2" ctrllimited="false"/>
+      <position kv="3" ctrllimited="false"/>
       <!-- <position kv="3" ctrllimited="false"/> -->
     </default>
 
@@ -69,7 +69,7 @@ Position and velocity actuators added. -->
     </default>
     <default class="ankle_pitch_vel">
       <!-- <position kv="3" ctrllimited="false"/> -->
-      <position kv="2" ctrllimited="false"/>
+      <position kv="3" ctrllimited="false"/>
       <!-- <position kv="0" ctrllimited="false"/> -->
     </default>
 
