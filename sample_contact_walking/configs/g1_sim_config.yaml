@@ -17,11 +17,11 @@ onboard:
         default_stand_foot_height: 0.005 #0.01
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.01 #0.012 #0.01
+        mpc_loop_period_sec: 0.01 # Can run closer to 8-9 ms now
         max_mpc_solves: -500 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.4 #0.25
-        first_swing_time: 5.0 #0.5
+        first_swing_time: 0.5 #5.0 #0.5
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs

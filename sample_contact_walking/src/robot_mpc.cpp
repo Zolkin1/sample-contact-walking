@@ -360,6 +360,12 @@ namespace robot
                     }
                 }
 
+                // Every tenth solve check to see if the user wants to print stats
+                if (mpc_->GetTotalSolves() % 10 == 0 && print_timings_) {
+                    mpc_->PrintAggregateStats();
+                    print_timings_ = false;
+                }
+
                 // TODO: If this is slow, then I need to move it
                 PublishTrajViz(traj_mpc_, viz_frames_);
             } else {
@@ -1029,6 +1035,7 @@ namespace robot
         static rclcpp::Time last_menu_press = this->now();
         static rclcpp::Time last_A_press = this->now();
         static rclcpp::Time last_X_press = this->now();
+        static rclcpp::Time last_B_press = this->now();
         static rclcpp::Time last_target_update = this->now();
 
         if (msg.buttons[MENU] && (this->now() - last_menu_press).seconds() > 1e-1) {
@@ -1036,6 +1043,7 @@ namespace robot
                 "Press (X) to toggle between MPC and PD to the initial condition.\n"
                 "Press (A) to print the current settings.\n"
                 "Press (Y) to cycle through gaits.\n"
+                "Press (B) to print the MPC timing statistics.\n"
                 "Press the vertical DPAD to adjust the nominal standing height.\n"
                 "Right joystick to change the target angle.\n"
                 "Left joystick to adjust the desired velocity.");
@@ -1053,6 +1061,10 @@ namespace robot
             }
 
             last_X_press = this->now();
+        }
+
+        if (msg.buttons[B] && (this->now() - last_B_press).seconds() > 2e-1) {
+            print_timings_ = true;
         }
 
         if (msg.buttons[A] && (this->now() - last_A_press).seconds() > 1e-1) {

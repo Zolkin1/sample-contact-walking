@@ -1,3 +1,5 @@
+#include <atomic>
+
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include "rclcpp/rclcpp.hpp"
@@ -86,6 +88,8 @@ namespace robot {
 
             ControllerState ctrl_state_;
 
+            std::atomic<bool> print_timings_;
+
             // Mutexes
             std::mutex est_state_mut_;
             std::mutex traj_out_mut_;
@@ -139,33 +143,6 @@ namespace robot {
 
             // broadcasters
             std::shared_ptr<tf2_ros::StaticTransformBroadcaster> torso_mocap_broadcaster_;
-
-            // TODO: Remove
-            // ------ Mujoco Debug ----- //
-            // mjModel* mj_model_;
-            // mjData* data_;
-            // mjvCamera cam;          // abstract camera
-            // mjvOption opt;          // visualization options
-            // mjvScene scn;           // abstract scene
-            // mjrContext con;         // custom GPU context
-
-            // std::atomic<bool> sim_ready_;
-            // std::mutex mj_data_mut_;
-
-            // GLFWwindow* window;
-
-            // // mouse interaction
-            // bool button_left   = false;
-            // bool button_middle = false;
-            // bool button_right  = false;
-            // double lastx       = 0;
-            // double lasty       = 0;
-
-            // bool pause = false;
-
-            // static constexpr int WINDOW_WIDTH_DEFAULT  = 1200;
-            // static constexpr int WINDOW_LENGTH_DEFAULT = 900;
-            // ------ Mujoco Debug ----- //
     };
 
     MpcController* MpcController::mujoco_sim_instance_ = nullptr;

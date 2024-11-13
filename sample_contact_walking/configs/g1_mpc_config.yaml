@@ -1,6 +1,6 @@
 general_settings:
   nodes: 32
-  verbose: True #True
+  verbose: False #True
   node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
   node_dt: 0.025 #0.025
   first_node_dt: 0.01 
@@ -22,7 +22,7 @@ solver_settings:
   sigma: 1e-6
   adaptive_rho: False
   max_iter: 20 #20
-  scaling: 10
+  scaling: 7 #10 # Solve gets faster as scaling goes down, but also the quality gets worse. There is a balance
 constraints:
   friction_coef: 0.6 #0.7  # TODO: Tune this
   friction_margin: 2
