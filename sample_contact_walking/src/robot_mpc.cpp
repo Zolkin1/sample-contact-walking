@@ -226,7 +226,7 @@ namespace robot
             }
         }
 
-        if (!recieved_first_state_ && q_.size() == mpc_model_->GetConfigDim() && v_.size() == mpc_model_->GetVelDim() && q_.segment<QUAT_VARS>(POS_VARS).norm() > 0.99) {
+        if (!recieved_first_state_ && q_.size() == mpc_model_->GetConfigDim() && v_.size() == mpc_model_->GetVelDim() && q_.segment<QUAT_VARS>(POS_VARS).norm() > 0.95) {
             RCLCPP_INFO_STREAM(this->get_logger(), "Recieved first message! q: " << q_.transpose());
             recieved_first_state_ = true;
         }
@@ -324,7 +324,7 @@ namespace robot
                     }
                 }
                 
-                // TODO: Remove with the refernece generator below!
+                // TODO: Put back!
                 if (!fixed_target_ || controller_target_) {
                     UpdateMpcTargets(q);
                     mpc_->SetConfigTarget(q_target_.value());
@@ -455,6 +455,10 @@ namespace robot
                 tau = tau_map;
             }
 
+            // TODO: Remove
+            // tau.setZero();
+            // tau = tau/1.25;
+
             // Make the message
             vectorx_t u_mujoco = ConvertControlToMujocoU(q.tail(model_->GetNumInputs()),
                 v.tail(model_->GetNumInputs()), tau);
@@ -512,19 +516,47 @@ namespace robot
         q_target_.value()[0](1) = q(1);
         q_target_.value()[0](2) = z_target_;
 
+        const quat_t q_quat(q.segment<QUAT_VARS>(POS_VARS));
+        vector3_t euler_angles = q_quat.toRotationMatrix().eulerAngles(2, 1, 0);
+
+        // quat_t yaw_quaternion(Eigen::AngleAxisd(euler_angles[2], Eigen::Vector3d::UnitZ()));
+        quat_t yaw_quaternion(q_quat.w(), 0, 0, q_quat.z()); 
+
+        // RCLCPP_INFO_STREAM(this->get_logger(), "yaw: " << euler_angles[2]);
+        // RCLCPP_INFO_STREAM(this->get_logger(), "q: " << q.transpose());
+
+        // TODO: Put back
+        q_target_.value()[0](3) = yaw_quaternion.x();
+        q_target_.value()[0](4) = yaw_quaternion.y();
+        q_target_.value()[0](5) = yaw_quaternion.z();
+        q_target_.value()[0](6) = yaw_quaternion.w();
+
+        // RCLCPP_INFO_STREAM(this->get_logger(), "q target: " << q_target_.value()[0].transpose());
+
         for (int i = 1; i < q_target_->GetNumNodes(); i++) {
             const quat_t quat(q_target_.value()[i-1].segment<QUAT_VARS>(POS_VARS));
             const matrix3_t R = quat.toRotationMatrix();
-            const vector3_t v = R*v_target_.value()[i].head<POS_VARS>();
+            vectorx_t v = v_target_.value()[i];
 
-            q_target_.value()[i](0) = q_target_.value()[i - 1](0) + dt_vec[i-1]*v(0);
-            q_target_.value()[i](1) = q_target_.value()[i - 1](1) + dt_vec[i-1]*v(1);
+            // TODO Investigate more if I need this term!
+            // v.head<POS_VARS>() = R*v_target_.value()[i].head<POS_VARS>();
+
+
+            // RCLCPP_INFO_STREAM(this->get_logger(), "v_target: " << v_target_.value()[i].head<POS_VARS>().transpose());
+
+            // q_target_.value()[i](0) = q_target_.value()[i - 1](0) + dt_vec[i-1]*v(0);
+            // q_target_.value()[i](1) = q_target_.value()[i - 1](1) + dt_vec[i-1]*v(1);
+            // q_target_.value()[i](2) = z_target_;
+
+            // Update the desired orientation
+            // Integrate the velocity quat
+            // q_target_.value()[i]()
+            q_target_.value()[i] = pinocchio::integrate(mpc_model_->GetModel(), q_target_.value()[i-1], dt_vec[i-1]*v);
             q_target_.value()[i](2) = z_target_;
         }
-        
+        // RCLCPP_INFO_STREAM(this->get_logger(), "q target: " << q_target_.value()[0].transpose());
 
         // In the future, we will want to be able to update the z height, and orientation
-        // Also in the future we will get inputs from the joystick
     }
 
     std::string MpcController::GetStateString(const ControllerState& state) {
@@ -635,7 +667,8 @@ namespace robot
                 force_msg.markers[i].colors.push_back(color);
                 force_msg.markers[i].colors.push_back(color);
             }
-
+            
+            // TODO: Merge this publish with the one above
             this->GetPublisher<visualization_msgs::msg::MarkerArray>("viz_pub")->publish(force_msg);
         }
     }
@@ -776,25 +809,30 @@ namespace robot
         // }
 
         // ---------- G1 ---------- //
-        std::lock_guard<std::mutex> lock(traj_out_mut_);
-
         obelisk_estimator_msgs::msg::EstimatedState msg;
+
+        vectorx_t q = vectorx_t::Zero(mpc_model_->GetConfigDim());
+        vectorx_t v = vectorx_t::Zero(mpc_model_->GetVelDim());
 
         double time = this->get_clock()->now().seconds();
         // TODO: Do I need to use nanoseconds?
         // double time_into_traj = 0.75;
-        double time_into_traj = time - traj_start_time_;
-        // double time_into_traj = 0;
+        {
+            std::lock_guard<std::mutex> lock(traj_out_mut_);
+            double time_into_traj = time - traj_start_time_;
+            // RCLCPP_INFO_STREAM(this->get_logger(), "Time: " << time);
+            // RCLCPP_INFO_STREAM(this->get_logger(), "Traj start time: " << traj_start_time_);
+            // double time_into_traj = 0;
 
-        // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
-        vectorx_t q = vectorx_t::Zero(mpc_model_->GetConfigDim());
-        vectorx_t v = vectorx_t::Zero(mpc_model_->GetVelDim());
-        if (GetState() == Mpc) {
-            traj_out_.GetConfigInterp(time_into_traj, q);
-            traj_out_.GetVelocityInterp(time_into_traj, v);
-        } else {
-            q = q_ic_;
-            v = v_ic_;
+            // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj)
+            if (GetState() == Mpc) {
+                // RCLCPP_WARN_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
+                traj_out_.GetConfigInterp(time_into_traj, q);
+                traj_out_.GetVelocityInterp(time_into_traj, v);
+            } else {
+                q = q_ic_;
+                v = v_ic_;
+            }
         }
 
         // traj_out_.GetConfigInterp(0.01, q);
@@ -1086,14 +1124,19 @@ namespace robot
                 z_target_ -= 0.005;
             }
 
-            // For now the joy stick in one ot one in velocity
+            // For now the joy stick in one to one in velocity
             // In the future we may want to cap the speed above or below 1 and/or we may want a different curve to map them (i.e. log or quadratic)
             for (int i = 0; i < v_target_.value().GetNumNodes(); i++) {
                 // TODO: Add some kind of "damping" so the target velocity doesnt change too much
                 v_target_.value()[i](0) = msg.axes[LEFT_JOY_VERT];
                 v_target_.value()[i](1) = msg.axes[LEFT_JOY_HORZ];
             }
+            
             // TODO: Add a angular velocity target too using the right joystick
+            for (int i = 0; i < v_target_.value().GetNumNodes(); i++) {
+                v_target_.value()[i](5) = 0.5*msg.axes[RIGHT_JOY_HORZ];
+            }
+
         }
     }
 
