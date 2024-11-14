@@ -455,10 +455,6 @@ namespace robot
                 tau = tau_map;
             }
 
-            // TODO: Remove
-            // tau.setZero();
-            // tau = tau/1.25;
-
             // Make the message
             vectorx_t u_mujoco = ConvertControlToMujocoU(q.tail(model_->GetNumInputs()),
                 v.tail(model_->GetNumInputs()), tau);
@@ -525,7 +521,6 @@ namespace robot
         // RCLCPP_INFO_STREAM(this->get_logger(), "yaw: " << euler_angles[2]);
         // RCLCPP_INFO_STREAM(this->get_logger(), "q: " << q.transpose());
 
-        // TODO: Put back
         q_target_.value()[0](3) = yaw_quaternion.x();
         q_target_.value()[0](4) = yaw_quaternion.y();
         q_target_.value()[0](5) = yaw_quaternion.z();
@@ -1134,7 +1129,7 @@ namespace robot
             
             // TODO: Add a angular velocity target too using the right joystick
             for (int i = 0; i < v_target_.value().GetNumNodes(); i++) {
-                v_target_.value()[i](5) = 0.5*msg.axes[RIGHT_JOY_HORZ];
+                v_target_.value()[i](5) = 1*msg.axes[RIGHT_JOY_HORZ];
             }
 
         }

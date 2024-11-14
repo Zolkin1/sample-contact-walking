@@ -128,7 +128,9 @@ namespace robot {
             Eigen::Quaterniond base_quat(base_quat_.w(), base_quat_.x(), base_quat_.y(), base_quat_.z());
             // TODO: Double check this conversion
             local_vel.head<POS_VARS>() = base_quat.toRotationMatrix().transpose() * v_world_linear;
-            local_vel.tail<POS_VARS>() = base_quat.toRotationMatrix().transpose() * v_world_angular;
+            // local_vel.tail<POS_VARS>() = base_quat.toRotationMatrix().transpose() * v_world_angular;
+            local_vel.tail<POS_VARS>() = v_world_angular;
+
             // local_vel.head<POS_VARS>() = v_world_linear;
             // local_vel.tail<POS_VARS>() = v_world_angular;
 
