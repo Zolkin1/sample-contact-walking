@@ -121,15 +121,14 @@ namespace robot {
             // Assign v_base from the true sim state
             // Need to rotate in to the local frame
             Eigen::Map<vector3_t> v_world_linear(base_vel_.data());
-            Eigen::Map<vector3_t> v_world_angular(base_vel_.data() + 3);
+            Eigen::Map<vector3_t> v_local_angular(base_vel_.data() + 3);
 
             vector6_t local_vel;
 
             Eigen::Quaterniond base_quat(base_quat_.w(), base_quat_.x(), base_quat_.y(), base_quat_.z());
             // TODO: Double check this conversion
             local_vel.head<POS_VARS>() = base_quat.toRotationMatrix().transpose() * v_world_linear;
-            // local_vel.tail<POS_VARS>() = base_quat.toRotationMatrix().transpose() * v_world_angular;
-            local_vel.tail<POS_VARS>() = v_world_angular;
+            local_vel.tail<POS_VARS>() = v_local_angular;
 
             // local_vel.head<POS_VARS>() = v_world_linear;
             // local_vel.tail<POS_VARS>() = v_world_angular;

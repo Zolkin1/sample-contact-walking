@@ -264,10 +264,6 @@ namespace robot
                         v = v_;
                     }
 
-                    // TODO: Remove
-                    q = q_ic_;
-                    v = v_ic_;
-
                     // TODO: Fix the state for when we re-enter this loop
                     double time = this->now().seconds();
                     mpc_->ComputeNLP(q, v, traj_mpc_);
@@ -324,7 +320,6 @@ namespace robot
                     }
                 }
                 
-                // TODO: Put back!
                 if (!fixed_target_ || controller_target_) {
                     UpdateMpcTargets(q);
                     mpc_->SetConfigTarget(q_target_.value());
@@ -518,40 +513,19 @@ namespace robot
         // quat_t yaw_quaternion(Eigen::AngleAxisd(euler_angles[2], Eigen::Vector3d::UnitZ()));
         quat_t yaw_quaternion(q_quat.w(), 0, 0, q_quat.z()); 
 
-        // RCLCPP_INFO_STREAM(this->get_logger(), "yaw: " << euler_angles[2]);
-        // RCLCPP_INFO_STREAM(this->get_logger(), "q: " << q.transpose());
-
         q_target_.value()[0](3) = yaw_quaternion.x();
         q_target_.value()[0](4) = yaw_quaternion.y();
         q_target_.value()[0](5) = yaw_quaternion.z();
         q_target_.value()[0](6) = yaw_quaternion.w();
-
-        // RCLCPP_INFO_STREAM(this->get_logger(), "q target: " << q_target_.value()[0].transpose());
 
         for (int i = 1; i < q_target_->GetNumNodes(); i++) {
             const quat_t quat(q_target_.value()[i-1].segment<QUAT_VARS>(POS_VARS));
             const matrix3_t R = quat.toRotationMatrix();
             vectorx_t v = v_target_.value()[i];
 
-            // TODO Investigate more if I need this term!
-            // v.head<POS_VARS>() = R*v_target_.value()[i].head<POS_VARS>();
-
-
-            // RCLCPP_INFO_STREAM(this->get_logger(), "v_target: " << v_target_.value()[i].head<POS_VARS>().transpose());
-
-            // q_target_.value()[i](0) = q_target_.value()[i - 1](0) + dt_vec[i-1]*v(0);
-            // q_target_.value()[i](1) = q_target_.value()[i - 1](1) + dt_vec[i-1]*v(1);
-            // q_target_.value()[i](2) = z_target_;
-
-            // Update the desired orientation
-            // Integrate the velocity quat
-            // q_target_.value()[i]()
             q_target_.value()[i] = pinocchio::integrate(mpc_model_->GetModel(), q_target_.value()[i-1], dt_vec[i-1]*v);
             q_target_.value()[i](2) = z_target_;
         }
-        // RCLCPP_INFO_STREAM(this->get_logger(), "q target: " << q_target_.value()[0].transpose());
-
-        // In the future, we will want to be able to update the z height, and orientation
     }
 
     std::string MpcController::GetStateString(const ControllerState& state) {
