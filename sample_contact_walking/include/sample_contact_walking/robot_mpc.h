@@ -15,6 +15,7 @@ namespace robot {
     using torc::mpc::vector3_t;
     using torc::mpc::quat_t;
     using torc::mpc::matrix3_t;
+    using torc::mpc::matrixx_t;
 
     class MpcController : public obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState> {
         public:
@@ -36,6 +37,9 @@ namespace robot {
             // MPC Targets
             // TODO: Update when I have joystick access
             void UpdateMpcTargets(const vectorx_t& q);
+
+            // Updating contact info
+            void UpdateContactPolytopes();
 
             // Joystick interface
             void JoystickCallback(const sensor_msgs::msg::Joy& msg);

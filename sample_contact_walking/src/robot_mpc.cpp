@@ -302,6 +302,7 @@ namespace robot
                     }
 
                     prev_time = this->now();
+                    UpdateContactPolytopes();
                     mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
                         this->get_parameter("default_swing_height").as_double(),
                         stance_height,
@@ -526,6 +527,19 @@ namespace robot
             q_target_.value()[i] = pinocchio::integrate(mpc_model_->GetModel(), q_target_.value()[i-1], dt_vec[i-1]*v);
             q_target_.value()[i](2) = z_target_;
         }
+    }
+
+    void MpcController::UpdateContactPolytopes() {
+        matrixx_t A_temp = matrixx_t::Identity(2, 2);
+        Eigen::Vector4d b_temp = Eigen::Vector4d::Zero();
+        b_temp << 10, 10, 10, 10;
+        for (const auto& frame : mpc_->GetContactFrames()) {
+            // TODO: Populate this with info from the other layer
+            for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
+                contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
+            }
+        }
+
     }
 
     std::string MpcController::GetStateString(const ControllerState& state) {
