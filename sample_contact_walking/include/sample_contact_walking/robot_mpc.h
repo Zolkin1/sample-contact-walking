@@ -81,6 +81,7 @@ namespace robot {
 
             // Viz information
             std::vector<std::string> viz_frames_;
+            std::vector<std::string> viz_polytope_frames_;
 
             // State flags
             bool recieved_first_state_;
@@ -112,6 +113,10 @@ namespace robot {
             // vectorx_t v_target_;
             bool fixed_target_;
             bool controller_target_;
+
+            // Foot step polytopes
+            std::mutex polytope_mutex_;
+            std::map<std::string, std::vector<torc::mpc::ContactInfo>> contact_polytopes_;
 
             vectorx_t q_ic_;
             vectorx_t v_ic_;

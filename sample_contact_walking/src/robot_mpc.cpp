@@ -146,6 +146,18 @@ namespace robot
             time += traj_out_.GetDtVec()[i];
         }
 
+        // Contact Polytope defaults
+        matrixx_t A_temp = matrixx_t::Identity(2, 2);
+        Eigen::Vector4d b_temp = Eigen::Vector4d::Zero();
+        b_temp << 10, 10, -10, -10;
+        for (const auto& frame : mpc_->GetContactFrames()) {
+            contact_polytopes_.insert({frame, {}});
+            for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
+                contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
+                contact_polytopes_[frame].emplace_back((A_temp, b_temp));
+            }
+        }
+
         mpc_->SetWarmStartTrajectory(traj_out_);
         traj_mpc_ = traj_out_;
         RCLCPP_INFO_STREAM(this->get_logger(), "Warm start trajectory created...");
@@ -174,6 +186,13 @@ namespace robot
         viz_forces_ = this->get_parameter("viz_forces").as_bool();
         scale_forces_ = this->get_parameter("viz_force_scale").as_double();
         this->get_parameter("force_frames", force_frames_);
+
+        for (const auto& frame : force_frames_) {
+            std::cout << "Force frame: " << frame << std::endl;
+        }
+
+        this->declare_parameter<std::vector<std::string>>("polytope_frames", {""});
+        this->get_parameter("polytope_frames", viz_polytope_frames_);
 
         // Spin up MPC thread
         mpc_thread_ = std::thread(&MpcController::MpcThread, this);
@@ -530,13 +549,21 @@ namespace robot
     }
 
     void MpcController::UpdateContactPolytopes() {
+        std::lock_guard<std::mutex> lock(polytope_mutex_);
         matrixx_t A_temp = matrixx_t::Identity(2, 2);
         Eigen::Vector4d b_temp = Eigen::Vector4d::Zero();
-        b_temp << 10, 10, 10, 10;
+        b_temp << 10, 10, -10, -10;
         for (const auto& frame : mpc_->GetContactFrames()) {
-            // TODO: Populate this with info from the other layer
             for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-                contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
+                if (i < contact_polytopes_[frame].size()) {
+                    contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
+                    contact_polytopes_[frame].emplace_back((A_temp, b_temp));
+                    // contact_schedule_.SetPolytope(frame, i, contact_polytopes_[frame][i].A_, contact_polytopes_[frame][i].b_);
+                } else {    // TODO: Should be able to remove this logic when the full stack is in
+                    contact_polytopes_[frame].emplace_back((contact_polytopes_[frame][i-1].A_, contact_polytopes_[frame][i-1].b_));
+                    contact_schedule_.SetPolytope(frame, i, contact_polytopes_[frame][i].A_, contact_polytopes_[frame][i].b_);
+                    // contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
+                }
             }
         }
 
@@ -560,8 +587,14 @@ namespace robot
 
     void MpcController::PublishTrajViz(const torc::mpc::Trajectory& traj, const std::vector<std::string>& viz_frames) {
         // Compute FK for each frame and add the point to a marker message
+
+        int num_polytope_markers = 0;
+        for (const auto& frame : viz_polytope_frames_) {
+            num_polytope_markers += contact_schedule_.GetNumContacts(frame);
+        }
+
         visualization_msgs::msg::MarkerArray msg;
-        msg.markers.resize(viz_frames.size());
+        msg.markers.resize(viz_frames.size() + force_frames_.size() + num_polytope_markers);
         for (int i = 0; i < viz_frames.size(); i++) {
             msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
             msg.markers[i].header.frame_id = "world";
@@ -599,37 +632,37 @@ namespace robot
             }
         }
 
-        this->GetPublisher<visualization_msgs::msg::MarkerArray>("viz_pub")->publish(msg);
+        // this->GetPublisher<visualization_msgs::msg::MarkerArray>("viz_pub")->publish(msg);
 
         // Publish force arrows
         if (viz_forces_ && traj_start_time_ >= 0) {
-            visualization_msgs::msg::MarkerArray force_msg;
-            force_msg.markers.resize(force_frames_.size());
+            // visualization_msgs::msg::MarkerArray force_msg;
+            // force_msg.markers.resize(force_frames_.size());
             mpc_model_->FirstOrderFK(traj.GetConfiguration(0));
-            for (int i = 0; i < force_frames_.size(); i++) {
-                force_msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
-                force_msg.markers[i].header.frame_id = "world";
-                force_msg.markers[i].header.stamp = this->now();
-                force_msg.markers[i].ns = "mpc_force_viz";
-                force_msg.markers[i].id = i;
-                force_msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
+            for (int i = viz_frames.size(); i < force_frames_.size() + viz_frames.size(); i++) {
+                msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
+                msg.markers[i].header.frame_id = "world";
+                msg.markers[i].header.stamp = this->now();
+                msg.markers[i].ns = "mpc_force_viz";
+                msg.markers[i].id = i;
+                msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
 
-                force_msg.markers[i].scale.x = 0.01; // Width of the arrows
+                msg.markers[i].scale.x = 0.01; // Width of the arrows
 
-                vector3_t frame_pos = mpc_model_->GetFrameState(force_frames_[i]).placement.translation();
+                vector3_t frame_pos = mpc_model_->GetFrameState(force_frames_[i - viz_frames_.size()]).placement.translation();
                 geometry_msgs::msg::Point start_point;
                 start_point.x = frame_pos(0);
                 start_point.y = frame_pos(1);
                 start_point.z = frame_pos(2);
 
-                force_msg.markers[i].points.emplace_back(start_point);
+                msg.markers[i].points.emplace_back(start_point);
 
                 vector3_t force_interp;
                 {
                     double time = this->get_clock()->now().seconds();
                     double time_into_traj = time - traj_start_time_;
                     std::lock_guard<std::mutex> lock(traj_out_mut_);
-                    traj_out_.GetForceInterp(time_into_traj, force_frames_[i], force_interp);
+                    traj_out_.GetForceInterp(time_into_traj, force_frames_[i - viz_frames_.size()], force_interp);
                 }
 
 
@@ -638,7 +671,7 @@ namespace robot
                 end_point.y = start_point.y + force_interp(1)*scale_forces_;
                 end_point.z = start_point.z + force_interp(2)*scale_forces_;
 
-                force_msg.markers[i].points.emplace_back(end_point);
+                msg.markers[i].points.emplace_back(end_point);
 
                 // *** Note *** The color is according to the node number, not necessarily the dt
                 // Color according to node
@@ -647,13 +680,79 @@ namespace robot
                 color.g = 0;
                 color.b = 1;
                 color.a = 1;
-                force_msg.markers[i].colors.push_back(color);
-                force_msg.markers[i].colors.push_back(color);
+                msg.markers[i].colors.push_back(color);
+                msg.markers[i].colors.push_back(color);
             }
             
             // TODO: Merge this publish with the one above
-            this->GetPublisher<visualization_msgs::msg::MarkerArray>("viz_pub")->publish(force_msg);
+            // this->GetPublisher<visualization_msgs::msg::MarkerArray>("viz_pub")->publish(msg);            
         }
+
+        int i = viz_frames.size() + force_frames_.size();
+        for (const auto& frame : viz_polytope_frames_) {
+            // Visualize contact polytopes
+            std::vector<torc::mpc::ContactInfo> polytope_vec;
+            {
+                // Grab the contact polytopes
+                std::lock_guard<std::mutex> lock(polytope_mutex_);
+
+                polytope_vec = contact_schedule_.GetPolytopes(frame);
+            }
+            
+            for (const auto& polytope : polytope_vec) {
+
+                msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
+                msg.markers[i].header.frame_id = "world";
+                msg.markers[i].header.stamp = this->now();
+                msg.markers[i].ns = "contact_polytope";
+                msg.markers[i].id = i;
+                msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
+
+                msg.markers[i].scale.x = 0.1;
+
+                std_msgs::msg::ColorRGBA color;
+                color.r = 1;
+                color.g = 0;
+                color.b = 1;
+                color.a = 1;
+
+                // TODO: Do better
+                // TODO: Check this to make sure it will work for more than the default polytope
+                geometry_msgs::msg::Point corner;
+                corner.z = 0;
+
+                // std::cout << "b: " << polytope.b_.transpose() << std::endl;
+                corner.x = polytope.b_(0);
+                corner.y = polytope.b_(1);
+                msg.markers[i].points.emplace_back(corner);
+                msg.markers[i].colors.push_back(color);
+
+                corner.x = polytope.b_(0);
+                corner.y = polytope.b_(3);
+                msg.markers[i].points.emplace_back(corner);
+                msg.markers[i].colors.push_back(color);
+
+                corner.x = polytope.b_(2);
+                corner.y = polytope.b_(3);
+                msg.markers[i].points.emplace_back(corner);
+                msg.markers[i].colors.push_back(color);
+
+                corner.x = polytope.b_(2);
+                corner.y = polytope.b_(1);
+                msg.markers[i].points.emplace_back(corner);
+                msg.markers[i].colors.push_back(color);
+
+                corner.x = polytope.b_(0);
+                corner.y = polytope.b_(1);
+                msg.markers[i].points.emplace_back(corner);
+                msg.markers[i].colors.push_back(color);
+
+
+                i++;
+            }
+        }
+
+        this->GetPublisher<visualization_msgs::msg::MarkerArray>("viz_pub")->publish(msg);            
     }
 
     void MpcController::PublishTrajStateViz() {
@@ -962,6 +1061,11 @@ namespace robot
 
             next_left_insertion_time_ += 2*swing_time_;
         }
+
+        contact_schedule_.CleanContacts(-0.1);
+        // for (const auto& frame : mpc_->GetContactFrames()) {
+        //     std::cout << frame << " num Contacts: " << contact_schedule_.GetNumContacts(frame) << std::endl;
+        // }
     }
 
     void MpcController::ParseContactParameters() {

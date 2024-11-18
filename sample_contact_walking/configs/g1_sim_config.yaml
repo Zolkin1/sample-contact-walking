@@ -12,13 +12,14 @@ onboard:
         viz_forces: True
         viz_force_scale: 0.01
         force_frames: ["left_toe", "left_heel", "right_toe", "right_heel"]
+        polytope_frames: ["left_toe", "right_toe"]
 # ---------- Swing trajectory ---------- #
         default_swing_height: 0.08 # 0.1
         default_stand_foot_height: 0.005 #0.01
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
         mpc_loop_period_sec: 0.013 #0.01 # Can run closer to 8-9 ms now
-        max_mpc_solves: -500 #125 
+        max_mpc_solves: -25 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.4 #0.25
         first_swing_time: 2. #0.5 #5.0 #0.5
