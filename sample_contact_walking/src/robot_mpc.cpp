@@ -689,6 +689,7 @@ namespace robot
         }
 
         int i = viz_frames.size() + force_frames_.size();
+        int frame_idx = 0;
         for (const auto& frame : viz_polytope_frames_) {
             // Visualize contact polytopes
             std::vector<torc::mpc::ContactInfo> polytope_vec;
@@ -699,6 +700,19 @@ namespace robot
                 polytope_vec = contact_schedule_.GetPolytopes(frame);
             }
             
+            std_msgs::msg::ColorRGBA color;
+            if (frame_idx % 2 == 0) {
+                color.r = 1;
+                color.g = 0;
+                color.b = 1;
+                color.a = 1;
+            } else {
+                color.r = 1;
+                color.g = 1;
+                color.b = 0;
+                color.a = 1;
+            }
+
             for (const auto& polytope : polytope_vec) {
 
                 msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
@@ -708,13 +722,7 @@ namespace robot
                 msg.markers[i].id = i;
                 msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
 
-                msg.markers[i].scale.x = 0.1;
-
-                std_msgs::msg::ColorRGBA color;
-                color.r = 1;
-                color.g = 0;
-                color.b = 1;
-                color.a = 1;
+                msg.markers[i].scale.x = 0.05;
 
                 // TODO: Do better
                 // TODO: Check this to make sure it will work for more than the default polytope
@@ -750,6 +758,8 @@ namespace robot
 
                 i++;
             }
+
+            frame_idx++;
         }
 
         this->GetPublisher<visualization_msgs::msg::MarkerArray>("viz_pub")->publish(msg);            
