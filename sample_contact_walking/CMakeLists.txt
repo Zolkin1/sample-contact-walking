@@ -16,7 +16,7 @@ find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(std_msgs REQUIRED)
+find_package(sample_contact_msgs REQUIRED)
 # find_package(obelisk_estimator_msgs REQUIRED)
 
 # ------- Fetch the Obelisk library ------- #
@@ -42,21 +42,6 @@ message(STATUS TORC_)
 # ------- Pinocchio ------- #
 find_package(pinocchio 3.0.0 REQUIRED)
 
-# ------- Messages --------- #
-rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/ContactInfo.msg"
-  "msg/ContactPolytope.msg"
-  "msg/ContactSchedule.msg"
-  DEPENDENCIES
-  std_msgs
-)
-
-set(THIS_PACKAGE_INCLUDE_DEPENDS
-  ament_cmake
-  std_msgs
-  rosidl_default_generators
-)
-
 # ------- Executables ------- #
 include_directories(include)
 ament_export_include_directories(include)
@@ -70,6 +55,7 @@ ament_target_dependencies(ll_controller
     visualization_msgs
     tf2_ros
     tf2
+    sample_contact_msgs
     sensor_msgs)
 
 # ------- Estimator ------- #
@@ -102,5 +88,4 @@ if(BUILD_TESTING)
     ament_lint_auto_find_test_dependencies()
 endif()
 
-ament_export_dependencies(rosidl_default_runtime)
 ament_package()

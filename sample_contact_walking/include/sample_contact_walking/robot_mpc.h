@@ -7,6 +7,8 @@
 
 #include "sensor_msgs/msg/joy.hpp"
 
+#include "sample_contact_msgs/msg/contact_schedule.hpp"
+
 #include "full_order_mpc.h"
 // #include "cross_entropy.h"
 
@@ -45,6 +47,7 @@ namespace robot {
             void JoystickCallback(const sensor_msgs::msg::Joy& msg);
 
             // Contact schedule
+            void ContactScheduleCallback(const sample_contact_msgs::msg::ContactSchedule& msg);
             void AddPeriodicContacts();
 
             // Parse contact into

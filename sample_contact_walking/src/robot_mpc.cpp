@@ -8,7 +8,6 @@
 #include "tf2_ros/static_transform_broadcaster.h"
 
 #include "sensor_msgs/msg/joy_feedback.hpp"
-
 // TODO: remove
 #include "obelisk_estimator.h"
 
@@ -47,6 +46,11 @@ namespace robot
         this->RegisterObkSubscription<sensor_msgs::msg::Joy>(
                     "joystick_sub_setting", "joystick_sub",
                     std::bind(&MpcController::JoystickCallback, this, std::placeholders::_1));
+
+        // ----- Contact Schedule Subscriber ----- //
+        this->RegisterObkSubscription<sample_contact_msgs::msg::ContactSchedule>(
+                    "contact_schedule_sub_setting", "contact_schedule_sub",
+                    std::bind(&MpcController::ContactScheduleCallback, this, std::placeholders::_1));
 
         //  Update model
         this->declare_parameter<std::string>("urdf_path", "");
@@ -548,6 +552,7 @@ namespace robot
         }
     }
 
+    // TODO: Remove when the call back is fully set up
     void MpcController::UpdateContactPolytopes() {
         std::lock_guard<std::mutex> lock(polytope_mutex_);
         matrixx_t A_temp = matrixx_t::Identity(2, 2);
@@ -1138,6 +1143,36 @@ namespace robot
         mpc_->PrintContactSchedule();
         for (const auto& frame : mpc_->GetContactFrames()) {
             mpc_->PrintSwingTraj(frame);
+        }
+    }
+
+    void MpcController::ContactScheduleCallback(const sample_contact_msgs::msg::ContactSchedule& msg) {
+        RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Recieved first contact schedule.");
+        std::lock_guard<std::mutex> lock(polytope_mutex_);
+        for (const auto& contact_info : msg.contact_info) {
+            const std::string& frame = contact_info.robot_contact_frame;
+            if (contact_schedule_.GetScheduleMap().contains(frame)) {
+                // TODO: Grab the swing times
+
+                // Verify that the number of contact polytopes matches the number of contacts
+                if (contact_polytopes_.size() != contact_schedule_.GetNumContacts(frame)) {
+                    throw std::runtime_error("[ContactScheduleCallback] The number of contact polytopes provided is not consistent with the swing times!");
+                }
+
+                // Extract contact polytopes
+                int contact_num = 0;
+                for (const auto& polytope : contact_info.polytopes) {
+                    std::vector<double> a_mat = polytope.a_mat;
+                    // TODO: Verify these
+                    Eigen::Map<matrixx_t> A(a_mat.data(), 4, 3);
+                    Eigen::Vector4d b(polytope.b_vec.data());
+                    contact_schedule_.SetPolytope(frame, contact_num, A, b);
+                    // contact_polytopes_[frame].emplace_back((A, b));
+                    contact_num++;
+                }
+            } else {
+                RCLCPP_ERROR_STREAM(this->get_logger(), frame << " is not a valid frame for the MPC contacts.");
+            }
         }
     }
 

@@ -103,7 +103,9 @@ onboard:
         # ----- Joystick subscriber ----- #
         - ros_parameter: joystick_sub_setting
           topic: /obelisk/g1/joy
-
+        # ----- Contact Schedule subscriber ----- #
+        - ros_parameter: contact_schedule_sub_setting
+          topic: /obelisk/g1/contact_schedule
       timers:
         # Low level control timer
         - ros_parameter: timer_ctrl_setting
@@ -113,6 +115,24 @@ onboard:
         - ros_parameter: state_viz_timer_setting
           timer_period_sec: 0.002
           callback_group: None
+    - pkg: contact_planning
+      publishers:
+        # Low level controller publisher
+        - ros_parameter: pub_ctrl_setting
+          topic: /obelisk/g1/low_level_control
+          history_depth: 10
+          non_obelisk: False
+      subscribers:
+        - ros_parameter: sub_est_setting
+          topic: /obelisk/g1/est_state # est_state, target_state
+          history_depth: 10
+          callback_group: estimation_cbg
+          non_obelisk: False
+      timers:
+        # Low level control timer
+        - ros_parameter: timer_ctrl_setting
+          timer_period_sec: 0.001
+          callback_group: control_cbg
   estimation:
     - pkg: sample_contact_walking
       executable: state_estimator

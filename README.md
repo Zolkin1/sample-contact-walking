@@ -15,6 +15,10 @@ Build and activate Obelisk:
 ```
 obk
 ```
+Build the messages pacakge first:
+```
+colcon build --symlink-install --packages-select sample_contact_msgs
+```
 
 Build all the packages:
 ```
