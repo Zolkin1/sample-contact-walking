@@ -116,20 +116,24 @@ onboard:
           timer_period_sec: 0.002
           callback_group: None
     - pkg: contact_planning
+      executable: contact_planner
       publishers:
-        # Low level controller publisher
+        # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting
-          topic: /obelisk/g1/low_level_control
+          topic: /obelisk/g1/contact_schedule
+          msg_type: ContactSchedule   # TODO: This won't work until I update Obelisk
+          key: "contact_schedule_pub"
           history_depth: 10
           non_obelisk: False
       subscribers:
         - ros_parameter: sub_est_setting
           topic: /obelisk/g1/est_state # est_state, target_state
+          msg_type: EstimatedState
           history_depth: 10
           callback_group: estimation_cbg
           non_obelisk: False
       timers:
-        # Low level control timer
+        # Contact planning timer
         - ros_parameter: timer_ctrl_setting
           timer_period_sec: 0.001
           callback_group: control_cbg
