@@ -64,8 +64,8 @@ costs:
           # 1, 1, 1,                  # Waist
           # 1, 1, 1, 1,      # Left Arm
           # 1, 1, 1, 1]      # Right Arm
-          1, 1, 1, 1,      # Left Arm
-          1, 1, 1, 1]      # Right Arm
+          0.5, 0.5, 0.5, 0.5,      # Left Arm
+          0.5, 0.5, 0.5, 0.5]      # Right Arm
   - type: VelocityTracking
     name: "VelocityTracking"
     weight: [2, 2, 2, #3, 3, 3, #5, 
@@ -74,8 +74,8 @@ costs:
             0.005, 1, 2, 0.001, 0.1, #0.001,         # Left Leg
             0.005, 1, 2, 0.001, 0.1, #0.001,         # Right Leg
             # 1, 1, 1,                  # Waist
-            0.8, 0.8, 0.8, 1,      # Left Arm
-            0.8, 0.8, 0.8, 1]      # Right Arm
+            0.2, 0.2, 0.2, 0.2,      # Left Arm
+            0.2, 0.2, 0.2, 0.2]      # Right Arm
   - type: TorqueRegularization
     name: "TorqueReg"
     weight: [0.001, 0.001, 0.001, 0.0001, 0.001, #0.001,            # Left Leg

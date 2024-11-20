@@ -559,7 +559,7 @@ namespace robot
         Eigen::Vector4d b_temp = Eigen::Vector4d::Zero();
         int frame_idx = 0;
         for (const auto& frame : mpc_->GetContactFrames()) {
-            b_temp << 1 + q_(0), 1 + q_(1), -1 + q_(0), -1 + q_(1); //10, 10, -10, -10;
+            b_temp << 10 + q_(0), 10 + q_(1), -10 + q_(0), -10 + q_(1); //10, 10, -10, -10;
             if (frame_idx % 2 == 0) {
                 b_temp = b_temp + Eigen::Vector4d::Constant(0.1*(frame_idx + 1));
             } else {
