@@ -32,8 +32,10 @@ onboard:
         target_config: [0, 0, 0.72, #0.73, #0.77, #0.793, if the height is too high we get some singularity issues
                         # 0, 0, 0, 1,
                         0, 0, 0.7, 0.7,
-                        -0.3, 0, 0, 0.52, -0.23, #0,
-                        -0.3, 0, 0, 0.52, -0.23, #0,
+                        -0.2, 0, 0, 0.4, -0.216,
+                        -0.2, 0, 0, 0.4, -0.216,
+                        # -0.3, 0, 0, 0.52, -0.23, #0,
+                        # -0.3, 0, 0, 0.52, -0.23, #0,
                         # 0, 0, 0,  # Removing the waist joints for now
                         0, 0, 0, 0.2,
                         0, 0, 0, 0.2]
@@ -121,7 +123,7 @@ onboard:
         # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting
           topic: /obelisk/g1/contact_schedule
-          msg_type: ContactSchedule   # TODO: This won't work until I update Obelisk
+          msg_type: PositionSetpoint #ContactSchedule   # TODO: This won't work until I update Obelisk
           key: "contact_schedule_pub"
           history_depth: 10
           non_obelisk: False
