@@ -557,8 +557,14 @@ namespace robot
         std::lock_guard<std::mutex> lock(polytope_mutex_);
         matrixx_t A_temp = matrixx_t::Identity(2, 2);
         Eigen::Vector4d b_temp = Eigen::Vector4d::Zero();
-        b_temp << 10, 10, -10, -10;
+        int frame_idx = 0;
         for (const auto& frame : mpc_->GetContactFrames()) {
+            b_temp << 1 + q_(0), 1 + q_(1), -1 + q_(0), -1 + q_(1); //10, 10, -10, -10;
+            if (frame_idx % 2 == 0) {
+                b_temp = b_temp + Eigen::Vector4d::Constant(0.1*(frame_idx + 1));
+            } else {
+                b_temp = b_temp + Eigen::Vector4d::Constant(-0.1*(frame_idx));
+            }
             for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
                 if (i < contact_polytopes_[frame].size()) {
                     contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
@@ -570,6 +576,8 @@ namespace robot
                     // contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
                 }
             }
+
+            frame_idx++;
         }
 
     }
@@ -718,6 +726,10 @@ namespace robot
                 color.a = 1;
             }
 
+            if (polytope_vec.size() != contact_schedule_.GetNumContacts(frame)) {
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Contact polytopes not of the correct size!");
+            }
+
             for (const auto& polytope : polytope_vec) {
 
                 msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
@@ -727,7 +739,7 @@ namespace robot
                 msg.markers[i].id = i;
                 msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
 
-                msg.markers[i].scale.x = 0.05;
+                msg.markers[i].scale.x = 0.02;
 
                 // TODO: Do better
                 // TODO: Check this to make sure it will work for more than the default polytope
