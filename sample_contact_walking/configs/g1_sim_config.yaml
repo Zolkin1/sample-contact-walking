@@ -125,6 +125,7 @@ onboard:
       executable: contact_planner
       params:
         num_nodes: 32   # Should match the MPC
+        default_polytope_size: 0.4 #0.6
       publishers:
         # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting
@@ -143,7 +144,7 @@ onboard:
       timers:
         # Contact planning timer
         - ros_parameter: timer_ctrl_setting
-          timer_period_sec: 0.1
+          timer_period_sec: 0.05 #0.1
           callback_group: control_cbg
   estimation:
     - pkg: sample_contact_walking
@@ -218,6 +219,7 @@ onboard:
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model
+          # model_xml_path: tile_scene.xml
           model_xml_path: basic_scene.xml
           # model_xml_path: stairs_scene.xml
           # model_xml_path: g1_29dof_with_hand.xml
@@ -347,9 +349,15 @@ onboard:
               base_mocap_quat_sensor: framequat
           viz_geoms:
             dt: 1
-            stair_1: box
-            stair_2: box
-            stair_3: box
+            # ----- Stair scene ----- #
+            # stair_1: box
+            # stair_2: box
+            # stair_3: box
+            # ----- Tile scene ----- #
+            # tile1: box
+            # tile2: box
+            # tile3: box
+            # tile4: box
   viz:
     on: True
     viz_tool: foxglove

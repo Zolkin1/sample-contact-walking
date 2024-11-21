@@ -21,7 +21,7 @@ solver_settings:
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6
   adaptive_rho: False
-  max_iter: 50 #50 #20 Increasing this definetly helps 40-60 seems like a good balance
+  max_iter: 80 #50 #20 Increasing this definetly helps 40-60 seems like a good balance
   scaling: 10 # Solve gets faster as scaling goes down, but also the quality gets worse. There is a balance
 constraints:
   friction_coef: 0.6 #0.7  # TODO: Tune this

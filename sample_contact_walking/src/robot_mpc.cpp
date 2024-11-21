@@ -334,10 +334,13 @@ namespace robot
                     if (!recieved_polytope_) {
                         UpdateContactPolytopes();
                     }
-                    mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
-                        this->get_parameter("default_swing_height").as_double(),
-                        stance_height,
-                        this->get_parameter("apex_time").as_double());
+                    {
+                        std::lock_guard<std::mutex> lock(polytope_mutex_);
+                        mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
+                            this->get_parameter("default_swing_height").as_double(),
+                            stance_height,
+                            this->get_parameter("apex_time").as_double());
+                    }
                     AddPeriodicContacts();
 
 

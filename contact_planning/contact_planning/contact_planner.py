@@ -35,6 +35,9 @@ class ContactPlanner(ObeliskController):
         self.q_target_base = np.zeros((7, self.num_nodes))
         self.q_target_base_global = self.q_target_base
 
+        self.declare_parameter("default_polytope_size", 0.7)
+        self.default_size = self.get_parameter("default_polytope_size").value
+
         self.received_state = False
 
     def on_configure(self, state: LifecycleState) -> TransitionCallbackReturn:
@@ -102,16 +105,12 @@ class ContactPlanner(ObeliskController):
                 for i in range(num_contacts):
                     polytope = ContactPolytope()
                     polytope.a_mat = [1., 0., 0., 1.]
-                    # polytope.b_vec = [1. + i/10 + frame_idx/4, 1. + i/10 + frame_idx/4, -1. + i/10 + frame_idx/4, -1. + i/10 + frame_idx/4]
-                    if frame_idx == 0:
-                        polytope.b_vec = [0.4 + self.q_target_base_global[0, i*nodes_per_contact], 0.4 + self.q_target_base_global[1, i*nodes_per_contact], -0.4 + self.q_target_base_global[0, i*nodes_per_contact], -0.4 + self.q_target_base_global[1, i*nodes_per_contact]]
-                    elif frame_idx == 1:
-                        polytope.b_vec = [0.4 + self.q_target_base_global[0, i*nodes_per_contact], 0.4 + self.q_target_base_global[1, i*nodes_per_contact], -0.4 + self.q_target_base_global[0, i*nodes_per_contact], -0.4 + self.q_target_base_global[1, i*nodes_per_contact]]
-                    elif frame_idx == 2:
-                        polytope.b_vec = [0.4 + self.q_target_base_global[0, i*nodes_per_contact], 0.4 + self.q_target_base_global[1, i*nodes_per_contact], -0.4 + self.q_target_base_global[0, i*nodes_per_contact], -0.4 + self.q_target_base_global[1, i*nodes_per_contact]]
-                    else:
-                        polytope.b_vec = [0.4 + self.q_target_base_global[0, i*nodes_per_contact], 0.4 + self.q_target_base_global[1, i*nodes_per_contact], -0.4 + self.q_target_base_global[0, i*nodes_per_contact], -0.4 + self.q_target_base_global[1, i*nodes_per_contact]]
-                    # self.get_logger().info(f"x: {self.q_target_base_global[0, i*nodes_per_contact]}, y: {self.q_target_base_global[1, i*nodes_per_contact]}")
+
+                    # TODO: Add the x-y offset of the feet relative to the base frame
+                    polytope.b_vec = [self.default_size + self.q_target_base_global[0, i*nodes_per_contact], 
+                                        self.default_size + self.q_target_base_global[1, i*nodes_per_contact],
+                                        -self.default_size + self.q_target_base_global[0, i*nodes_per_contact],
+                                        -self.default_size + self.q_target_base_global[1, i*nodes_per_contact]]
 
                     contact_info.polytopes.append(polytope)
 
