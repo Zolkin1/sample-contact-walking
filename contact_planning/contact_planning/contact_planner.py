@@ -1,6 +1,7 @@
 import numpy as np
 import math
 from scipy.spatial.transform import Rotation
+from scipy import sparse
 from typing import List, Optional
 
 from rclpy.executors import SingleThreadedExecutor
@@ -13,6 +14,9 @@ from rclpy.lifecycle import LifecycleState, TransitionCallbackReturn
 from obelisk_py.core.control import ObeliskController
 from obelisk_py.core.obelisk_typing import ObeliskControlMsg, ObeliskEstimatorMsg
 from sample_contact_msgs.msg import ContactInfo, ContactPolytope, ContactSchedule, CommandedTarget
+
+import mujoco
+import osqp
 
 class ContactPlanner(ObeliskController):
     """Example position setpoint controller."""
@@ -37,6 +41,23 @@ class ContactPlanner(ObeliskController):
 
         self.declare_parameter("default_polytope_size", 0.7)
         self.default_size = self.get_parameter("default_polytope_size").value
+
+
+        self.declare_parameter("mujoco_xml_path", "")
+        self.mujoco_xml_path = self.get_parameter("mujoco_xml_path").value
+
+        self.mujoco_model = mujoco.MjModel.from_xml_path(self.mujoco_xml_path)
+        self.mujoco_data = mujoco.MjData(self.mujoco_model)
+        
+        # List of geom names to be considered for footholds
+        self.declare_parameter("foothold_geoms", [""])
+        self.foothold_geoms = self.get_parameter("foothold_geoms").value
+
+        self.parse_geoms_from_mujoco(self.foothold_geoms)
+
+        # OSQP
+        self.osqp_prob = osqp.OSQP()
+        self.osqp_setup = False
 
         self.received_state = False
 
@@ -107,11 +128,17 @@ class ContactPlanner(ObeliskController):
                     polytope.a_mat = [1., 0., 0., 1.]
 
                     # TODO: Add the x-y offset of the feet relative to the base frame
-                    polytope.b_vec = [self.default_size + self.q_target_base_global[0, i*nodes_per_contact], 
-                                        self.default_size + self.q_target_base_global[1, i*nodes_per_contact],
-                                        -self.default_size + self.q_target_base_global[0, i*nodes_per_contact],
-                                        -self.default_size + self.q_target_base_global[1, i*nodes_per_contact]]
+                    # polytope.b_vec = [self.default_size + self.q_target_base_global[0, i*nodes_per_contact], 
+                    #                     self.default_size + self.q_target_base_global[1, i*nodes_per_contact],
+                    #                     -self.default_size + self.q_target_base_global[0, i*nodes_per_contact],
+                    #                     -self.default_size + self.q_target_base_global[1, i*nodes_per_contact]]
 
+                    # Compute the closest foothold
+                    # Compute this relative to the middle of the foot so that we don't get two seperate polytopes for the toe and heel
+                    desired_foothold = self.q_target_base_global[:2, i*nodes_per_contact] # TODO: Add the foot offset
+                    idx = self.compute_closest_foothold(desired_foothold)
+
+                    polytope.b_vec = self.b_vecs[idx].tolist()
                     contact_info.polytopes.append(polytope)
 
                 cs_msg.contact_info.append(contact_info)
@@ -126,7 +153,7 @@ class ContactPlanner(ObeliskController):
             # return cs_msg
     
     def command_target_callback(self, msg: CommandedTarget):
-        """Parse the user joystick command."""
+        """Parse the commanded target."""
         # TODO: Make this not hard coded
         first_dt = 0.01
         other_dt = 0.025
@@ -167,6 +194,89 @@ class ContactPlanner(ObeliskController):
                 self.q_target_base_global[3:7, i] = full_rotation.as_quat()
 
             # self.get_logger().info("Updating target!")
+
+    def compute_closest_foothold(self, desired_foothold):
+        # Iterate through each of the candidate polytopes already generated
+        min_distances = []
+        for i in range(len(self.b_vecs)):
+            # Compute the distance between the desired point and the polytopes
+            # Compute with OSQP (need to time it...)
+            min_distances.append(self.compute_min_distance(self.A_mats[i], self.b_vecs[i], desired_foothold))
+
+        # Iterate through the list and choose the geom coressponding to the geom with the smallest cost
+        min_dist = 100
+        min_idx = 100
+        for i in range(len(min_distances)):
+            # self.get_logger().info(f"Dist: {min_distances[i]}")
+            if min_distances[i] < min_dist:
+                min_dist = min_distances[i]
+                min_idx = i
+
+        # Return the index
+        return min_idx
+    
+    # For now we are making the assumption that the terrain does not move
+    def parse_geoms_from_mujoco(self, foothold_geoms: List[str]):
+        # Read in the terrain from Mujoco
+        self.b_vecs = []
+        self.A_mats = []
+
+        for geom_name in foothold_geoms:
+            geom_id = mujoco.mj_name2id(self.mujoco_model, mujoco.mjtObj.mjOBJ_GEOM, geom_name)
+
+            # Check type
+            geom_type = self.mujoco_model.geom_type[geom_id]
+            if geom_type != mujoco.mjtGeom.mjGEOM_BOX:
+                raise ValueError("The specified geom is not a box.")
+
+            # For now this will just be considering the "top" surface
+            # Create polytope representations for the relevant surfaces on the geoms
+            half_sizes = self.mujoco_model.geom_size[geom_id]
+            geom_pos = self.mujoco_model.geom_pos[geom_id]
+            # geom_rot = self.mujoco_model.geom_quat[geom_id]
+
+            # TODO: Determine a way to encode the height of the polytope
+            # For now assuming it is flush with the ground
+
+            # TODO: Deal with geometry at an angle
+            
+            # Get the smallest and largest x and y values
+            # TODO: Support non-identity values here
+            self.A_mats.append(np.array([[1, 0], [0, 1]]))
+
+            self.b_vecs.append(np.array([max(half_sizes[0] + geom_pos[0], -half_sizes[0] + geom_pos[0]),
+                                         max(half_sizes[1] + geom_pos[1], -half_sizes[1] + geom_pos[1]),
+                                         min(half_sizes[0] + geom_pos[0], -half_sizes[0] + geom_pos[0]),
+                                         min(half_sizes[1] + geom_pos[1], -half_sizes[1] + geom_pos[1])]))
+            
+            # self.get_logger().info(f"b: {self.b_vecs[-1]}")
+            self.get_logger().info(f"geom pos: {geom_pos[:2]}")
+    
+    def compute_min_distance(self, A, b, p):
+        """
+        Compute min (x - p)^2 s.t. Ax <= b using osqp
+        """
+        q = -2*p
+        l = b[2:]
+        u = b[:2]
+        # self.get_logger().info(f"l: {l}")
+        # self.get_logger().info(f"u: {u}")
+
+        P = sparse.csc_matrix([[1, 0], [0, 1]])
+        A_sparse = sparse.csc_matrix(A)
+        # self.get_logger().info(f"A: {A}")
+
+        if not self.osqp_setup:
+            self.osqp_prob.setup(P, q, A_sparse, l, u, verbose=False)
+            self.osqp_setup = True
+        else:
+            # TODO: Support updating A when needed
+            self.osqp_prob.update(q=q, l=l, u=u)
+
+        res = self.osqp_prob.solve()
+
+        # self.get_logger().info(f"result: {res.x}")
+        return res.info.obj_val
 
 def main(args: Optional[List] = None):
     spin_obelisk(args, ContactPlanner, SingleThreadedExecutor)

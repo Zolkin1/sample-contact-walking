@@ -410,7 +410,8 @@ namespace robot
             if (time_left > 0) {
                 while ((-(this->now() - start_time).nanoseconds() + mpc_loop_rate_ns) > 0) {}
             } else {
-                RCLCPP_WARN_STREAM(this->get_logger(), "MPC computation took longer than loop rate allowed for. " << std::abs(time_left)*1e-6 << "ms over time.");
+                // TODO: Put back!
+                // RCLCPP_WARN_STREAM(this->get_logger(), "MPC computation took longer than loop rate allowed for. " << std::abs(time_left)*1e-6 << "ms over time.");
             }
         }
     }

@@ -102,4 +102,8 @@ sudo apt-get install ros-humble-joy
 ```
 - As of 11/11/2024 I need to be om the obelisk branch with simulation geom viz
 
-- Make sure scipy is installed
+
+## Python deps (not yet added to the docker)
+- Scipy (pip)
+- Mujoco -> Comes with obelisk
+- OSQP (pip)
