@@ -119,7 +119,8 @@ namespace robot {
 
             // Foot step polytopes
             std::mutex polytope_mutex_;
-            std::map<std::string, std::vector<torc::mpc::ContactInfo>> contact_polytopes_;
+            // std::map<std::string, std::vector<torc::mpc::ContactInfo>> contact_polytopes_;
+            bool recieved_polytope_;
 
             vectorx_t q_ic_;
             vectorx_t v_ic_;

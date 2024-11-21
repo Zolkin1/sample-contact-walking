@@ -13,6 +13,7 @@ onboard:
         viz_force_scale: 0.01
         force_frames: ["left_toe", "left_heel", "right_toe", "right_heel"]
         polytope_frames: ["left_toe", "right_toe", "left_heel", "right_heel"]
+        # polytope_frames: ["left_heel", "right_heel"]
 # ---------- Swing trajectory ---------- #
         default_swing_height: 0.08 # 0.1
         default_stand_foot_height: 0.005 #0.01
@@ -95,6 +96,9 @@ onboard:
         # ----- Joystick publisher ----- #
         - ros_parameter: joystick_feedback_setting
           topic: /obelisk/g1/joy_feedback
+        # ----- Target publisher ----- #
+        - ros_parameter: target_pub_setting
+          topic: /obelisk/g1/commanded_target
       subscribers:
         # Estimated state subscriber
         - ros_parameter: sub_est_setting
@@ -119,10 +123,12 @@ onboard:
           callback_group: None
     - pkg: contact_planning
       executable: contact_planner
+      params:
+        num_nodes: 32   # Should match the MPC
       publishers:
         # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting
-          topic: /obelisk/g1/contact_schedule
+          topic: /obelisk/g1/blah_blah_contact_schedule
           msg_type: PositionSetpoint #ContactSchedule   # TODO: This won't work until I update Obelisk
           key: "contact_schedule_pub"
           history_depth: 10
@@ -137,7 +143,7 @@ onboard:
       timers:
         # Contact planning timer
         - ros_parameter: timer_ctrl_setting
-          timer_period_sec: 0.001
+          timer_period_sec: 0.1
           callback_group: control_cbg
   estimation:
     - pkg: sample_contact_walking

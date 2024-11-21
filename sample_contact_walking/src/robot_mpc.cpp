@@ -12,10 +12,12 @@
 #include "obelisk_estimator.h"
 
 // ------ Mujoco Debug ----- //
-#include <GLFW/glfw3.h>
+// #include <GLFW/glfw3.h>
 // ------ Mujoco Debug ----- //
 
 #include "sample_contact_walking/robot_mpc.h"
+
+#include "sample_contact_msgs/msg/commanded_target.hpp"
 
 // TODO:
 //  - Check for paths first relative to $SAMPLE_WALKING_ROOT then as a global path
@@ -26,7 +28,7 @@ namespace robot
 {
     MpcController::MpcController(const std::string& name) 
     : obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState>(name), 
-        recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(-1) {
+        recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(-1), recieved_polytope_(false) {
 
         mujoco_sim_instance_ = this;
 
@@ -46,6 +48,10 @@ namespace robot
         this->RegisterObkSubscription<sensor_msgs::msg::Joy>(
                     "joystick_sub_setting", "joystick_sub",
                     std::bind(&MpcController::JoystickCallback, this, std::placeholders::_1));
+
+        // ----- Target Publisher ----- //
+        this->RegisterObkPublisher<sample_contact_msgs::msg::CommandedTarget>(
+                    "target_pub_setting", "target_pub");
 
         // ----- Contact Schedule Subscriber ----- //
         this->RegisterObkSubscription<sample_contact_msgs::msg::ContactSchedule>(
@@ -155,10 +161,10 @@ namespace robot
         Eigen::Vector4d b_temp = Eigen::Vector4d::Zero();
         b_temp << 10, 10, -10, -10;
         for (const auto& frame : mpc_->GetContactFrames()) {
-            contact_polytopes_.insert({frame, {}});
+            // contact_polytopes_.insert({frame, {}});
             for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
                 contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
-                contact_polytopes_[frame].emplace_back((A_temp, b_temp));
+                // contact_polytopes_[frame].emplace_back((A_temp, b_temp));
             }
         }
 
@@ -325,7 +331,9 @@ namespace robot
                     }
 
                     prev_time = this->now();
-                    UpdateContactPolytopes();
+                    if (!recieved_polytope_) {
+                        UpdateContactPolytopes();
+                    }
                     mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
                         this->get_parameter("default_swing_height").as_double(),
                         stance_height,
@@ -566,15 +574,7 @@ namespace robot
                 b_temp = b_temp + Eigen::Vector4d::Constant(-0.1*(frame_idx));
             }
             for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-                if (i < contact_polytopes_[frame].size()) {
-                    contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
-                    contact_polytopes_[frame].emplace_back((A_temp, b_temp));
-                    // contact_schedule_.SetPolytope(frame, i, contact_polytopes_[frame][i].A_, contact_polytopes_[frame][i].b_);
-                } else {    // TODO: Should be able to remove this logic when the full stack is in
-                    contact_polytopes_[frame].emplace_back((contact_polytopes_[frame][i-1].A_, contact_polytopes_[frame][i-1].b_));
-                    contact_schedule_.SetPolytope(frame, i, contact_polytopes_[frame][i].A_, contact_polytopes_[frame][i].b_);
-                    // contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
-                }
+                contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
             }
 
             frame_idx++;
@@ -706,18 +706,43 @@ namespace robot
         for (const auto& frame : viz_polytope_frames_) {
             // Visualize contact polytopes
             std::vector<torc::mpc::ContactInfo> polytope_vec;
+            int num_contacts;
             {
                 // Grab the contact polytopes
                 std::lock_guard<std::mutex> lock(polytope_mutex_);
 
                 polytope_vec = contact_schedule_.GetPolytopes(frame);
+                num_contacts = contact_schedule_.GetNumContacts(frame);
             }
+
+            // RCLCPP_ERROR_STREAM(this->get_logger(), "Frame: " << frame << " size: " << num_contacts);
             
             std_msgs::msg::ColorRGBA color;
-            if (frame_idx % 2 == 0) {
+            // if (frame_idx % 2 == 0) {
+            //     color.r = 1;
+            //     color.g = 0;
+            //     color.b = 1;
+            //     color.a = 1;
+            // } else {
+            //     color.r = 1;
+            //     color.g = 1;
+            //     color.b = 0;
+            //     color.a = 1;
+            // }
+            if (frame_idx == 0) {
                 color.r = 1;
                 color.g = 0;
                 color.b = 1;
+                color.a = 1;
+            } else if (frame_idx == 1) {
+                color.r = 1;
+                color.g = 1;
+                color.b = 1;
+                color.a = 1;
+            } else if (frame_idx == 2) {
+                color.r = 1;
+                color.g = 0;
+                color.b = 0;
                 color.a = 1;
             } else {
                 color.r = 1;
@@ -726,11 +751,12 @@ namespace robot
                 color.a = 1;
             }
 
-            if (polytope_vec.size() != contact_schedule_.GetNumContacts(frame)) {
+            if (polytope_vec.size() != num_contacts) {
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Contact polytopes not of the correct size!");
             }
 
             for (const auto& polytope : polytope_vec) {
+                // RCLCPP_INFO_STREAM(this->get_logger(), "A: " << polytope.A_ << "\nb: " << polytope.b_.transpose());
 
                 msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
                 msg.markers[i].header.frame_id = "world";
@@ -1160,28 +1186,47 @@ namespace robot
 
     void MpcController::ContactScheduleCallback(const sample_contact_msgs::msg::ContactSchedule& msg) {
         RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Recieved first contact schedule.");
+        recieved_polytope_ = true;
         std::lock_guard<std::mutex> lock(polytope_mutex_);
+
+        // matrixx_t A_temp = matrixx_t::Identity(2, 2);
+        // Eigen::Vector4d b_temp = Eigen::Vector4d::Zero();
+
         for (const auto& contact_info : msg.contact_info) {
             const std::string& frame = contact_info.robot_contact_frame;
+            // RCLCPP_INFO_STREAM(this->get_logger(), "[Callback outer] Frame: " << frame << " size: " << contact_schedule_.GetNumContacts(frame));
+            // b_temp << 10 + q_(0), 10 + q_(1), -10 + q_(0), -10 + q_(1);
             if (contact_schedule_.GetScheduleMap().contains(frame)) {
                 // TODO: Grab the swing times
 
                 // Verify that the number of contact polytopes matches the number of contacts
-                if (contact_polytopes_.size() != contact_schedule_.GetNumContacts(frame)) {
-                    throw std::runtime_error("[ContactScheduleCallback] The number of contact polytopes provided is not consistent with the swing times!");
-                }
+                // if (contact_polytopes_.size() != contact_schedule_.GetNumContacts(frame)) {
+                //     throw std::runtime_error("[ContactScheduleCallback] The number of contact polytopes provided is not consistent with the swing times!");
+                // }
 
                 // Extract contact polytopes
                 int contact_num = 0;
-                for (const auto& polytope : contact_info.polytopes) {
-                    std::vector<double> a_mat = polytope.a_mat;
-                    // TODO: Verify these
-                    Eigen::Map<matrixx_t> A(a_mat.data(), 4, 3);
-                    Eigen::Vector4d b(polytope.b_vec.data());
-                    contact_schedule_.SetPolytope(frame, contact_num, A, b);
-                    // contact_polytopes_[frame].emplace_back((A, b));
+                for (const auto& polytope : contact_info.polytopes) { 
+                    // TODO: Remove when we extract swing times:
+                    if (contact_num < contact_schedule_.GetNumContacts(frame)) {
+                        std::vector<double> a_mat = polytope.a_mat;
+                        // TODO: Verify these
+                        Eigen::Map<matrixx_t> A(a_mat.data(), 2, 2);
+                        Eigen::Vector4d b(polytope.b_vec.data());
+                        // RCLCPP_INFO_STREAM(this->get_logger(), "A: " << A);
+                        // RCLCPP_INFO_STREAM(this->get_logger(), "b: " << b.transpose());
+                        contact_schedule_.SetPolytope(frame, contact_num, A, b);
+                        // contact_schedule_.SetPolytope(frame, contact_num, A_temp, b_temp);
+                        // contact_polytopes_[frame].emplace_back((A, b));
+                    }
                     contact_num++;
                 }
+
+                // for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
+                //     RCLCPP_INFO_STREAM(this->get_logger(), "[Callback] Frame: " << frame << " size: " << contact_schedule_.GetNumContacts(frame));
+                //     contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
+                // }
+
             } else {
                 RCLCPP_ERROR_STREAM(this->get_logger(), frame << " is not a valid frame for the MPC contacts.");
             }
@@ -1280,8 +1325,16 @@ namespace robot
             for (int i = 0; i < v_target_.value().GetNumNodes(); i++) {
                 v_target_.value()[i](5) = 1*msg.axes[RIGHT_JOY_HORZ];
             }
-
         }
+        
+        sample_contact_msgs::msg::CommandedTarget target_msg;
+        target_msg.z_target = z_target_;
+        for (int i = 0; i < v_target_.value()[0].size(); i++) {
+            target_msg.v_target.emplace_back(v_target_.value()[0][i]);
+        }
+
+        this->GetPublisher<sample_contact_msgs::msg::CommandedTarget>("target_pub")->publish(target_msg);
+
     }
 
 } // namespace robot

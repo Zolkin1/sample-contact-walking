@@ -15,6 +15,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ContactInfo.msg"
   "msg/ContactPolytope.msg"
   "msg/ContactSchedule.msg"
+  "msg/CommandedTarget.msg"
   DEPENDENCIES
   std_msgs
 )
