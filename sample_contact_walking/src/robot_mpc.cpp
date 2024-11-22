@@ -719,8 +719,10 @@ namespace robot
                 num_contacts = contact_schedule_.GetNumContacts(frame);
             }
 
-            // RCLCPP_ERROR_STREAM(this->get_logger(), "Frame: " << frame << " size: " << num_contacts);
-            
+            if (num_contacts != polytope_vec.size()) {
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Frame: " << frame << " size: " << num_contacts << " num poly: " << polytope_vec.size());
+            }
+
             std_msgs::msg::ColorRGBA color;
             // if (frame_idx % 2 == 0) {
             //     color.r = 1;

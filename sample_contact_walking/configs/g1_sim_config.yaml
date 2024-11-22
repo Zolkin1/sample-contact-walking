@@ -129,6 +129,12 @@ onboard:
         mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
       # ----- Tile Scene ---- #
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4"]
+      # ----- Swing Timing Paramers ---- #
+      # WARNING!! THESE MUST MATCH THE CORRESPONDING PARAMETERS ABOVE
+        first_step_time: 2.
+        swing_time: 0.4
+        right_foot_frames: ["right_toe", "right_heel"]
+        left_foot_frames: ["left_toe", "left_heel"]
       publishers:
         # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting
@@ -222,8 +228,8 @@ onboard:
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model
-          model_xml_path: tile_scene.xml
-          # model_xml_path: basic_scene.xml
+          # model_xml_path: tile_scene.xml
+          model_xml_path: basic_scene.xml
           # model_xml_path: stairs_scene.xml
           # model_xml_path: g1_29dof_with_hand.xml
           # n_u: 129
