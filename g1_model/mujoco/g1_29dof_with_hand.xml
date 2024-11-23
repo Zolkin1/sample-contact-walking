@@ -45,11 +45,13 @@ Position and velocity actuators added. -->
 
     <!-- Knee -->
     <default class="knee_pos">
-      <position kp="270" ctrllimited="false"/>
+      <position kp="370" ctrllimited="false"/>
+      <!-- 270 -->
       <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="knee_vel">
-      <position kv="4" ctrllimited="false"/>
+      <position kv="7" ctrllimited="false"/>
+      <!-- 4 -->
       <!-- <position kv="0" ctrllimited="false"/> -->
     </default>
 

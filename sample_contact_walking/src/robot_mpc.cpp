@@ -270,6 +270,13 @@ namespace robot
 
         const long max_mpc_solves = this->get_parameter("max_mpc_solves").as_int();
         
+        std::vector<double> stance_height(mpc_->GetContactFrames().size());
+        int frame_idx = 0;
+        for (const auto& frame : mpc_->GetContactFrames()) {
+            stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
+            frame_idx++;
+        }
+
         static bool first_loop = true;
         auto prev_time = this->now();
 
@@ -294,6 +301,13 @@ namespace robot
                     }
 
                     // TODO: Fix the state for when we re-enter this loop
+                     {
+                        std::lock_guard<std::mutex> lock(polytope_mutex_);
+                        mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
+                            this->get_parameter("default_swing_height").as_double(),
+                            stance_height,
+                            this->get_parameter("apex_time").as_double());
+                    }
                     double time = this->now().seconds();
                     mpc_->ComputeNLP(q, v, traj_mpc_);
                     {
@@ -323,12 +337,12 @@ namespace robot
 
 
                     // TODO: If I need to, I can go back to using the measured foot height
-                    std::vector<double> stance_height(mpc_->GetContactFrames().size());
-                    int frame_idx = 0;
-                    for (const auto& frame : mpc_->GetContactFrames()) {
-                        stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
-                        frame_idx++;
-                    }
+                    // std::vector<double> stance_height(mpc_->GetContactFrames().size());
+                    // int frame_idx = 0;
+                    // for (const auto& frame : mpc_->GetContactFrames()) {
+                    //     stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
+                    //     frame_idx++;
+                    // }
 
                     prev_time = this->now();
                     if (!recieved_polytope_) {
