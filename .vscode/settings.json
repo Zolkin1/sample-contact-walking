@@ -82,5 +82,6 @@
         "*.inc": "cpp",
         "*.ipp": "cpp",
         "ranges": "cpp"
-    }
+    },
+    "cmake.sourceDirectory": "/home/zolkin/AmberLab/Project-Sample-Walking/sample-contact-walking/achilles_model_custom"
 }

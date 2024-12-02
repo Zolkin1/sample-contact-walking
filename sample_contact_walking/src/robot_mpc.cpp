@@ -300,6 +300,10 @@ namespace robot
                         v = v_;
                     }
 
+                    // TODO: Remove
+                    // q = q_ic_;
+                    // v = v_ic_;
+
                     // TODO: Fix the state for when we re-enter this loop
                      {
                         std::lock_guard<std::mutex> lock(polytope_mutex_);

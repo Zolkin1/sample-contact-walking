@@ -21,7 +21,7 @@ solver_settings:
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6
   adaptive_rho: False
-  max_iter: 50 #50 #20 Increasing this definetly helps 40-60 seems like a good balance
+  max_iter: 50 #50 #50 #20 Increasing this definetly helps 40-60 seems like a good balance
   scaling: 10 # Solve gets faster as scaling goes down, but also the quality gets worse. There is a balance
 constraints:
   friction_coef: 0.6 #0.7  # TODO: Tune this
@@ -95,25 +95,25 @@ costs:
     name: "left_toe_polytope"
     weight: [1, 1, 1, 1]
     frame: "left_toe"
-    mu: 1
+    mu: 0.1
     delta: 0.01
   - type: FootPolytope
     name: "left_heel_polytope"
     weight: [1, 1, 1, 1]
     frame: "left_heel"
-    mu: 1
+    mu: 0.1
     delta: 0.01
   - type: FootPolytope
     name: "right_toe_polytope"
     weight: [1, 1, 1, 1]
     frame: "right_toe"
-    mu: 1
+    mu: 0.1
     delta: 0.01
   - type: FootPolytope
     name: "right_heel_polytope"
     weight: [1, 1, 1, 1]
     frame: "right_heel"
-    mu: 1
+    mu: 0.1
     delta: 0.01
 contacts:
   # contact_frames: ["left_heel", "right_heel"]

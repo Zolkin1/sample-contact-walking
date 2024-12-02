@@ -61,7 +61,7 @@ ENV PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/opt/openrobots/lib/pkgconfig"
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/opt/openrobots/lib"
 ENV CMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}:/opt/openrobots"
 
-RUN echo "About to pull obelisk."
+RUN echo "About to pull obelisk. Updated 12/2/24."
 
 # clone Obelisk into this docker image at the $OBELISK_ROOT path
 RUN git clone -b main https://github.com/Caltech-AMBER/obelisk.git /home/${USER}/obelisk
@@ -83,3 +83,7 @@ WORKDIR /home/${USER}
 RUN source /home/${USER}/obelisk/setup.sh --install-sys-deps --cyclone-perf --obk-aliases --basic
 
 WORKDIR /home/${USER}
+
+# Python Packages
+RUN pip install scipy && \
+    pip install osqp

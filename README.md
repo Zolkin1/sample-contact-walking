@@ -96,14 +96,14 @@ Can run `ros2 run joy joy_enumerate_devices` to see what devices are found.
 
 
 ## Random notes
-- As of 10/14/2024 I need to work on the obelisk joystick branch, and until the docker container is re-build with these updates I will need to re-install `ros-humble-joy` from apt-get:
+<!-- - As of 10/14/2024 I need to work on the obelisk joystick branch, and until the docker container is re-build with these updates I will need to re-install `ros-humble-joy` from apt-get:
 ```
 sudo apt-get install ros-humble-joy
-```
+``` -->
 - As of 11/11/2024 I need to be om the obelisk branch with simulation geom viz
 
 
-## Python deps (not yet added to the docker)
+<!-- ## Python deps (not yet added to the docker)
 - Scipy (pip)
 - Mujoco -> Comes with obelisk
-- OSQP (pip)
+- OSQP (pip) -->
