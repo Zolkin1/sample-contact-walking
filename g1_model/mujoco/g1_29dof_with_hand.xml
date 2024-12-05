@@ -896,7 +896,7 @@ Position and velocity actuators added. -->
   </sensor>
 
   <keyframe>
-    <key name="standing" 
+    <!-- <key name="standing" 
       qpos="0 0 0.79
             0.7 0 0 0.7
             -0.3 0 0 0.52 -0.23 0
@@ -928,8 +928,8 @@ Position and velocity actuators added. -->
             0 0 0 0 0 0 0
             0 0 0 0 0 0 0
             0 0 0 0 0 0 0
-            0 0 0 0 0 0 0"/>
-    <!-- <key name="standing" 
+            0 0 0 0 0 0 0"/> -->
+    <key name="standing" 
       qpos="0 0 0.79
             0 0 0 0
             -0.3 0 0 0.52 -0.23 0
@@ -961,7 +961,7 @@ Position and velocity actuators added. -->
             0 0 0 0 0 0 0
             0 0 0 0 0 0 0
             0 0 0 0 0 0 0
-            0 0 0 0 0 0 0"/> -->
+            0 0 0 0 0 0 0"/>
     <!-- <key name="home" qpos="0 0 0.27 1 0 0 0 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8"
       ctrl="0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8"/> -->
   </keyframe>

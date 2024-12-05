@@ -92,7 +92,11 @@ sudo chmod 666 /dev/input/eventX
 ```
 event24 seems to be consistent for the xbox remote for my machine.
 
-Can run `ros2 run joy joy_enumerate_devices` to see what devices are found.
+Can run 
+```
+ros2 run joy joy_enumerate_devices
+``` 
+to see what devices are found.
 
 
 ## Random notes

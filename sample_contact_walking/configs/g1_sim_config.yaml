@@ -31,8 +31,8 @@ onboard:
         left_frames: ["left_toe", "left_heel"]
 # ---------- Targets ---------- #
         target_config: [0, 0, 0.72, #0.73, #0.77, #0.793, if the height is too high we get some singularity issues
-                        # 0, 0, 0, 1,
-                        0, 0, 0.7, 0.7,
+                        0, 0, 0, 1,
+                        # 0, 0, 0.7, 0.7,
                         -0.2, 0, 0, 0.4, -0.216,
                         -0.2, 0, 0, 0.4, -0.216,
                         # -0.3, 0, 0, 0.52, -0.23, #0,
@@ -49,8 +49,8 @@ onboard:
                     0, 0, 0, 0,]
         # TODO: Remove these
         mpc_ic_config: [0, 0, 0.77, 
-                        # 0, 0, 0, 1,
-                        0, 0, 0.7, 0.7,
+                        0, 0, 0, 1,
+                        # 0, 0, 0.7, 0.7,
                         -0.3, 0, 0, 0.52, -0.23, #0,
                         -0.3, 0, 0, 0.52, -0.23, #0,
                         # 0, 0, 0,
@@ -102,7 +102,7 @@ onboard:
       subscribers:
         # Estimated state subscriber
         - ros_parameter: sub_est_setting
-          topic: /obelisk/g1/est_state # est_state, target_state
+          topic: /obelisk/g1/target_state # est_state, target_state
           history_depth: 10
           callback_group: estimation_cbg
           non_obelisk: False
@@ -145,7 +145,7 @@ onboard:
           non_obelisk: False
       subscribers:
         - ros_parameter: sub_est_setting
-          topic: /obelisk/g1/est_state # est_state, target_state
+          topic: /obelisk/g1/target_state # est_state, target_state
           msg_type: EstimatedState
           history_depth: 10
           callback_group: estimation_cbg

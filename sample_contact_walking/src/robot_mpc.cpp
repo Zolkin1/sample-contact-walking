@@ -301,8 +301,8 @@ namespace robot
                     }
 
                     // TODO: Remove
-                    // q = q_ic_;
-                    // v = v_ic_;
+                    q = q_ic_;
+                    v = v_ic_;
 
                     // TODO: Fix the state for when we re-enter this loop
                      {
@@ -373,17 +373,18 @@ namespace robot
                     }
                 }
                 
-                if (!fixed_target_ || controller_target_) {
-                    UpdateMpcTargets(q);
-                    mpc_->SetConfigTarget(q_target_.value());
-                    mpc_->SetVelTarget(v_target_.value());
-                }
+                // if (!fixed_target_ || controller_target_) {
+                //     UpdateMpcTargets(q);
+                //     mpc_->SetConfigTarget(q_target_.value());
+                //     mpc_->SetVelTarget(v_target_.value());
+                // }
 
-                // // TODO: Unclear if this really provides a performance improvement as the stack works without it.
+                // TODO: Unclear if this really provides a performance improvement as the stack works without it.
                 // TODO: Investigate this for the G1
-                // vectorx_t q_ref = q;
-                // q_ref(2) = z_target_;
-                // mpc_->GenerateCostReference(q_ref, v, v_target_.value()[0].head<3>());
+                UpdateMpcTargets(q);
+                vectorx_t q_ref = q;
+                q_ref(2) = z_target_;
+                mpc_->GenerateCostReference(q_ref, q_target_.value(), v_target_.value(), contact_schedule_);
 
                 // TODO: remove the max mpc solves when I no longer need it
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
@@ -1122,7 +1123,7 @@ namespace robot
     } 
 
     void MpcController::AddPeriodicContacts() {
-
+        
         while (next_right_insertion_time_ < 1) {
             for (const auto& frame : right_frames_) {
                 contact_schedule_.InsertSwingByDuration(frame, next_right_insertion_time_,  swing_time_);
@@ -1137,6 +1138,17 @@ namespace robot
             }
 
             next_left_insertion_time_ += 2*swing_time_;
+        }
+
+        // Set polytopes for newly created contacts
+        for (const auto& frame : mpc_->GetContactFrames()) {
+            if (contact_schedule_.GetNumContacts(frame) > 0 && contact_schedule_.GetPolytopes(frame).back().A_.size() == 0) {
+                torc::mpc::ContactInfo polytope = contact_schedule_.GetDefaultContactInfo();
+                if (contact_schedule_.GetNumContacts(frame) > 1) {
+                    polytope = contact_schedule_.GetPolytopes(frame).at(contact_schedule_.GetPolytopes(frame).size() - 2);
+                }
+                contact_schedule_.SetPolytope(frame, contact_schedule_.GetNumContacts(frame) - 1, polytope.A_, polytope.b_);
+            }
         }
 
         contact_schedule_.CleanContacts(-0.1);
@@ -1213,44 +1225,31 @@ namespace robot
         recieved_polytope_ = true;
         std::lock_guard<std::mutex> lock(polytope_mutex_);
 
-        // matrixx_t A_temp = matrixx_t::Identity(2, 2);
-        // Eigen::Vector4d b_temp = Eigen::Vector4d::Zero();
-
         for (const auto& contact_info : msg.contact_info) {
             const std::string& frame = contact_info.robot_contact_frame;
             // RCLCPP_INFO_STREAM(this->get_logger(), "[Callback outer] Frame: " << frame << " size: " << contact_schedule_.GetNumContacts(frame));
             // b_temp << 10 + q_(0), 10 + q_(1), -10 + q_(0), -10 + q_(1);
             if (contact_schedule_.GetScheduleMap().contains(frame)) {
-                // TODO: Grab the swing times
-
-                // Verify that the number of contact polytopes matches the number of contacts
-                // if (contact_polytopes_.size() != contact_schedule_.GetNumContacts(frame)) {
-                //     throw std::runtime_error("[ContactScheduleCallback] The number of contact polytopes provided is not consistent with the swing times!");
+                // if (contact_info.polytopes.size() != contact_schedule_.GetNumContacts(frame)) {
+                //     // TODO: Fix so this doesn't happen!
+                //     RCLCPP_ERROR_STREAM(this->get_logger(), "Message number of polytopes: " << contact_info.polytopes.size() <<
+                //         ", num contacts: " << contact_schedule_.GetNumContacts(frame));
                 // }
 
                 // Extract contact polytopes
-                int contact_num = 0;
-                for (const auto& polytope : contact_info.polytopes) { 
-                    // TODO: Remove when we extract swing times:
-                    if (contact_num < contact_schedule_.GetNumContacts(frame)) {
-                        std::vector<double> a_mat = polytope.a_mat;
-                        // TODO: Verify these
-                        Eigen::Map<matrixx_t> A(a_mat.data(), 2, 2);
-                        Eigen::Vector4d b(polytope.b_vec.data());
-                        // RCLCPP_INFO_STREAM(this->get_logger(), "A: " << A);
-                        // RCLCPP_INFO_STREAM(this->get_logger(), "b: " << b.transpose());
-                        contact_schedule_.SetPolytope(frame, contact_num, A, b);
-                        // contact_schedule_.SetPolytope(frame, contact_num, A_temp, b_temp);
-                        // contact_polytopes_[frame].emplace_back((A, b));
-                    }
-                    contact_num++;
+                for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
+                    auto polytope = contact_info.polytopes.back();
+                    if (i < contact_info.polytopes.size()) {
+                        polytope = contact_info.polytopes[i];
+                    } 
+
+                    std::vector<double> a_mat = polytope.a_mat;
+
+                    Eigen::Map<matrixx_t> A(a_mat.data(), 2, 2);
+                    Eigen::Vector4d b(polytope.b_vec.data());
+
+                    contact_schedule_.SetPolytope(frame, i, A, b);
                 }
-
-                // for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-                //     RCLCPP_INFO_STREAM(this->get_logger(), "[Callback] Frame: " << frame << " size: " << contact_schedule_.GetNumContacts(frame));
-                //     contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
-                // }
-
             } else {
                 RCLCPP_ERROR_STREAM(this->get_logger(), frame << " is not a valid frame for the MPC contacts.");
             }
