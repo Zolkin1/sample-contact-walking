@@ -101,7 +101,12 @@ class ContactPlanner(ObeliskController):
             # TODO: remove
             self.get_logger().info("q_target_base: " + np.array2string(self.q_target_base))
 
-        self.received_state = True
+        if np.linalg.norm(self.q_est[3:7]) > 0.9:
+            self.received_state = True
+
+        if np.linalg.norm(self.q_est[3:7]) < 0.9:
+            self.received_state = False
+
         # self.get_logger().info("Estiamted state: " + np.array2string(self.q_est))
 
     def compute_control(self):

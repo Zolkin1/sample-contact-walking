@@ -3,7 +3,7 @@ general_settings:
   verbose: False #True
   node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
   node_dt: 0.025 #0.025
-  first_node_dt: 0.01 
+  first_node_dt: 0.015 
   compile_derivatives: False #True
   base_frame: "pelvis"
   scale_cost: False
@@ -11,7 +11,7 @@ general_settings:
   initial_constraint_tol: 5e-4
   nodes_full_dynamics: 3 #3 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0
-  terminal_cost_weight: 2 #10 #2 #10
+  terminal_cost_weight: 2 #2 #10
 solver_settings:
   rel_tol: 1e-3
   abs_tol: 1e-3
@@ -21,7 +21,7 @@ solver_settings:
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6
   adaptive_rho: False
-  max_iter: 50 #50 #50 #20 Increasing this definetly helps 40-60 seems like a good balance
+  max_iter: 50 #20 #50 #50 #20 Increasing this definetly helps 40-60 seems like a good balance
   scaling: 10 # Solve gets faster as scaling goes down, but also the quality gets worse. There is a balance
 constraints:
   friction_coef: 0.6 #0.7  # TODO: Tune this
@@ -56,21 +56,21 @@ costs:
 # NOTE: The resulting behaviour is suprisingly sensitive
   - type: ConfigurationTracking
     name: "ConfigTracking"
+    weight:  [2, 2, 5, #2, 2, 5,  #15, 
+              2, 2, 2,
+              0.005, 3, 4, 0.0005, 1, #1,         # Left Leg
+              0.005, 3, 4, 0.0005, 1, #1,         # Right Leg
+              0.5, 0.5, 0.5, 0.5,      # Left Arm
+              0.5, 0.5, 0.5, 0.5]      # Right Arm
     # weight:  [1, 1, 5, #2, 2, 5,  #15, 
-    #           2, 2, 2,
-    #           0.005, 3, 4, 0.0005, 1, #1,         # Left Leg
-    #           0.005, 3, 4, 0.0005, 1, #1,         # Right Leg
-    #           0.5, 0.5, 0.5, 0.5,      # Left Arm
-    #           0.5, 0.5, 0.5, 0.5]      # Right Arm
-    weight:  [1, 1, 5, #2, 2, 5,  #15, 
-          2, 2, 2,
-          20, 20, 20, 20, 20,       # Left Leg
-          20, 20, 20, 20, 20,         # Right Leg
-          0.5, 0.5, 0.5, 0.5,      # Left Arm
-          0.5, 0.5, 0.5, 0.5]      # Right Arm
+    #       2, 2, 2,
+    #       20, 20, 20, 20, 20,       # Left Leg
+    #       20, 20, 20, 20, 20,         # Right Leg
+    #       0.5, 0.5, 0.5, 0.5,      # Left Arm
+    #       0.5, 0.5, 0.5, 0.5]      # Right Arm
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [0, 0, 0, #1, 1, 2, #2, 2, 2, #3, 3, 3, #5, 
+    weight: [2, 2, 2, #2, 2, 2, #3, 3, 3, #5, 
             2, 1, 2,
             0.005, 1, 2, 0.001, 0.1, #0.001,         # Left Leg
             0.005, 1, 2, 0.001, 0.1, #0.001,         # Right Leg

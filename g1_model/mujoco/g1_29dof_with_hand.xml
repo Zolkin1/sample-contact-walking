@@ -35,7 +35,7 @@ Position and velocity actuators added. -->
 
     <!-- Hip Yaw -->
     <default class="hip_yaw_pos">
-      <position kp="160" ctrllimited="false"/>
+      <position kp="260" ctrllimited="false"/>
       <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="hip_yaw_vel">
@@ -67,10 +67,10 @@ Position and velocity actuators added. -->
 
     <!-- Ankle Roll -->
     <default class="ankle_roll_pos">
-      <position kp="700" ctrllimited="false"/>
+      <position kp="300" ctrllimited="false"/>
     </default>
     <default class="ankle_roll_vel">
-      <position kv="2" ctrllimited="false"/>
+      <position kv="4" ctrllimited="false"/>
     </default>
 
     <!-- ############## -->
@@ -896,7 +896,7 @@ Position and velocity actuators added. -->
   </sensor>
 
   <keyframe>
-    <!-- <key name="standing" 
+    <key name="standing" 
       qpos="0 0 0.79
             0.7 0 0 0.7
             -0.3 0 0 0.52 -0.23 0
@@ -928,8 +928,8 @@ Position and velocity actuators added. -->
             0 0 0 0 0 0 0
             0 0 0 0 0 0 0
             0 0 0 0 0 0 0
-            0 0 0 0 0 0 0"/> -->
-    <key name="standing" 
+            0 0 0 0 0 0 0"/>
+    <!-- <key name="standing" 
       qpos="0 0 0.79
             0 0 0 0
             -0.3 0 0 0.52 -0.23 0
@@ -961,7 +961,7 @@ Position and velocity actuators added. -->
             0 0 0 0 0 0 0
             0 0 0 0 0 0 0
             0 0 0 0 0 0 0
-            0 0 0 0 0 0 0"/>
+            0 0 0 0 0 0 0"/> -->
     <!-- <key name="home" qpos="0 0 0.27 1 0 0 0 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8"
       ctrl="0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8"/> -->
   </keyframe>
