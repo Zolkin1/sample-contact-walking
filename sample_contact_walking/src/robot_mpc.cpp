@@ -22,7 +22,8 @@
 // TODO:
 //  - Check for paths first relative to $SAMPLE_WALKING_ROOT then as a global path
 //  - Add ROS diagonstic messages: https://docs.foxglove.dev/docs/visualization/panels/diagnostics#diagnosticarray
-//  - Add angular velocity command
+//  - I think the polytope commands are not being calculated correctly. When I go full tilt against the border I am still not getting the next polytope until after the end
+//      of the horizon which seems suspicious as I should cross into the other polytope very soon.
 
 namespace robot
 {
@@ -333,11 +334,14 @@ namespace robot
                     // Do everything that does not need the measured state first
 
                     // Shift the contact schedule
-                    auto current_time = this->now();
-                    double time_shift_sec = (current_time - prev_time).nanoseconds()/1e9;
-                    contact_schedule_.ShiftSwings(-time_shift_sec);    // TODO: Do I need a mutex on this later?
-                    next_left_insertion_time_ -= time_shift_sec;
-                    next_right_insertion_time_ -= time_shift_sec;
+                    {
+                        std::lock_guard<std::mutex> lock(polytope_mutex_);
+                        auto current_time = this->now();
+                        double time_shift_sec = (current_time - prev_time).nanoseconds()/1e9;
+                        contact_schedule_.ShiftSwings(-time_shift_sec);    // TODO: Do I need a mutex on this later?
+                        next_left_insertion_time_ -= time_shift_sec;
+                        next_right_insertion_time_ -= time_shift_sec;
+                    }
 
 
                     // TODO: If I need to, I can go back to using the measured foot height
@@ -358,9 +362,8 @@ namespace robot
                             this->get_parameter("default_swing_height").as_double(),
                             stance_height,
                             this->get_parameter("apex_time").as_double());
-                    }
-                    AddPeriodicContacts();
-
+                    }   
+                    // AddPeriodicContacts();   // Don't use when getting CS from the other node
 
                     // Read in state
                     {
@@ -380,12 +383,13 @@ namespace robot
                 // }
 
                 // TODO: Unclear if this really provides a performance improvement as the stack works without it.
-                // TODO: Investigate this for the G1
                 UpdateMpcTargets(q);
                 vectorx_t q_ref = q;
                 q_ref(2) = z_target_;
-                mpc_->GenerateCostReference(q_ref, q_target_.value(), v_target_.value(), contact_schedule_);
-
+                {
+                    std::lock_guard<std::mutex> lock(polytope_mutex_);
+                    mpc_->GenerateCostReference(q_ref, q_target_.value(), v_target_.value(), contact_schedule_);
+                }
                 // TODO: remove the max mpc solves when I no longer need it
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
                     double time = this->now().seconds();
@@ -623,14 +627,9 @@ namespace robot
 
     void MpcController::PublishTrajViz(const torc::mpc::Trajectory& traj, const std::vector<std::string>& viz_frames) {
         // Compute FK for each frame and add the point to a marker message
-
-        int num_polytope_markers = 0;
-        for (const auto& frame : viz_polytope_frames_) {
-            num_polytope_markers += contact_schedule_.GetNumContacts(frame);
-        }
-
+        // TODO: Change this function so I don't need the lock the whole time
         visualization_msgs::msg::MarkerArray msg;
-        msg.markers.resize(viz_frames.size() + force_frames_.size() + num_polytope_markers);
+        msg.markers.resize(viz_frames.size() + force_frames_.size());
         for (int i = 0; i < viz_frames.size(); i++) {
             msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
             msg.markers[i].header.frame_id = "world";
@@ -724,6 +723,15 @@ namespace robot
             // this->GetPublisher<visualization_msgs::msg::MarkerArray>("viz_pub")->publish(msg);            
         }
 
+        std::lock_guard<std::mutex> lock(polytope_mutex_);
+
+        int num_polytope_markers = 0;
+        for (const auto& frame : viz_polytope_frames_) {
+            num_polytope_markers += contact_schedule_.GetNumContacts(frame);
+        }
+        
+        msg.markers.resize(viz_frames.size() + force_frames_.size() + num_polytope_markers);
+        
         int i = viz_frames.size() + force_frames_.size();
         int frame_idx = 0;
         for (const auto& frame : viz_polytope_frames_) {
@@ -732,7 +740,7 @@ namespace robot
             int num_contacts;
             {
                 // Grab the contact polytopes
-                std::lock_guard<std::mutex> lock(polytope_mutex_);
+                // std::lock_guard<std::mutex> lock(polytope_mutex_); // Grabbed above
 
                 polytope_vec = contact_schedule_.GetPolytopes(frame);
                 num_contacts = contact_schedule_.GetNumContacts(frame);
@@ -1123,7 +1131,8 @@ namespace robot
     } 
 
     void MpcController::AddPeriodicContacts() {
-        
+        std::lock_guard<std::mutex> lock(polytope_mutex_);
+
         while (next_right_insertion_time_ < 1) {
             for (const auto& frame : right_frames_) {
                 contact_schedule_.InsertSwingByDuration(frame, next_right_insertion_time_,  swing_time_);
@@ -1225,16 +1234,35 @@ namespace robot
         recieved_polytope_ = true;
         std::lock_guard<std::mutex> lock(polytope_mutex_);
 
+        // TODO: Consider removing if this doesn't work
+        contact_schedule_.CleanContacts(10);
+
         for (const auto& contact_info : msg.contact_info) {
             const std::string& frame = contact_info.robot_contact_frame;
-            // RCLCPP_INFO_STREAM(this->get_logger(), "[Callback outer] Frame: " << frame << " size: " << contact_schedule_.GetNumContacts(frame));
-            // b_temp << 10 + q_(0), 10 + q_(1), -10 + q_(0), -10 + q_(1);
-            if (contact_schedule_.GetScheduleMap().contains(frame)) {
-                // if (contact_info.polytopes.size() != contact_schedule_.GetNumContacts(frame)) {
-                //     // TODO: Fix so this doesn't happen!
-                //     RCLCPP_ERROR_STREAM(this->get_logger(), "Message number of polytopes: " << contact_info.polytopes.size() <<
-                //         ", num contacts: " << contact_schedule_.GetNumContacts(frame));
+
+            const auto& sched_map = contact_schedule_.GetScheduleMap();
+            if (sched_map.contains(frame)) {
+                // std::cout << "swing times size: " << contact_info.swing_times.size() << std::endl;
+                // TODO: Try Assigning the swing times from the command
+                for (int i = 0; i < contact_info.swing_times.size()/2; i++) {
+                    contact_schedule_.InsertSwing(frame, contact_info.swing_times.at(2*i), contact_info.swing_times.at(2*i + 1));
+                    // std::cout << "inserting a swing!" << std::endl;
+                }
+
+                // std::cout << "Commanded swing times" << std::endl;
+                // for (int i = 0; i < contact_info.swing_times.size(); i++) {
+                //     std::cout << "i: " << i << ", swing times: " << contact_info.swing_times[i] << std::endl;
                 // }
+                // std::cout << "Current swing times" << std::endl;
+                // for (int i = 0; i < sched_map.at(frame).size(); i++) {
+                //     std::cout << "i: " << i << ", swing times: " << sched_map.at(frame)[i].first << ", " << sched_map.at(frame)[i].second << std::endl;
+                // }
+
+                if (contact_schedule_.GetNumContacts(frame) != contact_info.swing_times.size()/2 + 1) {
+                    std::cerr << "cs contact num: " << contact_schedule_.GetNumContacts(frame) << std::endl;
+                    std::cerr << "ci contact num: " << contact_info.swing_times.size()/2 + 1 << std::endl;
+                    throw std::runtime_error("Contacts not moved correctly!");
+                }
 
                 // Extract contact polytopes
                 for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
@@ -1247,9 +1275,12 @@ namespace robot
 
                     Eigen::Map<matrixx_t> A(a_mat.data(), 2, 2);
                     Eigen::Vector4d b(polytope.b_vec.data());
-
-                    contact_schedule_.SetPolytope(frame, i, A, b);
+                    if (i < contact_schedule_.GetPolytopes(frame).size()) {
+                        contact_schedule_.SetPolytope(frame, i, A, b);
+                    }
                 }
+
+                // std::cout << "done with " << frame << std::endl;
             } else {
                 RCLCPP_ERROR_STREAM(this->get_logger(), frame << " is not a valid frame for the MPC contacts.");
             }

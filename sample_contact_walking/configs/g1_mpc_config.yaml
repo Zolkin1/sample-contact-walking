@@ -70,7 +70,7 @@ costs:
           0.5, 0.5, 0.5, 0.5]      # Right Arm
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [1, 1, 2, #2, 2, 2, #3, 3, 3, #5, 
+    weight: [0, 0, 0, #1, 1, 2, #2, 2, 2, #3, 3, 3, #5, 
             2, 1, 2,
             0.005, 1, 2, 0.001, 0.1, #0.001,         # Left Leg
             0.005, 1, 2, 0.001, 0.1, #0.001,         # Right Leg

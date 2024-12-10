@@ -121,7 +121,8 @@ class ContactPlanner(ObeliskController):
 
             num_contacts = []
 
-            current_time_seconds =  self.get_clock().now().nanoseconds/1e9
+            current_time_seconds =  self.get_clock().now().nanoseconds*1e-9
+            # self.get_logger().info(f"current time seconds: {current_time_seconds}")
             for i in range(len(contact_frames)):
                 frame = contact_frames[i]
 
@@ -133,6 +134,8 @@ class ContactPlanner(ObeliskController):
 
                 # Assign the swing times
                 contact_info.swing_times = self.compute_swing_times(frame, current_time_seconds)
+                for i in range(len(contact_info.swing_times)):
+                    contact_info.swing_times[i] -= current_time_seconds
                 num_contacts.append(math.floor(len(contact_info.swing_times)/2) + 1)
                 # self.get_logger().info(f"{frame} swing times: {contact_info.swing_times}")
 
@@ -153,28 +156,23 @@ class ContactPlanner(ObeliskController):
                     #                     -self.default_size + self.q_target_base_global[0, i*nodes_per_contact],
                     #                     -self.default_size + self.q_target_base_global[1, i*nodes_per_contact]]
 
+                    contact_mid_time = self.get_contact_mid_times(current_time_seconds, i, cs_msg.contact_info[j].swing_times)
+                    # contact_mid_time_rel = contact_mid_time - current_time_seconds
 
-                    # Get the location when halfway through a given contact
-                    target_node = 0
-                    if i == 0:
-                        target_node = 0
-                    elif i != num_contacts[j] - 1:
-                        prev_touch_down = cs_msg.contact_info[j].swing_times[2*(i-1) + 1]
-                        if len(cs_msg.contact_info[j].swing_times) < 2*(i-1) + 2:
-                            next_take_off = cs_msg.contact_info[j].swing_times[2*(i-1) + 2]
-                        else:
-                            next_take_off = prev_touch_down + 0.2 # TODO: Make not hard coded
-                        mid_time = (next_take_off - prev_touch_down)/2.0
-                        target_node = self.get_node(mid_time)
-                    else:
-                        # For now just use the end
-                        target_node = self.num_nodes - 1
+                    desired_base_pos = self.get_position(0) # TODO: Is this how I want to handle this?
+                    if (contact_mid_time > 0):
+                        desired_base_pos = self.get_position(contact_mid_time)
+
+                    # self.get_logger().info(f"Frame: {frame}")
+                    # self.get_logger().info(f"contact mid time: {contact_mid_time}")
+                    # self.get_logger().info(f"desired_base_pos: {desired_base_pos[:2]}")
 
                     # Compute the closest foothold
                     # Compute this relative to the middle of the foot so that we don't get two seperate polytopes for the toe and heel
-                    desired_foothold = self.q_target_base_global[:2, target_node] # TODO: Add the foot offset.
+                    desired_foothold = desired_base_pos # TODO: Add the foot offset.
+                    # self.get_logger().info(f"desired foothold: {desired_foothold[:2]}\n")
 
-                    idx = self.compute_closest_foothold(desired_foothold)
+                    idx = self.compute_closest_foothold(desired_foothold[:2])
 
 
                     polytope.b_vec = self.b_vecs[idx].tolist()
@@ -331,15 +329,24 @@ class ContactPlanner(ObeliskController):
                 return swing_times
 
             time_since_first_swing = time_since_start - self.first_step_time
-
+            # self.get_logger().info(f"time since first swing: {time_since_first_swing}")
             # Swing once every 2*swing_time seconds
 
             # Get number of full gaits:
             num_gaits = math.floor(time_since_first_swing/(2*self.swing_time))
 
             time_into_full_gait = time_since_first_swing - (num_gaits * (2*self.swing_time))
+            # self.get_logger().info(f"time into full gait: {time_into_full_gait}")
+
+            # self.get_logger().info(f"current_time_seconds: {current_time_seconds}")
 
             gait_start_time = current_time_seconds - time_into_full_gait
+
+            # if gait_start_time > 10:
+                # self.get_logger().info(f"gait_start_time: {gait_start_time}")
+
+            # if time_into_full_gait > 10:
+                # self.get_logger().info(f"time_into_full_gait: {time_into_full_gait}")
 
             if time_into_full_gait < self.swing_time:
                 # Assume the right foot is first
@@ -371,6 +378,34 @@ class ContactPlanner(ObeliskController):
             return 0
         else:
             return math.floor((time - first_dt)/other_dt)
+
+    def get_contact_mid_times(self, current_time_seconds: float, contact_num: int, swing_times):
+        # self.get_logger().info(f"contact num: {contact_num}, swing_times len: {len(swing_times)}")
+        if len(swing_times) > 0:
+            if contact_num == 0:
+                # The first contact is always before the first recorded swing
+                return swing_times[0] - 0.15 # TODO: Adjust this
+            elif contact_num <= len(swing_times)/2. - 1:
+                # We are in an intermediate contact
+                # Get the mid point by using the surrounding swing times
+                touch_down = swing_times[contact_num*2]
+                lift_off = swing_times[contact_num*2 + 1]
+                contact_mid_time = (lift_off + touch_down)/2.
+                # self.get_logger().info(f"contact mid time {contact_mid_time}")
+                return contact_mid_time
+            else:
+                # After the last recorded swing
+                return swing_times[-1] + 0.15 # TODO: Adjust this number
+        else:
+            return 0.2 # TODO: Adjust this number
+
+    def get_position(self, time: float):
+        node = self.get_node(time)
+
+        if node >= self.num_nodes:
+            node = self.num_nodes - 1
+        
+        return self.q_target_base[:, node]
 
 def main(args: Optional[List] = None):
     spin_obelisk(args, ContactPlanner, SingleThreadedExecutor)
