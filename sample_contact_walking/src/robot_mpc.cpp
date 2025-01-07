@@ -302,8 +302,8 @@ namespace robot
                     }
 
                     // TODO: Remove
-                    // q = q_ic_;
-                    // v = v_ic_;
+                    q = q_ic_;
+                    v = v_ic_;
 
                     // TODO: Fix the state for when we re-enter this loop
                      {
@@ -363,7 +363,7 @@ namespace robot
                             stance_height,
                             this->get_parameter("apex_time").as_double());
                     }   
-                    AddPeriodicContacts();   // Don't use when getting CS from the other node
+                    // AddPeriodicContacts();   // Don't use when getting CS from the other node
 
                     // Read in state
                     {
@@ -395,6 +395,8 @@ namespace robot
                     double time = this->now().seconds();
                     double delay_start_time = 0; // this->now().seconds() - traj_start_time_;
                     mpc_->Compute(q, v, traj_mpc_, delay_start_time);
+                    // mpc_->Compute(q, v, traj_mpc_, delay_start_time);
+                    // mpc_->Compute(q, v, traj_mpc_, delay_start_time);
                     {
                         // Get the traj mutex to protect it
                         std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -434,7 +436,7 @@ namespace robot
                 while ((-(this->now() - start_time).nanoseconds() + mpc_loop_rate_ns) > 0) {}
             } else {
                 // TODO: Put back!
-                RCLCPP_WARN_STREAM(this->get_logger(), "MPC computation took longer than loop rate allowed for. " << std::abs(time_left)*1e-6 << "ms over time.");
+                // RCLCPP_WARN_STREAM(this->get_logger(), "MPC computation took longer than loop rate allowed for. " << std::abs(time_left)*1e-6 << "ms over time.");
             }
         }
     }
@@ -1230,61 +1232,61 @@ namespace robot
     }
 
     void MpcController::ContactScheduleCallback(const sample_contact_msgs::msg::ContactSchedule& msg) {
-        // RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Recieved first contact schedule.");
-        // recieved_polytope_ = true;
-        // std::lock_guard<std::mutex> lock(polytope_mutex_);
+        RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Recieved first contact schedule.");
+        recieved_polytope_ = true;
+        std::lock_guard<std::mutex> lock(polytope_mutex_);
 
-        // // TODO: Consider removing if this doesn't work
-        // contact_schedule_.CleanContacts(10);
+        // TODO: Consider removing if this doesn't work
+        contact_schedule_.CleanContacts(10);
 
-        // for (const auto& contact_info : msg.contact_info) {
-        //     const std::string& frame = contact_info.robot_contact_frame;
+        for (const auto& contact_info : msg.contact_info) {
+            const std::string& frame = contact_info.robot_contact_frame;
 
-        //     const auto& sched_map = contact_schedule_.GetScheduleMap();
-        //     if (sched_map.contains(frame)) {
-        //         // std::cout << "swing times size: " << contact_info.swing_times.size() << std::endl;
-        //         // TODO: Try Assigning the swing times from the command
-        //         for (int i = 0; i < contact_info.swing_times.size()/2; i++) {
-        //             contact_schedule_.InsertSwing(frame, contact_info.swing_times.at(2*i), contact_info.swing_times.at(2*i + 1));
-        //             // std::cout << "inserting a swing!" << std::endl;
-        //         }
+            const auto& sched_map = contact_schedule_.GetScheduleMap();
+            if (sched_map.contains(frame)) {
+                // std::cout << "swing times size: " << contact_info.swing_times.size() << std::endl;
+                // TODO: Try Assigning the swing times from the command
+                for (int i = 0; i < contact_info.swing_times.size()/2; i++) {
+                    contact_schedule_.InsertSwing(frame, contact_info.swing_times.at(2*i), contact_info.swing_times.at(2*i + 1));
+                    // std::cout << "inserting a swing!" << std::endl;
+                }
 
-        //         // std::cout << "Commanded swing times" << std::endl;
-        //         // for (int i = 0; i < contact_info.swing_times.size(); i++) {
-        //         //     std::cout << "i: " << i << ", swing times: " << contact_info.swing_times[i] << std::endl;
-        //         // }
-        //         // std::cout << "Current swing times" << std::endl;
-        //         // for (int i = 0; i < sched_map.at(frame).size(); i++) {
-        //         //     std::cout << "i: " << i << ", swing times: " << sched_map.at(frame)[i].first << ", " << sched_map.at(frame)[i].second << std::endl;
-        //         // }
+                // std::cout << "Commanded swing times" << std::endl;
+                // for (int i = 0; i < contact_info.swing_times.size(); i++) {
+                //     std::cout << "i: " << i << ", swing times: " << contact_info.swing_times[i] << std::endl;
+                // }
+                // std::cout << "Current swing times" << std::endl;
+                // for (int i = 0; i < sched_map.at(frame).size(); i++) {
+                //     std::cout << "i: " << i << ", swing times: " << sched_map.at(frame)[i].first << ", " << sched_map.at(frame)[i].second << std::endl;
+                // }
 
-        //         if (contact_schedule_.GetNumContacts(frame) != contact_info.swing_times.size()/2 + 1) {
-        //             std::cerr << "cs contact num: " << contact_schedule_.GetNumContacts(frame) << std::endl;
-        //             std::cerr << "ci contact num: " << contact_info.swing_times.size()/2 + 1 << std::endl;
-        //             throw std::runtime_error("Contacts not moved correctly!");
-        //         }
+                if (contact_schedule_.GetNumContacts(frame) != contact_info.swing_times.size()/2 + 1) {
+                    std::cerr << "cs contact num: " << contact_schedule_.GetNumContacts(frame) << std::endl;
+                    std::cerr << "ci contact num: " << contact_info.swing_times.size()/2 + 1 << std::endl;
+                    throw std::runtime_error("Contacts not moved correctly!");
+                }
 
-        //         // Extract contact polytopes
-        //         for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-        //             auto polytope = contact_info.polytopes.back();
-        //             if (i < contact_info.polytopes.size()) {
-        //                 polytope = contact_info.polytopes[i];
-        //             } 
+                // Extract contact polytopes
+                for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
+                    auto polytope = contact_info.polytopes.back();
+                    if (i < contact_info.polytopes.size()) {
+                        polytope = contact_info.polytopes[i];
+                    } 
 
-        //             std::vector<double> a_mat = polytope.a_mat;
+                    std::vector<double> a_mat = polytope.a_mat;
 
-        //             Eigen::Map<matrixx_t> A(a_mat.data(), 2, 2);
-        //             Eigen::Vector4d b(polytope.b_vec.data());
-        //             if (i < contact_schedule_.GetPolytopes(frame).size()) {
-        //                 contact_schedule_.SetPolytope(frame, i, A, b);
-        //             }
-        //         }
+                    Eigen::Map<matrixx_t> A(a_mat.data(), 2, 2);
+                    Eigen::Vector4d b(polytope.b_vec.data());
+                    if (i < contact_schedule_.GetPolytopes(frame).size()) {
+                        contact_schedule_.SetPolytope(frame, i, A, b);
+                    }
+                }
 
-        //         // std::cout << "done with " << frame << std::endl;
-        //     } else {
-        //         RCLCPP_ERROR_STREAM(this->get_logger(), frame << " is not a valid frame for the MPC contacts.");
-        //     }
-        // }
+                // std::cout << "done with " << frame << std::endl;
+            } else {
+                RCLCPP_ERROR_STREAM(this->get_logger(), frame << " is not a valid frame for the MPC contacts.");
+            }
+        }
     }
 
     void MpcController::JoystickCallback(const sensor_msgs::msg::Joy& msg) {

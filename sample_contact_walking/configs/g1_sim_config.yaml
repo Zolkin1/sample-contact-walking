@@ -102,7 +102,7 @@ onboard:
       subscribers:
         # Estimated state subscriber
         - ros_parameter: sub_est_setting
-          topic: /obelisk/g1/est_state # est_state, target_state
+          topic: /obelisk/g1/target_state # est_state, target_state
           history_depth: 10
           callback_group: estimation_cbg
           non_obelisk: False
@@ -145,7 +145,7 @@ onboard:
           non_obelisk: False
       subscribers:
         - ros_parameter: sub_est_setting
-          topic: /obelisk/g1/est_state # est_state, target_state
+          topic: /obelisk/g1/target_state # est_state, target_state
           msg_type: EstimatedState
           history_depth: 10
           callback_group: estimation_cbg
@@ -228,8 +228,8 @@ onboard:
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model
-          # model_xml_path: tile_scene.xml
-          model_xml_path: basic_scene.xml
+          model_xml_path: tile_scene.xml
+          # model_xml_path: basic_scene.xml
           # model_xml_path: stairs_scene.xml
           # model_xml_path: g1_29dof_with_hand.xml
           # n_u: 129
