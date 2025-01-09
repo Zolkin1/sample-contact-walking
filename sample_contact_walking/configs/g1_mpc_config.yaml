@@ -3,13 +3,13 @@ general_settings:
   verbose: False #True
   node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
   node_dt: 0.025 #0.025
-  first_node_dt: 0.01 
+  first_node_dt: 0.01 #0.01 
   compile_derivatives: False #True
   base_frame: "pelvis"
   scale_cost: False
   max_initial_solves: 20
   initial_constraint_tol: 5e-4
-  nodes_full_dynamics: 3 #3 #4   # Also determines how many nodes have torque constraints
+  nodes_full_dynamics: 3 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0
   terminal_cost_weight: 2 #2 #10
 solver_settings:
@@ -21,7 +21,7 @@ solver_settings:
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6
   adaptive_rho: False
-  max_iter: 50 #20 #50 #50 #20 Increasing this definetly helps 40-60 seems like a good balance
+  max_iter: 20 #50 #50 #20 Increasing this definetly helps 40-60 seems like a good balance
   scaling: 10 # Solve gets faster as scaling goes down, but also the quality gets worse. There is a balance
 constraints:
   friction_coef: 0.6 #0.7  # TODO: Tune this
@@ -30,12 +30,12 @@ constraints:
   collisions:
     - frame1: "left_toe"
       frame2: "right_toe"
-      radius1: 0.1 #0.13
-      radius2: 0.1 #0.13
+      radius1: 0.13 #0.13
+      radius2: 0.13 #0.13
     - frame1: "left_heel"
       frame2: "right_heel"
-      radius1: 0.1 #0.13
-      radius2: 0.1 #0.13
+      radius1: 0.13 #0.13
+      radius2: 0.13 #0.13
     - frame1: "left_toe"
       frame2: "right_heel"
       radius1: 0.1
@@ -56,14 +56,15 @@ costs:
 # NOTE: The resulting behaviour is suprisingly sensitive
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    weight:  [2, 2, 5, #2, 2, 5,  #15, 
+    weight:  [2, 2, 15, #2, 2, 5,  #15, 
+              # 4, 4, 4,
               2, 2, 2,
-              0.5, 3, 4, 0.05, 1, #1,         # Left Leg
-              0.5, 3, 4, 0.05, 1, #1,         # Right Leg
+              0.005, 1, 1, 0.01, 1, #1,         # Left Leg
+              0.005, 1, 1, 0.01, 1, #1,         # Right Leg
               # 0.5, 0.5, 0.5, 0.5,      # Left Arm
               # 0.5, 0.5, 0.5, 0.5]      # Right Arm
-              0.2, 0.2, 0.2, 0.2,      # Left Arm
-              0.2, 0.2, 0.2, 0.2]      # Right Arm
+              1, 1, 1, 1,      # Left Arm
+              1, 1, 1, 1]      # Right Arm
     # weight:  [1, 1, 5, #2, 2, 5,  #15, 
     #       2, 2, 2,
     #       20, 20, 20, 20, 20,       # Left Leg
@@ -78,48 +79,52 @@ costs:
     #       0.5, 0.5, 0.5, 0.5]      # Right Arm
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [2, 2, 2, #3, 3, 3, #5, 
+    weight: [3, 3, 5, #2, 2, 2, #3, 3, 3, #5, 
+            # 5, 5, 5,
             2, 1, 2,
-            0.005, 1, 2, 0.001, 0.1, #0.001,         # Left Leg
-            0.005, 1, 2, 0.001, 0.1, #0.001,         # Right Leg
-            0.3, 0.3, 0.3, 0.3,      # Left Arm
-            0.3, 0.3, 0.3, 0.3]      # Right Arm
+            0.05, 1, 1, 0.01, 0.1, #0.001,         # Left Leg
+            0.05, 1, 1, 0.01, 0.1, #0.001,         # Right Leg
+            1, 1, 1, 1,
+            1, 1, 1, 1,]
+            # 0.3, 0.3, 0.3, 0.3,      # Left Arm
+            # 0.3, 0.3, 0.3, 0.3]      # Right Arm
   - type: TorqueRegularization
     name: "TorqueReg"
-    weight: [0.0001, 0.001, 0.001, 0.0001, 0.001, #0.001,            # Left Leg
-            0.0001, 0.001, 0.001, 0.0001, 0.001, #0.001,             # Right Leg
+    weight: [0.001, 0.001, 0.001, 0.0001, 0.001, #0.001,            # Left Leg
+            0.001, 0.001, 0.001, 0.0001, 0.001, #0.001,             # Right Leg
             0.01, 0.01, 0.01, 0.01,                           # Left Arm
             0.01, 0.01, 0.01, 0.01,]                          # Right Arm
   - type: ForceRegularization
     name: "ForceReg"
     # weight: [0.005, 0.005, 0.001]
+    # weight: [0.02, 0.02, 0.001]
     weight: [0.01, 0.01, 0.0001]
     # weight: [0.02, 0.02, 0.0002]
     # weight: [0.2, 0.2, 0.1]
-  - type: FootPolytope
-    name: "left_toe_polytope"
-    weight: [1, 1, 1, 1]
-    frame: "left_toe"
-    mu: 0.01
-    delta: 0.01
-  - type: FootPolytope
-    name: "left_heel_polytope"
-    weight: [1, 1, 1, 1]
-    frame: "left_heel"
-    mu: 0.01
-    delta: 0.01
-  - type: FootPolytope
-    name: "right_toe_polytope"
-    weight: [1, 1, 1, 1]
-    frame: "right_toe"
-    mu: 0.01
-    delta: 0.01
-  - type: FootPolytope
-    name: "right_heel_polytope"
-    weight: [1, 1, 1, 1]
-    frame: "right_heel"
-    mu: 0.01
-    delta: 0.01
+  # - type: FootPolytope
+  #   name: "left_toe_polytope"
+  #   weight: [1, 1, 1, 1]
+  #   frame: "left_toe"
+  #   mu: 0.01
+  #   delta: 0.01
+  # - type: FootPolytope
+  #   name: "left_heel_polytope"
+  #   weight: [1, 1, 1, 1]
+  #   frame: "left_heel"
+  #   mu: 0.01
+  #   delta: 0.01
+  # - type: FootPolytope
+  #   name: "right_toe_polytope"
+  #   weight: [1, 1, 1, 1]
+  #   frame: "right_toe"
+  #   mu: 0.01
+  #   delta: 0.01
+  # - type: FootPolytope
+  #   name: "right_heel_polytope"
+  #   weight: [1, 1, 1, 1]
+  #   frame: "right_heel"
+  #   mu: 0.01
+  #   delta: 0.01
 contacts:
   # contact_frames: ["left_heel", "right_heel"]
   contact_frames: ["left_toe", "left_heel", "right_toe", "right_heel"]
