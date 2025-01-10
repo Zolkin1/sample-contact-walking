@@ -99,7 +99,7 @@ class ContactPlanner(ObeliskController):
             for i in range(self.q_target_base.shape[1]):
                 self.q_target_base[:,i] = x_hat_msg.q_base
             # TODO: remove
-            self.get_logger().info("q_target_base: " + np.array2string(self.q_target_base))
+            # self.get_logger().info("q_target_base: " + np.array2string(self.q_target_base))
 
         if np.linalg.norm(self.q_est[3:7]) > 0.9:
             self.received_state = True

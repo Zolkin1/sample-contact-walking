@@ -302,8 +302,8 @@ namespace robot
                     }
 
                     // TODO: Remove
-                    // q = q_ic_;
-                    // v = v_ic_;
+                    q = q_ic_;
+                    v = v_ic_;
 
                     // TODO: Fix the state for when we re-enter this loop
                      {
@@ -671,174 +671,176 @@ namespace robot
 
         // this->GetPublisher<visualization_msgs::msg::MarkerArray>("viz_pub")->publish(msg);
 
-        // Publish force arrows
-        if (viz_forces_ && traj_start_time_ >= 0) {
-            // visualization_msgs::msg::MarkerArray force_msg;
-            // force_msg.markers.resize(force_frames_.size());
-            mpc_model_->FirstOrderFK(traj.GetConfiguration(0));
-            for (int i = viz_frames.size(); i < force_frames_.size() + viz_frames.size(); i++) {
-                msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
-                msg.markers[i].header.frame_id = "world";
-                msg.markers[i].header.stamp = this->now();
-                msg.markers[i].ns = "mpc_force_viz";
-                msg.markers[i].id = i;
-                msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
+        // TODO: There is a bug in this block of code for the quad
+        // // Publish force arrows
+        // if (viz_forces_ && traj_start_time_ >= 0) {
+        //     // visualization_msgs::msg::MarkerArray force_msg;
+        //     // force_msg.markers.resize(force_frames_.size());
+        //     mpc_model_->FirstOrderFK(traj.GetConfiguration(0));
+        //     for (int i = viz_frames.size(); i < force_frames_.size() + viz_frames.size(); i++) {
+        //         msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
+        //         msg.markers[i].header.frame_id = "world";
+        //         msg.markers[i].header.stamp = this->now();
+        //         msg.markers[i].ns = "mpc_force_viz";
+        //         msg.markers[i].id = i;
+        //         msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
 
-                msg.markers[i].scale.x = 0.01; // Width of the arrows
+        //         msg.markers[i].scale.x = 0.01; // Width of the arrows
 
-                vector3_t frame_pos = mpc_model_->GetFrameState(force_frames_[i - viz_frames_.size()]).placement.translation();
-                geometry_msgs::msg::Point start_point;
-                start_point.x = frame_pos(0);
-                start_point.y = frame_pos(1);
-                start_point.z = frame_pos(2);
+        //         vector3_t frame_pos = mpc_model_->GetFrameState(force_frames_[i - viz_frames_.size()]).placement.translation();
+        //         geometry_msgs::msg::Point start_point;
+        //         start_point.x = frame_pos(0);
+        //         start_point.y = frame_pos(1);
+        //         start_point.z = frame_pos(2);
 
-                msg.markers[i].points.emplace_back(start_point);
+        //         msg.markers[i].points.emplace_back(start_point);
 
-                vector3_t force_interp;
-                {
-                    double time = this->get_clock()->now().seconds();
-                    double time_into_traj = time - traj_start_time_;
-                    std::lock_guard<std::mutex> lock(traj_out_mut_);
-                    traj_out_.GetForceInterp(time_into_traj, force_frames_[i - viz_frames_.size()], force_interp);
-                }
+        //         vector3_t force_interp;
+        //         {
+        //             double time = this->get_clock()->now().seconds();
+        //             double time_into_traj = time - traj_start_time_;
+        //             std::lock_guard<std::mutex> lock(traj_out_mut_);
+        //             traj_out_.GetForceInterp(time_into_traj, force_frames_[i - viz_frames_.size()], force_interp);
+        //         }
 
 
-                geometry_msgs::msg::Point end_point;
-                end_point.x = start_point.x + force_interp(0)*scale_forces_;
-                end_point.y = start_point.y + force_interp(1)*scale_forces_;
-                end_point.z = start_point.z + force_interp(2)*scale_forces_;
+        //         geometry_msgs::msg::Point end_point;
+        //         end_point.x = start_point.x + force_interp(0)*scale_forces_;
+        //         end_point.y = start_point.y + force_interp(1)*scale_forces_;
+        //         end_point.z = start_point.z + force_interp(2)*scale_forces_;
 
-                msg.markers[i].points.emplace_back(end_point);
+        //         msg.markers[i].points.emplace_back(end_point);
 
-                // *** Note *** The color is according to the node number, not necessarily the dt
-                // Color according to node
-                std_msgs::msg::ColorRGBA color;
-                color.r = 0;
-                color.g = 0;
-                color.b = 1;
-                color.a = 1;
-                msg.markers[i].colors.push_back(color);
-                msg.markers[i].colors.push_back(color);
-            }
+        //         // *** Note *** The color is according to the node number, not necessarily the dt
+        //         // Color according to node
+        //         std_msgs::msg::ColorRGBA color;
+        //         color.r = 0;
+        //         color.g = 0;
+        //         color.b = 1;
+        //         color.a = 1;
+        //         msg.markers[i].colors.push_back(color);
+        //         msg.markers[i].colors.push_back(color);
+        //     }
             
-            // TODO: Merge this publish with the one above
-            // this->GetPublisher<visualization_msgs::msg::MarkerArray>("viz_pub")->publish(msg);            
-        }
+        //     // TODO: Merge this publish with the one above
+        //     // this->GetPublisher<visualization_msgs::msg::MarkerArray>("viz_pub")->publish(msg);            
+        // }
 
-        std::lock_guard<std::mutex> lock(polytope_mutex_);
+        // std::lock_guard<std::mutex> lock(polytope_mutex_);
 
-        int num_polytope_markers = 0;
-        for (const auto& frame : viz_polytope_frames_) {
-            num_polytope_markers += contact_schedule_.GetNumContacts(frame);
-        }
+        // int num_polytope_markers = 0;
+        // for (const auto& frame : viz_polytope_frames_) {
+        //     num_polytope_markers += contact_schedule_.GetNumContacts(frame);
+        // }
         
-        msg.markers.resize(viz_frames.size() + force_frames_.size() + num_polytope_markers);
+        // msg.markers.resize(viz_frames.size() + force_frames_.size() + num_polytope_markers);
 
-        int i = viz_frames.size() + force_frames_.size();
-        int frame_idx = 0;
-        for (const auto& frame : viz_polytope_frames_) {
-            // Visualize contact polytopes
-            std::vector<torc::mpc::ContactInfo> polytope_vec;
-            int num_contacts;
-            {
-                // Grab the contact polytopes
-                // std::lock_guard<std::mutex> lock(polytope_mutex_); // Grabbed above
+        // TODO: There is a bug in this block of code for the quad
+        // int i = viz_frames.size() + force_frames_.size();
+        // int frame_idx = 0;
+        // for (const auto& frame : viz_polytope_frames_) {
+        //     // Visualize contact polytopes
+        //     std::vector<torc::mpc::ContactInfo> polytope_vec;
+        //     int num_contacts;
+        //     {
+        //         // Grab the contact polytopes
+        //         // std::lock_guard<std::mutex> lock(polytope_mutex_); // Grabbed above
 
-                polytope_vec = contact_schedule_.GetPolytopes(frame);
-                num_contacts = contact_schedule_.GetNumContacts(frame);
-            }
+        //         polytope_vec = contact_schedule_.GetPolytopes(frame);
+        //         num_contacts = contact_schedule_.GetNumContacts(frame);
+        //     }
 
-            if (num_contacts != polytope_vec.size()) {
-                RCLCPP_ERROR_STREAM(this->get_logger(), "Frame: " << frame << " size: " << num_contacts << " num poly: " << polytope_vec.size());
-            }
+        //     if (num_contacts != polytope_vec.size()) {
+        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Frame: " << frame << " size: " << num_contacts << " num poly: " << polytope_vec.size());
+        //     }
 
-            std_msgs::msg::ColorRGBA color;
-            // if (frame_idx % 2 == 0) {
-            //     color.r = 1;
-            //     color.g = 0;
-            //     color.b = 1;
-            //     color.a = 1;
-            // } else {
-            //     color.r = 1;
-            //     color.g = 1;
-            //     color.b = 0;
-            //     color.a = 1;
-            // }
-            if (frame_idx == 0) {
-                color.r = 1;
-                color.g = 0;
-                color.b = 1;
-                color.a = 1;
-            } else if (frame_idx == 1) {
-                color.r = 1;
-                color.g = 1;
-                color.b = 1;
-                color.a = 1;
-            } else if (frame_idx == 2) {
-                color.r = 1;
-                color.g = 0;
-                color.b = 0;
-                color.a = 1;
-            } else {
-                color.r = 1;
-                color.g = 1;
-                color.b = 0;
-                color.a = 1;
-            }
+        //     std_msgs::msg::ColorRGBA color;
+        //     // if (frame_idx % 2 == 0) {
+        //     //     color.r = 1;
+        //     //     color.g = 0;
+        //     //     color.b = 1;
+        //     //     color.a = 1;
+        //     // } else {
+        //     //     color.r = 1;
+        //     //     color.g = 1;
+        //     //     color.b = 0;
+        //     //     color.a = 1;
+        //     // }
+        //     if (frame_idx == 0) {
+        //         color.r = 1;
+        //         color.g = 0;
+        //         color.b = 1;
+        //         color.a = 1;
+        //     } else if (frame_idx == 1) {
+        //         color.r = 1;
+        //         color.g = 1;
+        //         color.b = 1;
+        //         color.a = 1;
+        //     } else if (frame_idx == 2) {
+        //         color.r = 1;
+        //         color.g = 0;
+        //         color.b = 0;
+        //         color.a = 1;
+        //     } else {
+        //         color.r = 1;
+        //         color.g = 1;
+        //         color.b = 0;
+        //         color.a = 1;
+        //     }
 
-            if (polytope_vec.size() != num_contacts) {
-                RCLCPP_ERROR_STREAM(this->get_logger(), "Contact polytopes not of the correct size!");
-            }
+        //     if (polytope_vec.size() != num_contacts) {
+        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Contact polytopes not of the correct size!");
+        //     }
 
-            for (const auto& polytope : polytope_vec) {
-                // RCLCPP_INFO_STREAM(this->get_logger(), "A: " << polytope.A_ << "\nb: " << polytope.b_.transpose());
+        //     for (const auto& polytope : polytope_vec) {
+        //         // RCLCPP_INFO_STREAM(this->get_logger(), "A: " << polytope.A_ << "\nb: " << polytope.b_.transpose());
 
-                msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
-                msg.markers[i].header.frame_id = "world";
-                msg.markers[i].header.stamp = this->now();
-                msg.markers[i].ns = "contact_polytope";
-                msg.markers[i].id = i;
-                msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
+        //         msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
+        //         msg.markers[i].header.frame_id = "world";
+        //         msg.markers[i].header.stamp = this->now();
+        //         msg.markers[i].ns = "contact_polytope";
+        //         msg.markers[i].id = i;
+        //         msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
 
-                msg.markers[i].scale.x = 0.02;
+        //         msg.markers[i].scale.x = 0.02;
 
-                // TODO: Do better
-                // TODO: Check this to make sure it will work for more than the default polytope
-                geometry_msgs::msg::Point corner;
-                corner.z = 0;
+        //         // TODO: Do better
+        //         // TODO: Check this to make sure it will work for more than the default polytope
+        //         geometry_msgs::msg::Point corner;
+        //         corner.z = 0;
 
-                // std::cout << "b: " << polytope.b_.transpose() << std::endl;
-                corner.x = polytope.b_(0);
-                corner.y = polytope.b_(1);
-                msg.markers[i].points.emplace_back(corner);
-                msg.markers[i].colors.push_back(color);
+        //         // std::cout << "b: " << polytope.b_.transpose() << std::endl;
+        //         corner.x = polytope.b_(0);
+        //         corner.y = polytope.b_(1);
+        //         msg.markers[i].points.emplace_back(corner);
+        //         msg.markers[i].colors.push_back(color);
 
-                corner.x = polytope.b_(0);
-                corner.y = polytope.b_(3);
-                msg.markers[i].points.emplace_back(corner);
-                msg.markers[i].colors.push_back(color);
+        //         corner.x = polytope.b_(0);
+        //         corner.y = polytope.b_(3);
+        //         msg.markers[i].points.emplace_back(corner);
+        //         msg.markers[i].colors.push_back(color);
 
-                corner.x = polytope.b_(2);
-                corner.y = polytope.b_(3);
-                msg.markers[i].points.emplace_back(corner);
-                msg.markers[i].colors.push_back(color);
+        //         corner.x = polytope.b_(2);
+        //         corner.y = polytope.b_(3);
+        //         msg.markers[i].points.emplace_back(corner);
+        //         msg.markers[i].colors.push_back(color);
 
-                corner.x = polytope.b_(2);
-                corner.y = polytope.b_(1);
-                msg.markers[i].points.emplace_back(corner);
-                msg.markers[i].colors.push_back(color);
+        //         corner.x = polytope.b_(2);
+        //         corner.y = polytope.b_(1);
+        //         msg.markers[i].points.emplace_back(corner);
+        //         msg.markers[i].colors.push_back(color);
 
-                corner.x = polytope.b_(0);
-                corner.y = polytope.b_(1);
-                msg.markers[i].points.emplace_back(corner);
-                msg.markers[i].colors.push_back(color);
+        //         corner.x = polytope.b_(0);
+        //         corner.y = polytope.b_(1);
+        //         msg.markers[i].points.emplace_back(corner);
+        //         msg.markers[i].colors.push_back(color);
 
 
-                i++;
-            }
+        //         i++;
+        //     }
 
-            frame_idx++;
-        }
+        //     frame_idx++;
+        // }
 
         this->GetPublisher<visualization_msgs::msg::MarkerArray>("viz_pub")->publish(msg);            
     }
@@ -905,98 +907,23 @@ namespace robot
         // }
 
         // ---------- Go2 ---------- //
-        // std::lock_guard<std::mutex> lock(traj_out_mut_);
-
-        // // TODO: Consider putting back
-        // // if (traj_start_time_ < 0) {
-        // //     traj_start_time_ = this->get_clock()->now().seconds();
-        // // }
-        // obelisk_estimator_msgs::msg::EstimatedState msg;
-
-        // double time = this->get_clock()->now().seconds();
-        // // TODO: Do I need to use nanoseconds?
-        // // double time_into_traj = 0.75;
-        // double time_into_traj = time - traj_start_time_;
-        // // double time_into_traj = 0;
-
-        // // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
-        // vectorx_t q = vectorx_t::Zero(model_->GetConfigDim());
-        // vectorx_t v = vectorx_t::Zero(model_->GetVelDim());
-        // if (GetState() == Mpc) {
-        //     traj_out_.GetConfigInterp(time_into_traj, q);
-        //     traj_out_.GetVelocityInterp(time_into_traj, v);
-        // } else {
-        //     q = q_ic_;
-        //     v = v_ic_;
+        // TODO: Consider putting back
+        // if (traj_start_time_ < 0) {
+        //     traj_start_time_ = this->get_clock()->now().seconds();
         // }
-
-        // // traj_out_.GetConfigInterp(0.01, q);
-        // msg.base_link_name = "torso";
-        // vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
-        // vectorx_t q_tail = q.tail(model_->GetNumInputs());
-        // msg.q_base = torc::utils::EigenToStdVector(q_head);
-        // msg.q_joints.resize(model_->GetNumInputs());
-        // msg.v_joints.resize(model_->GetNumInputs());
-
-        // msg.joint_names.resize(q_tail.size());
-        // msg.joint_names[0] = "FL_hip_joint";
-        // msg.joint_names[1] = "FR_hip_joint";
-        // msg.joint_names[2] = "RL_hip_joint";
-        // msg.joint_names[3] = "RR_hip_joint";
-        // msg.joint_names[4] = "FL_thigh_joint";
-        // msg.joint_names[5] = "FR_thigh_joint";
-        // msg.joint_names[6] = "RL_thigh_joint";
-        // msg.joint_names[7] = "RR_thigh_joint";
-        // msg.joint_names[8] = "FL_calf_joint";
-        // msg.joint_names[9] = "FR_calf_joint";
-        // msg.joint_names[10] = "RL_calf_joint";
-        // msg.joint_names[11] = "RR_calf_joint";
-
-        // for (int i = 0; i < msg.joint_names.size(); i++) {
-        //     const auto idx = model_->GetJointID(msg.joint_names[i]);
-        //     if (idx.has_value()) {
-        //         msg.q_joints[i] = q(5 + idx.value());
-        //         if (4 + idx.value() > v.size()) {
-        //             RCLCPP_ERROR_STREAM(this->get_logger(), "v idx out of bounds!");
-        //         } else {
-        //             msg.v_joints[i] = v(4 + idx.value());
-        //         }
-        //     } else {
-        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Joint index not found!");
-        //     }
-        // }
-
-        // // traj_out_.GetVelocityInterp(0.01, v);
-        // vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
-
-        // // vectorx_t temp = vectorx_t::Zero(6);
-        // msg.v_base = torc::utils::EigenToStdVector(v_head);
-
-        // msg.header.stamp = this->now();
-
-        // if (!sim_ready_) {
-        //     this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
-        // }
-
-        // ---------- G1 ---------- //
         obelisk_estimator_msgs::msg::EstimatedState msg;
 
-        vectorx_t q = vectorx_t::Zero(mpc_model_->GetConfigDim());
-        vectorx_t v = vectorx_t::Zero(mpc_model_->GetVelDim());
-
+        vectorx_t q;
+        vectorx_t v;
         double time = this->get_clock()->now().seconds();
-        // TODO: Do I need to use nanoseconds?
-        // double time_into_traj = 0.75;
         {
             std::lock_guard<std::mutex> lock(traj_out_mut_);
             double time_into_traj = time - traj_start_time_;
-            // RCLCPP_INFO_STREAM(this->get_logger(), "Time: " << time);
-            // RCLCPP_INFO_STREAM(this->get_logger(), "Traj start time: " << traj_start_time_);
-            // double time_into_traj = 0;
 
-            // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj)
+            // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
+            q = vectorx_t::Zero(model_->GetConfigDim());
+            v = vectorx_t::Zero(model_->GetVelDim());
             if (GetState() == Mpc) {
-                // RCLCPP_WARN_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
                 traj_out_.GetConfigInterp(time_into_traj, q);
                 traj_out_.GetVelocityInterp(time_into_traj, v);
             } else {
@@ -1006,7 +933,7 @@ namespace robot
         }
 
         // traj_out_.GetConfigInterp(0.01, q);
-        msg.base_link_name = "pelvis";
+        msg.base_link_name = "torso";
         vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
         vectorx_t q_tail = q.tail(model_->GetNumInputs());
         msg.q_base = torc::utils::EigenToStdVector(q_head);
@@ -1014,68 +941,21 @@ namespace robot
         msg.v_joints.resize(model_->GetNumInputs());
 
         msg.joint_names.resize(q_tail.size());
-        // Left Leg
-        msg.joint_names[0] = "left_hip_pitch_joint";
-        msg.joint_names[1] = "left_hip_roll_joint";
-        msg.joint_names[2] = "left_hip_yaw_joint";
-        msg.joint_names[3] = "left_knee_joint";
-        msg.joint_names[4] = "left_ankle_pitch_joint";
-        msg.joint_names[5] = "left_ankle_roll_joint";
-
-        // Right Leg
-        msg.joint_names[6] = "right_hip_pitch_joint";
-        msg.joint_names[7] = "right_hip_roll_joint";
-        msg.joint_names[8] = "right_hip_yaw_joint";
-        msg.joint_names[9] = "right_knee_joint";
-        msg.joint_names[10] = "right_ankle_pitch_joint";
-        msg.joint_names[11] = "right_ankle_roll_joint";
-
-        // Torso
-        msg.joint_names[12] = "waist_yaw_joint";
-        msg.joint_names[13] = "waist_roll_joint";
-        msg.joint_names[14] = "waist_pitch_joint";
-
-        // Left Arm
-        msg.joint_names[15] = "left_shoulder_pitch_joint";
-        msg.joint_names[16] = "left_shoulder_roll_joint";
-        msg.joint_names[17] = "left_shoulder_yaw_joint";
-        msg.joint_names[18] = "left_elbow_joint";
-        msg.joint_names[19] = "left_wrist_roll_joint";
-        msg.joint_names[20] = "left_wrist_pitch_joint";
-        msg.joint_names[21] = "left_wrist_yaw_joint";
-
-        // Left Hand
-        msg.joint_names[22] = "left_hand_thumb_0_joint";
-        msg.joint_names[23] = "left_hand_thumb_1_joint";
-        msg.joint_names[24] = "left_hand_thumb_2_joint";
-        msg.joint_names[25] = "left_hand_middle_0_joint";
-        msg.joint_names[26] = "left_hand_middle_1_joint";
-        msg.joint_names[27] = "left_hand_index_0_joint";
-        msg.joint_names[28] = "left_hand_index_1_joint";
-
-        // Right Arm
-        msg.joint_names[29] = "right_shoulder_pitch_joint";
-        msg.joint_names[30] = "right_shoulder_roll_joint";
-        msg.joint_names[31] = "right_shoulder_yaw_joint";
-        msg.joint_names[32] = "right_elbow_joint";
-        msg.joint_names[33] = "right_wrist_roll_joint";
-        msg.joint_names[34] = "right_wrist_pitch_joint";
-        msg.joint_names[35] = "right_wrist_yaw_joint";
-
-        // Right Hand
-        msg.joint_names[36] = "right_hand_thumb_0_joint";
-        msg.joint_names[37] = "right_hand_thumb_1_joint";
-        msg.joint_names[38] = "right_hand_thumb_2_joint";
-        msg.joint_names[39] = "right_hand_middle_0_joint";
-        msg.joint_names[40] = "right_hand_middle_1_joint";
-        msg.joint_names[41] = "right_hand_index_0_joint";
-        msg.joint_names[42] = "right_hand_index_1_joint";
-
-        const auto joint_skip_names = mpc_->GetJointSkipNames();
-        const auto joint_skip_values = mpc_->GetJointSkipValues();
+        msg.joint_names[0] = "FL_hip_joint";
+        msg.joint_names[1] = "FR_hip_joint";
+        msg.joint_names[2] = "RL_hip_joint";
+        msg.joint_names[3] = "RR_hip_joint";
+        msg.joint_names[4] = "FL_thigh_joint";
+        msg.joint_names[5] = "FR_thigh_joint";
+        msg.joint_names[6] = "RL_thigh_joint";
+        msg.joint_names[7] = "RR_thigh_joint";
+        msg.joint_names[8] = "FL_calf_joint";
+        msg.joint_names[9] = "FR_calf_joint";
+        msg.joint_names[10] = "RL_calf_joint";
+        msg.joint_names[11] = "RR_calf_joint";
 
         for (int i = 0; i < msg.joint_names.size(); i++) {
-            const auto idx = mpc_model_->GetJointID(msg.joint_names[i]);
+            const auto idx = model_->GetJointID(msg.joint_names[i]);
             if (idx.has_value()) {
                 msg.q_joints[i] = q(5 + idx.value());
                 if (4 + idx.value() > v.size()) {
@@ -1083,14 +963,6 @@ namespace robot
                 } else {
                     msg.v_joints[i] = v(4 + idx.value());
                 }
-            } else if (std::find(joint_skip_names.begin(), joint_skip_names.end(), msg.joint_names[i]) != joint_skip_names.end()) {     // Check if the joint is a skipped joint
-                // Find the index
-                for (int skip_idx = 0; skip_idx < joint_skip_names.size(); skip_idx++) {
-                    if (joint_skip_names[skip_idx] == msg.joint_names[i]) {
-                        msg.q_joints[i] = joint_skip_values[skip_idx];
-                        break;
-                    }
-                } 
             } else {
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Joint index not found!");
             }
@@ -1107,6 +979,136 @@ namespace robot
         // if (!sim_ready_) {
         this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
         // }
+
+        // ---------- G1 ---------- //
+        // obelisk_estimator_msgs::msg::EstimatedState msg;
+
+        // vectorx_t q = vectorx_t::Zero(mpc_model_->GetConfigDim());
+        // vectorx_t v = vectorx_t::Zero(mpc_model_->GetVelDim());
+
+        // double time = this->get_clock()->now().seconds();
+        // // TODO: Do I need to use nanoseconds?
+        // // double time_into_traj = 0.75;
+        // {
+        //     std::lock_guard<std::mutex> lock(traj_out_mut_);
+        //     double time_into_traj = time - traj_start_time_;
+        //     // RCLCPP_INFO_STREAM(this->get_logger(), "Time: " << time);
+        //     // RCLCPP_INFO_STREAM(this->get_logger(), "Traj start time: " << traj_start_time_);
+        //     // double time_into_traj = 0;
+
+        //     // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj)
+        //     if (GetState() == Mpc) {
+        //         // RCLCPP_WARN_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
+        //         traj_out_.GetConfigInterp(time_into_traj, q);
+        //         traj_out_.GetVelocityInterp(time_into_traj, v);
+        //     } else {
+        //         q = q_ic_;
+        //         v = v_ic_;
+        //     }
+        // }
+
+        // // traj_out_.GetConfigInterp(0.01, q);
+        // msg.base_link_name = "pelvis";
+        // vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
+        // vectorx_t q_tail = q.tail(model_->GetNumInputs());
+        // msg.q_base = torc::utils::EigenToStdVector(q_head);
+        // msg.q_joints.resize(model_->GetNumInputs());
+        // msg.v_joints.resize(model_->GetNumInputs());
+
+        // msg.joint_names.resize(q_tail.size());
+        // // Left Leg
+        // msg.joint_names[0] = "left_hip_pitch_joint";
+        // msg.joint_names[1] = "left_hip_roll_joint";
+        // msg.joint_names[2] = "left_hip_yaw_joint";
+        // msg.joint_names[3] = "left_knee_joint";
+        // msg.joint_names[4] = "left_ankle_pitch_joint";
+        // msg.joint_names[5] = "left_ankle_roll_joint";
+
+        // // Right Leg
+        // msg.joint_names[6] = "right_hip_pitch_joint";
+        // msg.joint_names[7] = "right_hip_roll_joint";
+        // msg.joint_names[8] = "right_hip_yaw_joint";
+        // msg.joint_names[9] = "right_knee_joint";
+        // msg.joint_names[10] = "right_ankle_pitch_joint";
+        // msg.joint_names[11] = "right_ankle_roll_joint";
+
+        // // Torso
+        // msg.joint_names[12] = "waist_yaw_joint";
+        // msg.joint_names[13] = "waist_roll_joint";
+        // msg.joint_names[14] = "waist_pitch_joint";
+
+        // // Left Arm
+        // msg.joint_names[15] = "left_shoulder_pitch_joint";
+        // msg.joint_names[16] = "left_shoulder_roll_joint";
+        // msg.joint_names[17] = "left_shoulder_yaw_joint";
+        // msg.joint_names[18] = "left_elbow_joint";
+        // msg.joint_names[19] = "left_wrist_roll_joint";
+        // msg.joint_names[20] = "left_wrist_pitch_joint";
+        // msg.joint_names[21] = "left_wrist_yaw_joint";
+
+        // // Left Hand
+        // msg.joint_names[22] = "left_hand_thumb_0_joint";
+        // msg.joint_names[23] = "left_hand_thumb_1_joint";
+        // msg.joint_names[24] = "left_hand_thumb_2_joint";
+        // msg.joint_names[25] = "left_hand_middle_0_joint";
+        // msg.joint_names[26] = "left_hand_middle_1_joint";
+        // msg.joint_names[27] = "left_hand_index_0_joint";
+        // msg.joint_names[28] = "left_hand_index_1_joint";
+
+        // // Right Arm
+        // msg.joint_names[29] = "right_shoulder_pitch_joint";
+        // msg.joint_names[30] = "right_shoulder_roll_joint";
+        // msg.joint_names[31] = "right_shoulder_yaw_joint";
+        // msg.joint_names[32] = "right_elbow_joint";
+        // msg.joint_names[33] = "right_wrist_roll_joint";
+        // msg.joint_names[34] = "right_wrist_pitch_joint";
+        // msg.joint_names[35] = "right_wrist_yaw_joint";
+
+        // // Right Hand
+        // msg.joint_names[36] = "right_hand_thumb_0_joint";
+        // msg.joint_names[37] = "right_hand_thumb_1_joint";
+        // msg.joint_names[38] = "right_hand_thumb_2_joint";
+        // msg.joint_names[39] = "right_hand_middle_0_joint";
+        // msg.joint_names[40] = "right_hand_middle_1_joint";
+        // msg.joint_names[41] = "right_hand_index_0_joint";
+        // msg.joint_names[42] = "right_hand_index_1_joint";
+
+        // const auto joint_skip_names = mpc_->GetJointSkipNames();
+        // const auto joint_skip_values = mpc_->GetJointSkipValues();
+
+        // for (int i = 0; i < msg.joint_names.size(); i++) {
+        //     const auto idx = mpc_model_->GetJointID(msg.joint_names[i]);
+        //     if (idx.has_value()) {
+        //         msg.q_joints[i] = q(5 + idx.value());
+        //         if (4 + idx.value() > v.size()) {
+        //             RCLCPP_ERROR_STREAM(this->get_logger(), "v idx out of bounds!");
+        //         } else {
+        //             msg.v_joints[i] = v(4 + idx.value());
+        //         }
+        //     } else if (std::find(joint_skip_names.begin(), joint_skip_names.end(), msg.joint_names[i]) != joint_skip_names.end()) {     // Check if the joint is a skipped joint
+        //         // Find the index
+        //         for (int skip_idx = 0; skip_idx < joint_skip_names.size(); skip_idx++) {
+        //             if (joint_skip_names[skip_idx] == msg.joint_names[i]) {
+        //                 msg.q_joints[i] = joint_skip_values[skip_idx];
+        //                 break;
+        //             }
+        //         } 
+        //     } else {
+        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Joint index not found!");
+        //     }
+        // }
+
+        // // traj_out_.GetVelocityInterp(0.01, v);
+        // vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
+
+        // // vectorx_t temp = vectorx_t::Zero(6);
+        // msg.v_base = torc::utils::EigenToStdVector(v_head);
+
+        // msg.header.stamp = this->now();
+
+        // // if (!sim_ready_) {
+        // this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
+        // // }
     }
 
     void MpcController::MakeTargetTorsoMocapTransform() {

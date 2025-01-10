@@ -21,7 +21,7 @@ onboard:
         max_mpc_solves: -37 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.2 #0.25
-        first_swing_time: 2.
+        first_swing_time: 0.1 #2.
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -77,17 +77,22 @@ onboard:
         # ----- Joystick publisher ----- #
         - ros_parameter: joystick_feedback_setting
           topic: /obelisk/go2/joy_feedback
+        # ----- Target publisher ----- #
+        - ros_parameter: target_pub_setting
+          topic: /obelisk/go2/commanded_target
       subscribers:
         # Estimated state subscriber
         - ros_parameter: sub_est_setting
-          topic: /obelisk/go2/est_state # est_state, target_state
+          topic: /obelisk/go2/target_state # est_state, target_state
           history_depth: 10
           callback_group: estimation_cbg
           non_obelisk: False
         # ----- Joystick subscriber ----- #
         - ros_parameter: joystick_sub_setting
           topic: /obelisk/go2/joy
-
+        # ----- Contact Schedule subscriber ----- #
+        - ros_parameter: contact_schedule_sub_setting
+          topic: /obelisk/go2/contact_schedule
       timers:
         # Low level control timer
         - ros_parameter: timer_ctrl_setting
@@ -97,6 +102,40 @@ onboard:
         - ros_parameter: state_viz_timer_setting
           timer_period_sec: 0.002
           callback_group: None
+    - pkg: contact_planning
+      executable: contact_planner
+      params:
+        num_nodes: 32   # Should match the MPC
+        default_polytope_size: 0.4 #0.6
+        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
+      # ----- Tile Scene ---- #
+        foothold_geoms: ["tile1"]
+      # ----- Swing Timing Paramers ---- #
+      # WARNING!! THESE MUST MATCH THE CORRESPONDING PARAMETERS ABOVE
+        swing_time: 0.2 #0.25
+        first_swing_time: 2.
+        right_foot_frames: ["RL_foot", "FR_foot"]
+        left_foot_frames: ["FL_foot", "RR_foot"]
+      publishers:
+        # Contact schedule publisher
+        - ros_parameter: pub_ctrl_setting
+          topic: /obelisk/go2/blah_blah_contact_schedule
+          msg_type: PositionSetpoint #ContactSchedule   # TODO: This won't work until I update Obelisk
+          key: "contact_schedule_pub"
+          history_depth: 10
+          non_obelisk: False
+      subscribers:
+        - ros_parameter: sub_est_setting
+          topic: /obelisk/go2/target_state # est_state, target_state
+          msg_type: EstimatedState
+          history_depth: 10
+          callback_group: estimation_cbg
+          non_obelisk: False
+      timers:
+        # Contact planning timer
+        - ros_parameter: timer_ctrl_setting
+          timer_period_sec: 0.05 #0.1
+          callback_group: control_cbg
   estimation:
     - pkg: sample_contact_walking
       executable: state_estimator
