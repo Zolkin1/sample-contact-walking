@@ -11,7 +11,7 @@ general_settings:
   initial_constraint_tol: 5e-4
   nodes_full_dynamics: 3 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0
-  terminal_cost_weight: 10
+  terminal_cost_weight: 2 #10
 solver_settings:
   rel_tol: 1e-3
   abs_tol: 1e-3
@@ -48,7 +48,8 @@ costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
     weight:  [ 2.0, 2.0, 20, #2, 2, 150, or 2,2,30
-          25.5, 25.5, 25.5, # 5.5, 5.5, 5.5
+          7, 7, 7,
+          #25.5, 25.5, 25.5, # 5.5, 5.5, 5.5
           # 12.5, 12.5, 12.5,
           # 10, 10, 10,          # FL
           # 10, 10, 10,          # FR
@@ -58,10 +59,10 @@ costs:
           # 0.4, 0.01, 0.0001,          # FR
           # 0.4, 0.01, 0.0001,          # RL
           # 0.4, 0.01, 0.0001,]
-          1, 1, 1,          # FL
-          1, 1, 1,          # FR
-          1, 1, 1,          # RL
-          1, 1, 1,]          # RR
+          1, 1, .001,          # FL
+          1, 1, .001,          # FR
+          1, 1, .001,          # RL
+          1, 1, .001,]          # RR
   - type: VelocityTracking
     name: "VelocityTracking"
     weight: [2, 2, 2,
@@ -78,7 +79,7 @@ costs:
              .001, .001, .0001]       # RR
   - type: ForceRegularization
     name: "ForceReg"
-    weight: [0.001, 0.001, 0.01]
+    weight: [0.001, 0.001, 0.001]
 contacts:
   contact_frames: ["RL_foot", "FR_foot", "FL_foot", "RR_foot"]
   # hip_offsets: [-0.1934, 0.142, 0.1934, -0.142, 0.1934, 0.142, -0.1934, -0.142]
