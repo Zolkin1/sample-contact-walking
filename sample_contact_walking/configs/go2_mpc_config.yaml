@@ -13,15 +13,15 @@ general_settings:
   delay_prediction_dt: 0
   terminal_cost_weight: 2 #10
 solver_settings:
-  rel_tol: 1e-3
-  abs_tol: 1e-3
+  rel_tol: 1e-6 #1e-3
+  abs_tol: 1e-6 #1e-3
   verbose: False
   polish: False
   rho: 0.01
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6
   adaptive_rho: False
-  max_iter: 20 #20
+  max_iter: 200 #50 #20
   scaling: 10
 constraints:
   friction_coef: 0.7  # TODO: Tune this
@@ -80,6 +80,30 @@ costs:
   - type: ForceRegularization
     name: "ForceReg"
     weight: [0.001, 0.001, 0.001]
+  # - type: FootPolytope
+  #   name: "FR_foot_polytope"
+  #   weight: [1, 1, 1, 1]
+  #   frame: "FR_foot"
+  #   mu: 0.2
+  #   delta: 0.005
+  # - type: FootPolytope
+  #   name: "FL_foot_polytope"
+  #   weight: [1, 1, 1, 1]
+  #   frame: "FL_foot"
+  #   mu: 0.2
+  #   delta: 0.005
+  # - type: FootPolytope
+  #   name: "RR_foot_polytope"
+  #   weight: [1, 1, 1, 1]
+  #   frame: "RR_foot"
+  #   mu: 0.2
+  #   delta: 0.005
+  # - type: FootPolytope
+  #   name: "RL_foot_polytope"
+  #   weight: [1, 1, 1, 1]
+  #   frame: "RL_foot"
+  #   mu: 0.2
+  #   delta: 0.005
 contacts:
   contact_frames: ["RL_foot", "FR_foot", "FL_foot", "RR_foot"]
   # hip_offsets: [-0.1934, 0.142, 0.1934, -0.142, 0.1934, 0.142, -0.1934, -0.142]

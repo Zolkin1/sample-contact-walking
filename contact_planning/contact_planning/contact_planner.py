@@ -29,13 +29,13 @@ class ContactPlanner(ObeliskController):
 
         # Contact schedule publisher
         # TODO: Remove when obelisk is updated
-        self.contact_schedule_pub_ = self.create_publisher(ContactSchedule, 'obelisk/g1/contact_schedule', 10, non_obelisk=True)
+        self.contact_schedule_pub_ = self.create_publisher(ContactSchedule, 'obelisk/go2/contact_schedule', 10, non_obelisk=True)
 
         # Command Subcriber
-        self.command_sub_ = self.create_subscription(CommandedTarget, 'obelisk/g1/commanded_target', self.command_target_callback, 10, non_obelisk=True)
+        self.command_sub_ = self.create_subscription(CommandedTarget, 'obelisk/go2/commanded_target', self.command_target_callback, 10, non_obelisk=True)
 
         # Joystick Subscriber
-        self.joystick_sub_ = self.create_subscription(Joy, 'obelisk/g1/joy', self.joystick_callback, 10, non_obelisk=True)
+        self.joystick_sub_ = self.create_subscription(Joy, 'obelisk/go2/joy', self.joystick_callback, 10, non_obelisk=True)
 
         self.declare_parameter("num_nodes", 32)
         self.num_nodes = self.get_parameter("num_nodes").get_parameter_value().integer_value
@@ -69,6 +69,11 @@ class ContactPlanner(ObeliskController):
         self.swing_time = self.get_parameter("swing_time").value
         self.right_foot_frames = self.get_parameter("right_foot_frames").value
         self.left_foot_frames = self.get_parameter("left_foot_frames").value
+
+        self.declare_parameter("foot_offsets", [0.0])
+        self.foot_offset = np.array(self.get_parameter("foot_offsets").value)
+        self.foot_offset = np.reshape(self.foot_offset, (len(self.right_foot_frames) + len(self.left_foot_frames), 2))
+        self.get_logger().error(f"foot offsets: {self.foot_offset}")
 
         # OSQP
         self.osqp_prob = osqp.OSQP()
@@ -122,7 +127,8 @@ class ContactPlanner(ObeliskController):
 
 
             # For now I will hardcode all of these settings
-            contact_frames = ["left_toe", "right_toe", "left_heel", "right_heel"]
+            # contact_frames = ["left_toe", "right_toe", "left_heel", "right_heel"]
+            contact_frames = self.right_foot_frames + self.left_foot_frames
 
             num_contacts = []
 
@@ -174,13 +180,20 @@ class ContactPlanner(ObeliskController):
 
                     # Compute the closest foothold
                     # Compute this relative to the middle of the foot so that we don't get two seperate polytopes for the toe and heel
-                    desired_foothold = desired_base_pos # TODO: Add the foot offset.
+                    # print(f"foot offset: {self.foot_offset[j,:]}")
+                    # print(f"des base pos: {desired_base_pos}")
+                    # TODO: Double check this
+                    R = Rotation.from_quat([desired_base_pos[3], desired_base_pos[4], desired_base_pos[5], desired_base_pos[6]])
+                    desired_foothold = desired_base_pos[:2] + (R.as_matrix()[:2,:2]@self.foot_offset[j,:].transpose()).transpose()
+
                     # self.get_logger().info(f"desired foothold: {desired_foothold[:2]}\n")
 
-                    idx = self.compute_closest_foothold(desired_foothold[:2])
+                    idx = self.compute_closest_foothold(desired_foothold)
 
 
                     polytope.b_vec = self.b_vecs[idx].tolist()
+                    # print("frame: " + frame)
+                    # print(f"b: {polytope.b_vec}")
                     cs_msg.contact_info[j].polytopes.append(polytope)
 
             # TODO: Need to update obelisk

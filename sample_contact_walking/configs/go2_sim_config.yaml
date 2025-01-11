@@ -12,12 +12,13 @@ onboard:
         viz_forces: True
         viz_force_scale: 0.01
         force_frames: ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
+        polytope_frames: ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
 # ---------- Swing trajectory ---------- #
         default_swing_height: 0.08 # 0.1
         default_stand_foot_height: 0.01 #0.01
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.006 #0.01 #0.01
+        mpc_loop_period_sec: 0.008 #0.01 #0.01
         max_mpc_solves: -37 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.2 #0.25
@@ -107,15 +108,16 @@ onboard:
       params:
         num_nodes: 32   # Should match the MPC
         default_polytope_size: 0.4 #0.6
-        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
+        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile_scene.xml
       # ----- Tile Scene ---- #
-        foothold_geoms: ["tile1"]
+        foothold_geoms: ["tile1", "tile2", "tile3", "tile4"]
       # ----- Swing Timing Paramers ---- #
       # WARNING!! THESE MUST MATCH THE CORRESPONDING PARAMETERS ABOVE
         swing_time: 0.2 #0.25
-        first_swing_time: 2.
+        first_swing_time: 0.1
         right_foot_frames: ["RL_foot", "FR_foot"]
         left_foot_frames: ["FL_foot", "RR_foot"]
+        foot_offsets: [-0.1934, 0.142, 0.1734, -0.142, 0.1734, 0.142, -0.1934, -0.142]
       publishers:
         # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting
@@ -209,7 +211,8 @@ onboard:
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: go2_model
-          model_xml_path: go2_scene.xml
+          # model_xml_path: go2_scene.xml
+          model_xml_path: go2_tile_scene.xml
           n_u: 36
           time_step: 0.001
           num_steps_per_viz: 16 # No longer used
@@ -273,6 +276,17 @@ onboard:
           #     FR_force_sensor: force
           #     RL_force_sensor: force
           #     RR_force_sensor: force
+          viz_geoms:
+            dt: 1
+            # ----- Stair scene ----- #
+            # stair_1: box
+            # stair_2: box
+            # stair_3: box
+            # ----- Tile scene ----- #
+            tile1: box
+            tile2: box
+            tile3: box
+            tile4: box
   viz:
     on: True
     viz_tool: foxglove

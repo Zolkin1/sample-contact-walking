@@ -364,7 +364,7 @@ namespace robot
                             stance_height,
                             this->get_parameter("apex_time").as_double());
                     }   
-                    AddPeriodicContacts();   // Don't use when getting CS from the other node
+                    // AddPeriodicContacts();   // Don't use when getting CS from the other node
 
                     // Read in state
                     {
@@ -398,6 +398,7 @@ namespace robot
                     mpc_->Compute(q, v, traj_mpc_, delay_start_time);
                     // mpc_->Compute(q, v, traj_mpc_, delay_start_time);
                     // mpc_->Compute(q, v, traj_mpc_, delay_start_time);
+                    // mpc_->ComputeNLP(q, v, traj_mpc_);
                     {
                         // Get the traj mutex to protect it
                         std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -672,175 +673,175 @@ namespace robot
         // this->GetPublisher<visualization_msgs::msg::MarkerArray>("viz_pub")->publish(msg);
 
         // TODO: There is a bug in this block of code for the quad
-        // // Publish force arrows
-        // if (viz_forces_ && traj_start_time_ >= 0) {
-        //     // visualization_msgs::msg::MarkerArray force_msg;
-        //     // force_msg.markers.resize(force_frames_.size());
-        //     mpc_model_->FirstOrderFK(traj.GetConfiguration(0));
-        //     for (int i = viz_frames.size(); i < force_frames_.size() + viz_frames.size(); i++) {
-        //         msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
-        //         msg.markers[i].header.frame_id = "world";
-        //         msg.markers[i].header.stamp = this->now();
-        //         msg.markers[i].ns = "mpc_force_viz";
-        //         msg.markers[i].id = i;
-        //         msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
+        // Publish force arrows
+        if (viz_forces_ && traj_start_time_ >= 0) {
+            // visualization_msgs::msg::MarkerArray force_msg;
+            // force_msg.markers.resize(force_frames_.size());
+            mpc_model_->FirstOrderFK(traj.GetConfiguration(0));
+            for (int i = viz_frames.size(); i < force_frames_.size() + viz_frames.size(); i++) {
+                msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
+                msg.markers[i].header.frame_id = "world";
+                msg.markers[i].header.stamp = this->now();
+                msg.markers[i].ns = "mpc_force_viz";
+                msg.markers[i].id = i;
+                msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
 
-        //         msg.markers[i].scale.x = 0.01; // Width of the arrows
+                msg.markers[i].scale.x = 0.01; // Width of the arrows
 
-        //         vector3_t frame_pos = mpc_model_->GetFrameState(force_frames_[i - viz_frames_.size()]).placement.translation();
-        //         geometry_msgs::msg::Point start_point;
-        //         start_point.x = frame_pos(0);
-        //         start_point.y = frame_pos(1);
-        //         start_point.z = frame_pos(2);
+                vector3_t frame_pos = mpc_model_->GetFrameState(force_frames_[i - viz_frames_.size()]).placement.translation();
+                geometry_msgs::msg::Point start_point;
+                start_point.x = frame_pos(0);
+                start_point.y = frame_pos(1);
+                start_point.z = frame_pos(2);
 
-        //         msg.markers[i].points.emplace_back(start_point);
+                msg.markers[i].points.emplace_back(start_point);
 
-        //         vector3_t force_interp;
-        //         {
-        //             double time = this->get_clock()->now().seconds();
-        //             double time_into_traj = time - traj_start_time_;
-        //             std::lock_guard<std::mutex> lock(traj_out_mut_);
-        //             traj_out_.GetForceInterp(time_into_traj, force_frames_[i - viz_frames_.size()], force_interp);
-        //         }
+                vector3_t force_interp;
+                {
+                    double time = this->get_clock()->now().seconds();
+                    double time_into_traj = time - traj_start_time_;
+                    std::lock_guard<std::mutex> lock(traj_out_mut_);
+                    traj_out_.GetForceInterp(time_into_traj, force_frames_[i - viz_frames_.size()], force_interp);
+                }
 
 
-        //         geometry_msgs::msg::Point end_point;
-        //         end_point.x = start_point.x + force_interp(0)*scale_forces_;
-        //         end_point.y = start_point.y + force_interp(1)*scale_forces_;
-        //         end_point.z = start_point.z + force_interp(2)*scale_forces_;
+                geometry_msgs::msg::Point end_point;
+                end_point.x = start_point.x + force_interp(0)*scale_forces_;
+                end_point.y = start_point.y + force_interp(1)*scale_forces_;
+                end_point.z = start_point.z + force_interp(2)*scale_forces_;
 
-        //         msg.markers[i].points.emplace_back(end_point);
+                msg.markers[i].points.emplace_back(end_point);
 
-        //         // *** Note *** The color is according to the node number, not necessarily the dt
-        //         // Color according to node
-        //         std_msgs::msg::ColorRGBA color;
-        //         color.r = 0;
-        //         color.g = 0;
-        //         color.b = 1;
-        //         color.a = 1;
-        //         msg.markers[i].colors.push_back(color);
-        //         msg.markers[i].colors.push_back(color);
-        //     }
+                // *** Note *** The color is according to the node number, not necessarily the dt
+                // Color according to node
+                std_msgs::msg::ColorRGBA color;
+                color.r = 0;
+                color.g = 0;
+                color.b = 1;
+                color.a = 1;
+                msg.markers[i].colors.push_back(color);
+                msg.markers[i].colors.push_back(color);
+            }
             
-        //     // TODO: Merge this publish with the one above
-        //     // this->GetPublisher<visualization_msgs::msg::MarkerArray>("viz_pub")->publish(msg);            
-        // }
+            // TODO: Merge this publish with the one above
+            // this->GetPublisher<visualization_msgs::msg::MarkerArray>("viz_pub")->publish(msg);            
+        }
 
-        // std::lock_guard<std::mutex> lock(polytope_mutex_);
+        std::lock_guard<std::mutex> lock(polytope_mutex_);
 
-        // int num_polytope_markers = 0;
-        // for (const auto& frame : viz_polytope_frames_) {
-        //     num_polytope_markers += contact_schedule_.GetNumContacts(frame);
-        // }
+        int num_polytope_markers = 0;
+        for (const auto& frame : viz_polytope_frames_) {
+            num_polytope_markers += contact_schedule_.GetNumContacts(frame);
+        }
         
-        // msg.markers.resize(viz_frames.size() + force_frames_.size() + num_polytope_markers);
+        msg.markers.resize(viz_frames.size() + force_frames_.size() + num_polytope_markers);
 
         // TODO: There is a bug in this block of code for the quad
-        // int i = viz_frames.size() + force_frames_.size();
-        // int frame_idx = 0;
-        // for (const auto& frame : viz_polytope_frames_) {
-        //     // Visualize contact polytopes
-        //     std::vector<torc::mpc::ContactInfo> polytope_vec;
-        //     int num_contacts;
-        //     {
-        //         // Grab the contact polytopes
-        //         // std::lock_guard<std::mutex> lock(polytope_mutex_); // Grabbed above
+        int i = viz_frames.size() + force_frames_.size();
+        int frame_idx = 0;
+        for (const auto& frame : viz_polytope_frames_) {
+            // Visualize contact polytopes
+            std::vector<torc::mpc::ContactInfo> polytope_vec;
+            int num_contacts;
+            {
+                // Grab the contact polytopes
+                // std::lock_guard<std::mutex> lock(polytope_mutex_); // Grabbed above
 
-        //         polytope_vec = contact_schedule_.GetPolytopes(frame);
-        //         num_contacts = contact_schedule_.GetNumContacts(frame);
-        //     }
+                polytope_vec = contact_schedule_.GetPolytopes(frame);
+                num_contacts = contact_schedule_.GetNumContacts(frame);
+            }
 
-        //     if (num_contacts != polytope_vec.size()) {
-        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Frame: " << frame << " size: " << num_contacts << " num poly: " << polytope_vec.size());
-        //     }
+            if (num_contacts != polytope_vec.size()) {
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Frame: " << frame << " size: " << num_contacts << " num poly: " << polytope_vec.size());
+            }
 
-        //     std_msgs::msg::ColorRGBA color;
-        //     // if (frame_idx % 2 == 0) {
-        //     //     color.r = 1;
-        //     //     color.g = 0;
-        //     //     color.b = 1;
-        //     //     color.a = 1;
-        //     // } else {
-        //     //     color.r = 1;
-        //     //     color.g = 1;
-        //     //     color.b = 0;
-        //     //     color.a = 1;
-        //     // }
-        //     if (frame_idx == 0) {
-        //         color.r = 1;
-        //         color.g = 0;
-        //         color.b = 1;
-        //         color.a = 1;
-        //     } else if (frame_idx == 1) {
-        //         color.r = 1;
-        //         color.g = 1;
-        //         color.b = 1;
-        //         color.a = 1;
-        //     } else if (frame_idx == 2) {
-        //         color.r = 1;
-        //         color.g = 0;
-        //         color.b = 0;
-        //         color.a = 1;
-        //     } else {
-        //         color.r = 1;
-        //         color.g = 1;
-        //         color.b = 0;
-        //         color.a = 1;
-        //     }
+            std_msgs::msg::ColorRGBA color;
+            // if (frame_idx % 2 == 0) {
+            //     color.r = 1;
+            //     color.g = 0;
+            //     color.b = 1;
+            //     color.a = 1;
+            // } else {
+            //     color.r = 1;
+            //     color.g = 1;
+            //     color.b = 0;
+            //     color.a = 1;
+            // }
+            if (frame_idx == 0) {
+                color.r = 1;
+                color.g = 0;
+                color.b = 1;
+                color.a = 1;
+            } else if (frame_idx == 1) {
+                color.r = 1;
+                color.g = 1;
+                color.b = 1;
+                color.a = 1;
+            } else if (frame_idx == 2) {
+                color.r = 1;
+                color.g = 0;
+                color.b = 0;
+                color.a = 1;
+            } else {
+                color.r = 1;
+                color.g = 1;
+                color.b = 0;
+                color.a = 1;
+            }
 
-        //     if (polytope_vec.size() != num_contacts) {
-        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Contact polytopes not of the correct size!");
-        //     }
+            if (polytope_vec.size() != num_contacts) {
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Contact polytopes not of the correct size!");
+            }
 
-        //     for (const auto& polytope : polytope_vec) {
-        //         // RCLCPP_INFO_STREAM(this->get_logger(), "A: " << polytope.A_ << "\nb: " << polytope.b_.transpose());
+            for (const auto& polytope : polytope_vec) {
+                // RCLCPP_INFO_STREAM(this->get_logger(), "A: " << polytope.A_ << "\nb: " << polytope.b_.transpose());
 
-        //         msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
-        //         msg.markers[i].header.frame_id = "world";
-        //         msg.markers[i].header.stamp = this->now();
-        //         msg.markers[i].ns = "contact_polytope";
-        //         msg.markers[i].id = i;
-        //         msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
+                msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
+                msg.markers[i].header.frame_id = "world";
+                msg.markers[i].header.stamp = this->now();
+                msg.markers[i].ns = "contact_polytope";
+                msg.markers[i].id = i;
+                msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
 
-        //         msg.markers[i].scale.x = 0.02;
+                msg.markers[i].scale.x = 0.02;
 
-        //         // TODO: Do better
-        //         // TODO: Check this to make sure it will work for more than the default polytope
-        //         geometry_msgs::msg::Point corner;
-        //         corner.z = 0;
+                // TODO: Do better
+                // TODO: Check this to make sure it will work for more than the default polytope
+                geometry_msgs::msg::Point corner;
+                corner.z = 0;
 
-        //         // std::cout << "b: " << polytope.b_.transpose() << std::endl;
-        //         corner.x = polytope.b_(0);
-        //         corner.y = polytope.b_(1);
-        //         msg.markers[i].points.emplace_back(corner);
-        //         msg.markers[i].colors.push_back(color);
+                // std::cout << "b: " << polytope.b_.transpose() << std::endl;
+                corner.x = polytope.b_(0);
+                corner.y = polytope.b_(1);
+                msg.markers[i].points.emplace_back(corner);
+                msg.markers[i].colors.push_back(color);
 
-        //         corner.x = polytope.b_(0);
-        //         corner.y = polytope.b_(3);
-        //         msg.markers[i].points.emplace_back(corner);
-        //         msg.markers[i].colors.push_back(color);
+                corner.x = polytope.b_(0);
+                corner.y = polytope.b_(3);
+                msg.markers[i].points.emplace_back(corner);
+                msg.markers[i].colors.push_back(color);
 
-        //         corner.x = polytope.b_(2);
-        //         corner.y = polytope.b_(3);
-        //         msg.markers[i].points.emplace_back(corner);
-        //         msg.markers[i].colors.push_back(color);
+                corner.x = polytope.b_(2);
+                corner.y = polytope.b_(3);
+                msg.markers[i].points.emplace_back(corner);
+                msg.markers[i].colors.push_back(color);
 
-        //         corner.x = polytope.b_(2);
-        //         corner.y = polytope.b_(1);
-        //         msg.markers[i].points.emplace_back(corner);
-        //         msg.markers[i].colors.push_back(color);
+                corner.x = polytope.b_(2);
+                corner.y = polytope.b_(1);
+                msg.markers[i].points.emplace_back(corner);
+                msg.markers[i].colors.push_back(color);
 
-        //         corner.x = polytope.b_(0);
-        //         corner.y = polytope.b_(1);
-        //         msg.markers[i].points.emplace_back(corner);
-        //         msg.markers[i].colors.push_back(color);
+                corner.x = polytope.b_(0);
+                corner.y = polytope.b_(1);
+                msg.markers[i].points.emplace_back(corner);
+                msg.markers[i].colors.push_back(color);
 
 
-        //         i++;
-        //     }
+                i++;
+            }
 
-        //     frame_idx++;
-        // }
+            frame_idx++;
+        }
 
         this->GetPublisher<visualization_msgs::msg::MarkerArray>("viz_pub")->publish(msg);            
     }
@@ -913,8 +914,8 @@ namespace robot
         // }
         obelisk_estimator_msgs::msg::EstimatedState msg;
 
-        vectorx_t q;
-        vectorx_t v;
+        vectorx_t q = vectorx_t::Zero(mpc_model_->GetConfigDim());
+        vectorx_t v = vectorx_t::Zero(mpc_model_->GetVelDim());
         double time = this->get_clock()->now().seconds();
         {
             std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -975,6 +976,8 @@ namespace robot
         msg.v_base = torc::utils::EigenToStdVector(v_head);
 
         msg.header.stamp = this->now();
+
+        // RCLCPP_ERROR_STREAM(this->get_logger(), "Publishing state viz");
 
         // if (!sim_ready_) {
         this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
@@ -1234,61 +1237,61 @@ namespace robot
     }
 
     void MpcController::ContactScheduleCallback(const sample_contact_msgs::msg::ContactSchedule& msg) {
-        // RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Recieved first contact schedule.");
-        // recieved_polytope_ = true;
-        // std::lock_guard<std::mutex> lock(polytope_mutex_);
+        RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Recieved first contact schedule.");
+        recieved_polytope_ = true;
+        std::lock_guard<std::mutex> lock(polytope_mutex_);
 
-        // // TODO: Consider removing if this doesn't work
-        // contact_schedule_.CleanContacts(10);
+        // TODO: Consider removing if this doesn't work
+        contact_schedule_.CleanContacts(10);
 
-        // for (const auto& contact_info : msg.contact_info) {
-        //     const std::string& frame = contact_info.robot_contact_frame;
+        for (const auto& contact_info : msg.contact_info) {
+            const std::string& frame = contact_info.robot_contact_frame;
 
-        //     const auto& sched_map = contact_schedule_.GetScheduleMap();
-        //     if (sched_map.contains(frame)) {
-        //         // std::cout << "swing times size: " << contact_info.swing_times.size() << std::endl;
-        //         // TODO: Try Assigning the swing times from the command
-        //         for (int i = 0; i < contact_info.swing_times.size()/2; i++) {
-        //             contact_schedule_.InsertSwing(frame, contact_info.swing_times.at(2*i), contact_info.swing_times.at(2*i + 1));
-        //             // std::cout << "inserting a swing!" << std::endl;
-        //         }
+            const auto& sched_map = contact_schedule_.GetScheduleMap();
+            if (sched_map.contains(frame)) {
+                // std::cout << "swing times size: " << contact_info.swing_times.size() << std::endl;
+                // TODO: Try Assigning the swing times from the command
+                for (int i = 0; i < contact_info.swing_times.size()/2; i++) {
+                    contact_schedule_.InsertSwing(frame, contact_info.swing_times.at(2*i), contact_info.swing_times.at(2*i + 1));
+                    // std::cout << "inserting a swing!" << std::endl;
+                }
 
-        //         // std::cout << "Commanded swing times" << std::endl;
-        //         // for (int i = 0; i < contact_info.swing_times.size(); i++) {
-        //         //     std::cout << "i: " << i << ", swing times: " << contact_info.swing_times[i] << std::endl;
-        //         // }
-        //         // std::cout << "Current swing times" << std::endl;
-        //         // for (int i = 0; i < sched_map.at(frame).size(); i++) {
-        //         //     std::cout << "i: " << i << ", swing times: " << sched_map.at(frame)[i].first << ", " << sched_map.at(frame)[i].second << std::endl;
-        //         // }
+                // std::cout << "Commanded swing times" << std::endl;
+                // for (int i = 0; i < contact_info.swing_times.size(); i++) {
+                //     std::cout << "i: " << i << ", swing times: " << contact_info.swing_times[i] << std::endl;
+                // }
+                // std::cout << "Current swing times" << std::endl;
+                // for (int i = 0; i < sched_map.at(frame).size(); i++) {
+                //     std::cout << "i: " << i << ", swing times: " << sched_map.at(frame)[i].first << ", " << sched_map.at(frame)[i].second << std::endl;
+                // }
 
-        //         if (contact_schedule_.GetNumContacts(frame) != contact_info.swing_times.size()/2 + 1) {
-        //             std::cerr << "cs contact num: " << contact_schedule_.GetNumContacts(frame) << std::endl;
-        //             std::cerr << "ci contact num: " << contact_info.swing_times.size()/2 + 1 << std::endl;
-        //             throw std::runtime_error("Contacts not moved correctly!");
-        //         }
+                if (contact_schedule_.GetNumContacts(frame) != contact_info.swing_times.size()/2 + 1) {
+                    std::cerr << "cs contact num: " << contact_schedule_.GetNumContacts(frame) << std::endl;
+                    std::cerr << "ci contact num: " << contact_info.swing_times.size()/2 + 1 << std::endl;
+                    throw std::runtime_error("Contacts not moved correctly!");
+                }
 
-        //         // Extract contact polytopes
-        //         for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-        //             auto polytope = contact_info.polytopes.back();
-        //             if (i < contact_info.polytopes.size()) {
-        //                 polytope = contact_info.polytopes[i];
-        //             } 
+                // Extract contact polytopes
+                for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
+                    auto polytope = contact_info.polytopes.back();
+                    if (i < contact_info.polytopes.size()) {
+                        polytope = contact_info.polytopes[i];
+                    } 
 
-        //             std::vector<double> a_mat = polytope.a_mat;
+                    std::vector<double> a_mat = polytope.a_mat;
 
-        //             Eigen::Map<matrixx_t> A(a_mat.data(), 2, 2);
-        //             Eigen::Vector4d b(polytope.b_vec.data());
-        //             if (i < contact_schedule_.GetPolytopes(frame).size()) {
-        //                 contact_schedule_.SetPolytope(frame, i, A, b);
-        //             }
-        //         }
+                    Eigen::Map<matrixx_t> A(a_mat.data(), 2, 2);
+                    Eigen::Vector4d b(polytope.b_vec.data());
+                    if (i < contact_schedule_.GetPolytopes(frame).size()) {
+                        contact_schedule_.SetPolytope(frame, i, A, b);
+                    }
+                }
 
-        //         // std::cout << "done with " << frame << std::endl;
-        //     } else {
-        //         RCLCPP_ERROR_STREAM(this->get_logger(), frame << " is not a valid frame for the MPC contacts.");
-        //     }
-        // }
+                // std::cout << "done with " << frame << std::endl;
+            } else {
+                RCLCPP_ERROR_STREAM(this->get_logger(), frame << " is not a valid frame for the MPC contacts.");
+            }
+        }
     }
 
     void MpcController::JoystickCallback(const sensor_msgs::msg::Joy& msg) {

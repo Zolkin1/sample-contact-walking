@@ -111,3 +111,5 @@ sudo apt-get install ros-humble-joy
 - Scipy (pip)
 - Mujoco -> Comes with obelisk
 - OSQP (pip) -->
+
+- Remember that the topics in the contact planner need to updated in the source code until Obelisk is updated
