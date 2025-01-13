@@ -18,10 +18,10 @@ onboard:
         default_stand_foot_height: 0.01 #0.01
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.008 #0.01 #0.01
+        mpc_loop_period_sec: 0.006 #0.008 #0.01 #0.01
         max_mpc_solves: -37 #125 
 # ---------- Contact schedule ---------- #
-        swing_time: 0.2 #0.25
+        swing_time: 0.2 #0.2 #0.25
         first_swing_time: 0.1 #2.
         double_stance_time: 0.0
         right_foot_first: True
@@ -113,7 +113,7 @@ onboard:
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4"]
       # ----- Swing Timing Paramers ---- #
       # WARNING!! THESE MUST MATCH THE CORRESPONDING PARAMETERS ABOVE
-        swing_time: 0.2 #0.25
+        swing_time: 0.2 #0.2 #0.25
         first_swing_time: 0.1
         right_foot_frames: ["RL_foot", "FR_foot"]
         left_foot_frames: ["FL_foot", "RR_foot"]
@@ -211,8 +211,8 @@ onboard:
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: go2_model
-          # model_xml_path: go2_scene.xml
-          model_xml_path: go2_tile_scene.xml
+          model_xml_path: go2_scene.xml
+          # model_xml_path: go2_tile_scene.xml
           n_u: 36
           time_step: 0.001
           num_steps_per_viz: 16 # No longer used

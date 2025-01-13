@@ -342,7 +342,7 @@ namespace robot
                         next_left_insertion_time_ -= time_shift_sec;
                         next_right_insertion_time_ -= time_shift_sec;
                     }
-
+                    prev_time = this->now();
 
                     // TODO: Do I Need this - can I remove it?
                     // TODO: If I need to, I can go back to using the measured foot height
@@ -353,18 +353,9 @@ namespace robot
                         frame_idx++;
                     }
 
-                    prev_time = this->now();
                     if (!recieved_polytope_) {
                         UpdateContactPolytopes();
-                    }
-                    {
-                        std::lock_guard<std::mutex> lock(polytope_mutex_);
-                        mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
-                            this->get_parameter("default_swing_height").as_double(),
-                            stance_height,
-                            this->get_parameter("apex_time").as_double());
-                    }   
-                    // AddPeriodicContacts();   // Don't use when getting CS from the other node
+                    } 
 
                     // Read in state
                     {
@@ -376,7 +367,15 @@ namespace robot
                         v = v_;
                     }
                 }
-                
+                 
+                {
+                    std::lock_guard<std::mutex> lock(polytope_mutex_);
+                    mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
+                        this->get_parameter("default_swing_height").as_double(),
+                        stance_height,
+                        this->get_parameter("apex_time").as_double());
+                } 
+                // AddPeriodicContacts();   // Don't use when getting CS from the other node
                 if (!fixed_target_ || controller_target_) {
                     UpdateMpcTargets(q);
                     mpc_->SetConfigTarget(q_target_.value());
@@ -389,12 +388,19 @@ namespace robot
                 // q_ref(2) = z_target_;
                 // {
                 //     std::lock_guard<std::mutex> lock(polytope_mutex_);
+                //     mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
+                //         this->get_parameter("default_swing_height").as_double(),
+                //         stance_height,
+                //         this->get_parameter("apex_time").as_double());
+                //     // AddPeriodicContacts();   // Don't use when getting CS from the other node
+
                 //     mpc_->GenerateCostReference(q_ref, q_target_.value(), v_target_.value(), contact_schedule_);
                 // }
                 // TODO: remove the max mpc solves when I no longer need it
                 if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
                     double time = this->now().seconds();
                     double delay_start_time = 0; // this->now().seconds() - traj_start_time_;
+                    // TODO: move the state read to here
                     mpc_->Compute(q, v, traj_mpc_, delay_start_time);
                     // mpc_->Compute(q, v, traj_mpc_, delay_start_time);
                     // mpc_->Compute(q, v, traj_mpc_, delay_start_time);

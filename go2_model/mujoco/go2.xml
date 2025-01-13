@@ -78,7 +78,7 @@
         <default class="calf_vel">
           <!-- <velocity kv="0" ctrllimited="false"/> -->
           <!-- <velocity kv="1" ctrllimited="false"/> -->
-          <velocity kv="2" ctrllimited="false"/>
+          <velocity kv="4" ctrllimited="false"/>
         </default>
       </default>
 

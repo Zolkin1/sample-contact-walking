@@ -21,7 +21,7 @@ solver_settings:
   alpha: 1.6 # 1.6, 1.1
   sigma: 1e-6
   adaptive_rho: False
-  max_iter: 200 #50 #20
+  max_iter: 20 #50 #20
   scaling: 10
 constraints:
   friction_coef: 0.7  # TODO: Tune this
@@ -44,10 +44,12 @@ constraints:
       frame2: "RL_foot"
       radius1: 0.06
       radius2: 0.06
+  polytope_delta: 0 #0.07 #0.02
+  polytope_shrinking_rad: 0.2
 costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    weight:  [ 2.0, 2.0, 20, #2, 2, 150, or 2,2,30
+    weight:  [2.0, 2.0, 20, #2, 2, 150, or 2,2,30
           7, 7, 7,
           #25.5, 25.5, 25.5, # 5.5, 5.5, 5.5
           # 12.5, 12.5, 12.5,
@@ -59,10 +61,16 @@ costs:
           # 0.4, 0.01, 0.0001,          # FR
           # 0.4, 0.01, 0.0001,          # RL
           # 0.4, 0.01, 0.0001,]
+          # Good walking:
           1, 1, .001,          # FL
           1, 1, .001,          # FR
           1, 1, .001,          # RL
           1, 1, .001,]          # RR
+          # For ref generator:
+          # 10, 10, 1,          # FL
+          # 10, 10, 1,          # FR
+          # 10, 10, 1,          # RL
+          # 10, 10, 1,]          # RR
   - type: VelocityTracking
     name: "VelocityTracking"
     weight: [2, 2, 2,
@@ -80,29 +88,30 @@ costs:
   - type: ForceRegularization
     name: "ForceReg"
     weight: [0.001, 0.001, 0.001]
+    # TODO: Investigate this w/ no constraints. Weird stuff happening
   # - type: FootPolytope
   #   name: "FR_foot_polytope"
   #   weight: [1, 1, 1, 1]
   #   frame: "FR_foot"
-  #   mu: 0.2
+  #   mu: 0.1
   #   delta: 0.005
   # - type: FootPolytope
   #   name: "FL_foot_polytope"
   #   weight: [1, 1, 1, 1]
   #   frame: "FL_foot"
-  #   mu: 0.2
+  #   mu: 0.1
   #   delta: 0.005
   # - type: FootPolytope
   #   name: "RR_foot_polytope"
   #   weight: [1, 1, 1, 1]
   #   frame: "RR_foot"
-  #   mu: 0.2
+  #   mu: 0.1
   #   delta: 0.005
   # - type: FootPolytope
   #   name: "RL_foot_polytope"
   #   weight: [1, 1, 1, 1]
   #   frame: "RL_foot"
-  #   mu: 0.2
+  #   mu: 0.1
   #   delta: 0.005
 contacts:
   contact_frames: ["RL_foot", "FR_foot", "FL_foot", "RR_foot"]
