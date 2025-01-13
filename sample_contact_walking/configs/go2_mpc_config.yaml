@@ -2,7 +2,7 @@ general_settings:
   nodes: 32
   verbose: False #True
   node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
-  node_dt: 0.025
+  node_dt: 0.015 #0.025
   first_node_dt: 0.01 
   compile_derivatives: False #True
   base_frame: "torso"
@@ -50,6 +50,7 @@ costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
     weight:  [2.0, 2.0, 20, #2, 2, 150, or 2,2,30
+          # 2, 2, 2,
           7, 7, 7,
           #25.5, 25.5, 25.5, # 5.5, 5.5, 5.5
           # 12.5, 12.5, 12.5,
@@ -93,25 +94,25 @@ costs:
   #   name: "FR_foot_polytope"
   #   weight: [1, 1, 1, 1]
   #   frame: "FR_foot"
-  #   mu: 0.1
+  #   mu: 0.05
   #   delta: 0.005
   # - type: FootPolytope
   #   name: "FL_foot_polytope"
   #   weight: [1, 1, 1, 1]
   #   frame: "FL_foot"
-  #   mu: 0.1
+  #   mu: 0.05
   #   delta: 0.005
   # - type: FootPolytope
   #   name: "RR_foot_polytope"
   #   weight: [1, 1, 1, 1]
   #   frame: "RR_foot"
-  #   mu: 0.1
+  #   mu: 0.05
   #   delta: 0.005
   # - type: FootPolytope
   #   name: "RL_foot_polytope"
   #   weight: [1, 1, 1, 1]
   #   frame: "RL_foot"
-  #   mu: 0.1
+  #   mu: 0.05
   #   delta: 0.005
 contacts:
   contact_frames: ["RL_foot", "FR_foot", "FL_foot", "RR_foot"]

@@ -25,14 +25,14 @@
         <default class="hip_pos">
           <!-- <position kp="0" ctrllimited="false"/> -->
           <!-- <position kp="100" ctrllimited="false"/> -->
-          <position kp="250" ctrllimited="false"/>
+          <position kp="350" ctrllimited="false"/>
         </default>
 
         <!-- Velocity Control -->
         <default class="hip_vel">
           <!-- <velocity kv="0" ctrllimited="false"/> -->
           <!-- <velocity kv="1" ctrllimited="false"/> -->
-          <velocity kv="2" ctrllimited="false"/>
+          <velocity kv="3" ctrllimited="false"/>
         </default>
       </default>
 
@@ -51,14 +51,14 @@
         <default class="thigh_pos">
           <!-- <position kp="0" ctrllimited="false"/> -->
           <!-- <position kp="125" ctrllimited="false"/> -->
-          <position kp="200" ctrllimited="false"/>
+          <position kp="300" ctrllimited="false"/>
         </default>
 
         <!-- Velocity Control -->
         <default class="thigh_vel">
           <!-- <velocity kv="0" ctrllimited="false"/> -->
           <!-- <velocity kv="1" ctrllimited="false"/> -->
-          <velocity kv="2" ctrllimited="false"/>
+          <velocity kv="3" ctrllimited="false"/>
         </default> 
       </default>
       

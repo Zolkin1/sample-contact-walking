@@ -302,8 +302,8 @@ namespace robot
                     }
 
                     // TODO: Remove
-                    q = q_ic_;
-                    v = v_ic_;
+                    // q = q_ic_;
+                    // v = v_ic_;
 
                     // TODO: Fix the state for when we re-enter this loop
                      {
@@ -326,48 +326,35 @@ namespace robot
 
                     prev_time = this->now();
                     first_loop = false;
-
-                    // Assign these to give state estimator more time for the fake data state estimator
-                    // q = q_ic_;
-                    // v = v_ic_;
-                } else {
-                    // Do everything that does not need the measured state first
-
-                    // Shift the contact schedule
-                    {
-                        std::lock_guard<std::mutex> lock(polytope_mutex_);
-                        auto current_time = this->now();
-                        double time_shift_sec = (current_time - prev_time).nanoseconds()/1e9;
-                        contact_schedule_.ShiftSwings(-time_shift_sec);    // TODO: Do I need a mutex on this later?
-                        next_left_insertion_time_ -= time_shift_sec;
-                        next_right_insertion_time_ -= time_shift_sec;
-                    }
-                    prev_time = this->now();
-
-                    // TODO: Do I Need this - can I remove it?
-                    // TODO: If I need to, I can go back to using the measured foot height
-                    std::vector<double> stance_height(mpc_->GetContactFrames().size());
-                    int frame_idx = 0;
-                    for (const auto& frame : mpc_->GetContactFrames()) {
-                        stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
-                        frame_idx++;
-                    }
-
-                    if (!recieved_polytope_) {
-                        UpdateContactPolytopes();
-                    } 
-
-                    // Read in state
-                    {
-                        // Get the mutex to protect the states
-                        std::lock_guard<std::mutex> lock(est_state_mut_);
-
-                        // Create current state
-                        q = q_;
-                        v = v_;
-                    }
                 }
-                 
+
+
+
+                // Shift the contact schedule
+                {
+                    std::lock_guard<std::mutex> lock(polytope_mutex_);
+                    auto current_time = this->now();
+                    double time_shift_sec = (current_time - prev_time).nanoseconds()/1e9;
+                    contact_schedule_.ShiftSwings(-time_shift_sec);    // TODO: Do I need a mutex on this later?
+                    next_left_insertion_time_ -= time_shift_sec;
+                    next_right_insertion_time_ -= time_shift_sec;
+                }
+                prev_time = this->now();
+
+                // TODO: Do I Need this - can I remove it?
+                // TODO: If I need to, I can go back to using the measured foot height
+                std::vector<double> stance_height(mpc_->GetContactFrames().size());
+                int frame_idx = 0;
+                for (const auto& frame : mpc_->GetContactFrames()) {
+                    stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
+                    frame_idx++;
+                }
+
+                if (!recieved_polytope_) {
+                    UpdateContactPolytopes();
+                } 
+                
+                // ----- No Reference ----- //
                 {
                     std::lock_guard<std::mutex> lock(polytope_mutex_);
                     mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
@@ -375,13 +362,25 @@ namespace robot
                         stance_height,
                         this->get_parameter("apex_time").as_double());
                 } 
-                // AddPeriodicContacts();   // Don't use when getting CS from the other node
+                // // AddPeriodicContacts();   // Don't use when getting CS from the other node
+                
+                
+                // ----- Read in state ----- //
+                {
+                    // Get the mutex to protect the states
+                    std::lock_guard<std::mutex> lock(est_state_mut_);
+
+                    // Create current state
+                    q = q_;
+                    v = v_;
+                }
                 if (!fixed_target_ || controller_target_) {
                     UpdateMpcTargets(q);
                     mpc_->SetConfigTarget(q_target_.value());
                     mpc_->SetVelTarget(v_target_.value());
                 }
 
+                // ----- Reference Generation ----- //
                 // TODO: Unclear if this really provides a performance improvement as the stack works without it.
                 // UpdateMpcTargets(q);
                 // vectorx_t q_ref = q;
@@ -396,31 +395,18 @@ namespace robot
 
                 //     mpc_->GenerateCostReference(q_ref, q_target_.value(), v_target_.value(), contact_schedule_);
                 // }
-                // TODO: remove the max mpc solves when I no longer need it
-                if (max_mpc_solves < 0 || mpc_->GetTotalSolves() < max_mpc_solves) {
-                    double time = this->now().seconds();
-                    double delay_start_time = 0; // this->now().seconds() - traj_start_time_;
-                    // TODO: move the state read to here
-                    mpc_->Compute(q, v, traj_mpc_, delay_start_time);
-                    // mpc_->Compute(q, v, traj_mpc_, delay_start_time);
-                    // mpc_->Compute(q, v, traj_mpc_, delay_start_time);
-                    // mpc_->ComputeNLP(q, v, traj_mpc_);
-                    {
-                        // Get the traj mutex to protect it
-                        std::lock_guard<std::mutex> lock(traj_out_mut_);
-                        traj_out_ = traj_mpc_;
 
-                        // Assign start time too
-                        traj_start_time_ = time;
-                    }
-                } else {
-                    static bool printed = false;
-                    if (!printed) {
-                        mpc_->PrintStatistics();
-                        mpc_->PrintContactSchedule();
-                        mpc_->PrintAggregateStats();
-                        printed = true;
-                    }
+                double time = this->now().seconds();
+
+                // ---- Solve MPC ----- //
+                mpc_->Compute(q, v, traj_mpc_);
+                {
+                    // Get the traj mutex to protect it
+                    std::lock_guard<std::mutex> lock(traj_out_mut_);
+                    traj_out_ = traj_mpc_;
+
+                    // Assign start time too
+                    traj_start_time_ = time;
                 }
 
                 // Every tenth solve check to see if the user wants to print stats
