@@ -117,7 +117,7 @@ onboard:
         first_swing_time: 0.1
         right_foot_frames: ["RL_foot", "FR_foot"]
         left_foot_frames: ["FL_foot", "RR_foot"]
-        foot_offsets: [-0.1934, 0.142, 0.1734, -0.142, 0.1734, 0.142, -0.1934, -0.142]
+        foot_offsets: [-0.1934, 0.142, 0.2234, -0.142, 0.2234, 0.142, -0.1934, -0.142]
       publishers:
         # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting
@@ -211,8 +211,8 @@ onboard:
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: go2_model
-          model_xml_path: go2_scene.xml
-          # model_xml_path: go2_tile_scene.xml
+          # model_xml_path: go2_scene.xml
+          model_xml_path: go2_tile_scene.xml
           n_u: 36
           time_step: 0.001
           num_steps_per_viz: 16 # No longer used

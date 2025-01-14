@@ -2,7 +2,7 @@ general_settings:
   nodes: 32
   verbose: False #True
   node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
-  node_dt: 0.015 #0.025
+  node_dt: 0.015 #0.015 #0.025
   first_node_dt: 0.01 
   compile_derivatives: False #True
   base_frame: "torso"
@@ -44,37 +44,45 @@ constraints:
       frame2: "RL_foot"
       radius1: 0.06
       radius2: 0.06
-  polytope_delta: 0 #0.07 #0.02
+  polytope_delta: 0.06 #0.02
   polytope_shrinking_rad: 0.2
 costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
+    # weight:  [2.0, 2.0, 20, #2, 2, 150, or 2,2,30
+    #       # 2, 2, 2,
+    #       7, 7, 7,
+    #       #25.5, 25.5, 25.5, # 5.5, 5.5, 5.5
+    #       # Good walking, no reference:
+    #       1, 1, .001,          # FL
+    #       1, 1, .001,          # FR
+    #       1, 1, .001,          # RL
+    #       1, 1, .001,]          # RR
+    # For ref generator:
     weight:  [2.0, 2.0, 20, #2, 2, 150, or 2,2,30
-          # 2, 2, 2,
-          7, 7, 7,
-          #25.5, 25.5, 25.5, # 5.5, 5.5, 5.5
-          # 12.5, 12.5, 12.5,
-          # 10, 10, 10,          # FL
-          # 10, 10, 10,          # FR
-          # 10, 10, 10,          # RL
-          # 10, 10, 10]
-          # 0.4, 0.01, 0.0001,          # FL
-          # 0.4, 0.01, 0.0001,          # FR
-          # 0.4, 0.01, 0.0001,          # RL
-          # 0.4, 0.01, 0.0001,]
-          # Good walking:
-          1, 1, .001,          # FL
-          1, 1, .001,          # FR
-          1, 1, .001,          # RL
-          1, 1, .001,]          # RR
-          # For ref generator:
-          # 10, 10, 1,          # FL
-          # 10, 10, 1,          # FR
-          # 10, 10, 1,          # RL
-          # 10, 10, 1,]          # RR
+      # 2, 2, 2,
+      10, 10, 10,
+      #25.5, 25.5, 25.5, # 5.5, 5.5, 5.5
+      # Good walking:
+      # 1, 1, .001,          # FL
+      # 1, 1, .001,          # FR
+      # 1, 1, .001,          # RL
+      # 1, 1, .001,]          # RR
+      # For ref generator:
+      1, 1, 1,          # FL
+      1, 1, 1,          # FR
+      1, 1, 1,          # RL
+      1, 1, 1,]          # RR
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [2, 2, 2,
+    # weight: [2, 2, 2,
+    #     .5, .5, .5,
+    #     0.01, 0.01, 0.0001,         # FL
+    #     0.01, 0.01, 0.0001,         # FR
+    #     0.01, 0.01, 0.0001,         # RL
+    #     0.01, 0.01, 0.0001]         # RR
+    # For reference gen:
+    weight: [1, 1, 1,
         .5, .5, .5,
         0.01, 0.01, 0.0001,         # FL
         0.01, 0.01, 0.0001,         # FR
@@ -88,7 +96,9 @@ costs:
              .001, .001, .0001]       # RR
   - type: ForceRegularization
     name: "ForceReg"
-    weight: [0.001, 0.001, 0.001]
+    # weight: [0.001, 0.001, 0.001]
+    # For reference gen:
+    weight: [0.0001, 0.0001, 0.0001]
     # TODO: Investigate this w/ no constraints. Weird stuff happening
   # - type: FootPolytope
   #   name: "FR_foot_polytope"
@@ -116,8 +126,8 @@ costs:
   #   delta: 0.005
 contacts:
   contact_frames: ["RL_foot", "FR_foot", "FL_foot", "RR_foot"]
-  # hip_offsets: [-0.1934, 0.142, 0.1934, -0.142, 0.1934, 0.142, -0.1934, -0.142]
-  hip_offsets: [-0.1934, 0.142, 0.1734, -0.142, 0.1734, 0.142, -0.1934, -0.142]
+  # hip_offsets: [-0.1934, 0.142, 0.1734, -0.142, 0.1734, 0.142, -0.1934, -0.142]
+  hip_offsets: [-0.1934, 0.142, 0.2234, -0.142, 0.2234, 0.142, -0.1934, -0.142]
 
 line_search:
   alpha_min: 1e-3

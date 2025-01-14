@@ -302,8 +302,8 @@ namespace robot
                     }
 
                     // TODO: Remove
-                    // q = q_ic_;
-                    // v = v_ic_;
+                    q = q_ic_;
+                    v = v_ic_;
 
                     // TODO: Fix the state for when we re-enter this loop
                      {
@@ -325,7 +325,6 @@ namespace robot
                     }
 
                     prev_time = this->now();
-                    first_loop = false;
                 }
 
 
@@ -355,46 +354,52 @@ namespace robot
                 } 
                 
                 // ----- No Reference ----- //
-                {
-                    std::lock_guard<std::mutex> lock(polytope_mutex_);
-                    mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
-                        this->get_parameter("default_swing_height").as_double(),
-                        stance_height,
-                        this->get_parameter("apex_time").as_double());
-                } 
-                // // AddPeriodicContacts();   // Don't use when getting CS from the other node
-                
-                
-                // ----- Read in state ----- //
-                {
-                    // Get the mutex to protect the states
-                    std::lock_guard<std::mutex> lock(est_state_mut_);
-
-                    // Create current state
-                    q = q_;
-                    v = v_;
-                }
-                if (!fixed_target_ || controller_target_) {
-                    UpdateMpcTargets(q);
-                    mpc_->SetConfigTarget(q_target_.value());
-                    mpc_->SetVelTarget(v_target_.value());
-                }
-
-                // ----- Reference Generation ----- //
-                // TODO: Unclear if this really provides a performance improvement as the stack works without it.
-                // UpdateMpcTargets(q);
-                // vectorx_t q_ref = q;
-                // q_ref(2) = z_target_;
                 // {
                 //     std::lock_guard<std::mutex> lock(polytope_mutex_);
                 //     mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
                 //         this->get_parameter("default_swing_height").as_double(),
                 //         stance_height,
                 //         this->get_parameter("apex_time").as_double());
-                //     // AddPeriodicContacts();   // Don't use when getting CS from the other node
+                // } 
+                // // AddPeriodicContacts();   // Don't use when getting CS from the other node
+                
+                
+                // ----- Read in state ----- //
+                // TODO: If state is only here for when we remove sim
+                if (first_loop) {
+                    first_loop = false;
+                } else {
+                    {
+                        // Get the mutex to protect the states
+                        std::lock_guard<std::mutex> lock(est_state_mut_);
 
-                //     mpc_->GenerateCostReference(q_ref, q_target_.value(), v_target_.value(), contact_schedule_);
+                        // Create current state
+                        q = q_;
+                        v = v_;
+                    }
+                }
+                // ----- No Reference ----- //
+                // if (!fixed_target_ || controller_target_) {
+                //     UpdateMpcTargets(q);
+                //     mpc_->SetConfigTarget(q_target_.value());
+                //     mpc_->SetVelTarget(v_target_.value());
                 // }
+
+                // ----- Reference Generation ----- //
+                // TODO: Unclear if this really provides a performance improvement as the stack works without it.
+                UpdateMpcTargets(q);
+                vectorx_t q_ref = q;
+                q_ref(2) = z_target_;
+                {
+                    std::lock_guard<std::mutex> lock(polytope_mutex_);
+                    mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
+                        this->get_parameter("default_swing_height").as_double(),
+                        stance_height,
+                        this->get_parameter("apex_time").as_double());
+                    // AddPeriodicContacts();   // Don't use when getting CS from the other node
+
+                    mpc_->GenerateCostReference(q_ref, q_target_.value(), v_target_.value(), contact_schedule_);
+                }
 
                 double time = this->now().seconds();
 
@@ -970,6 +975,7 @@ namespace robot
         msg.header.stamp = this->now();
 
         // RCLCPP_ERROR_STREAM(this->get_logger(), "Publishing state viz");
+        // std::cerr << "Here " << std::endl;
 
         // if (!sim_ready_) {
         this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
