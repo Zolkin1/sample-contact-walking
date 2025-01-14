@@ -313,6 +313,9 @@ namespace robot
                             stance_height,
                             this->get_parameter("apex_time").as_double());
                     }
+                    vectorx_t q_ref = q;
+                    q_ref(2) = z_target_;
+                    mpc_->GenerateCostReference(q_ref, v, q_target_.value(), v_target_.value(), contact_schedule_);
                     double time = this->now().seconds();
                     mpc_->ComputeNLP(q, v, traj_mpc_);
                     {
@@ -388,8 +391,8 @@ namespace robot
                 // ----- Reference Generation ----- //
                 // TODO: Unclear if this really provides a performance improvement as the stack works without it.
                 UpdateMpcTargets(q);
-                vectorx_t q_ref = q;
-                q_ref(2) = z_target_;
+                // vectorx_t q_ref = q;
+                // q_ref(2) = z_target_;
                 {
                     std::lock_guard<std::mutex> lock(polytope_mutex_);
                     mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
@@ -398,7 +401,7 @@ namespace robot
                         this->get_parameter("apex_time").as_double());
                     // AddPeriodicContacts();   // Don't use when getting CS from the other node
 
-                    mpc_->GenerateCostReference(q_ref, q_target_.value(), v_target_.value(), contact_schedule_);
+                    mpc_->GenerateCostReference(q, v, q_target_.value(), v_target_.value(), contact_schedule_);
                 }
 
                 double time = this->now().seconds();
@@ -431,7 +434,7 @@ namespace robot
 
             // Compute difference
             const long time_left = mpc_loop_rate_ns - (stop_time - start_time).nanoseconds();
-            std::cout << "MPC Loop time (ms): " << static_cast<double>((stop_time - start_time).nanoseconds())/1e6 << std::endl;
+            // std::cout << "MPC Loop time (ms): " << static_cast<double>((stop_time - start_time).nanoseconds())/1e6 << std::endl;
             if (time_left > 0) {
                 while ((-(this->now() - start_time).nanoseconds() + mpc_loop_rate_ns) > 0) {}
             } else {

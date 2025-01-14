@@ -75,6 +75,11 @@ class ContactPlanner(ObeliskController):
         self.foot_offset = np.reshape(self.foot_offset, (len(self.right_foot_frames) + len(self.left_foot_frames), 2))
         self.get_logger().error(f"foot offsets: {self.foot_offset}")
 
+        self.declare_parameter("first_dt", 0.01)
+        self.declare_parameter("dt", 0.025)
+        self.first_dt = self.get_parameter("first_dt").value
+        self.dt = self.get_parameter("dt").value
+
         # OSQP
         self.osqp_prob = osqp.OSQP()
         self.osqp_setup = False
@@ -206,9 +211,6 @@ class ContactPlanner(ObeliskController):
     
     def command_target_callback(self, msg: CommandedTarget):
         """Parse the commanded target."""
-        # TODO: Make this not hard coded
-        first_dt = 0.01
-        other_dt = 0.025
         if self.received_state:
             self.q_target_base[:,0] = self.q_est[:7]
             self.q_target_base_global[:,0] = self.q_est[:7]
@@ -218,9 +220,9 @@ class ContactPlanner(ObeliskController):
             for i in range(1, self.num_nodes):
                 dt = 0
                 if i == 1:
-                    dt = first_dt
+                    dt = self.first_dt
                 else:
-                    dt = other_dt
+                    dt = self.dt
                 
                 # Local frame
                 self.q_target_base[:, i] = self.q_target_base[:, i-1] + dt*v_target[:7]

@@ -21,7 +21,7 @@ onboard:
         mpc_loop_period_sec: 0.006 #0.008 #0.01 #0.01
         max_mpc_solves: -37 #125 
 # ---------- Contact schedule ---------- #
-        swing_time: 0.2 #0.2 #0.25
+        swing_time: 0.25 #0.2 #0.25
         first_swing_time: 0.1 #2.
         double_stance_time: 0.0
         right_foot_first: True
@@ -109,15 +109,18 @@ onboard:
         num_nodes: 32   # Should match the MPC
         default_polytope_size: 0.4 #0.6
         mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile_scene.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
       # ----- Tile Scene ---- #
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4"]
       # ----- Swing Timing Paramers ---- #
       # WARNING!! THESE MUST MATCH THE CORRESPONDING PARAMETERS ABOVE
-        swing_time: 0.2 #0.2 #0.25
+        swing_time: 0.25 #0.2 #0.25
         first_swing_time: 0.1
         right_foot_frames: ["RL_foot", "FR_foot"]
         left_foot_frames: ["FL_foot", "RR_foot"]
         foot_offsets: [-0.1934, 0.142, 0.2234, -0.142, 0.2234, 0.142, -0.1934, -0.142]
+        first_dt: 0.01
+        dt: 0.025
       publishers:
         # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting

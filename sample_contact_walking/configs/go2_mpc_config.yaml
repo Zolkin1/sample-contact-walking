@@ -2,7 +2,7 @@ general_settings:
   nodes: 32
   verbose: False #True
   node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
-  node_dt: 0.02 #0.015 #0.015 #0.025
+  node_dt: 0.025 #0.015 #0.015 #0.025
   first_node_dt: 0.01 
   compile_derivatives: False #True
   base_frame: "torso"
@@ -11,7 +11,7 @@ general_settings:
   initial_constraint_tol: 5e-4
   nodes_full_dynamics: 3 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0
-  terminal_cost_weight: 10 #2 #10
+  terminal_cost_weight: 2 #2 #10
 solver_settings:
   rel_tol: 1e-6 #1e-3
   abs_tol: 1e-6 #1e-3
@@ -24,7 +24,7 @@ solver_settings:
   max_iter: 20 #50 #20
   scaling: 10
 constraints:
-  friction_coef: 0.7  # TODO: Tune this
+  friction_coef: 0.5  # TODO: Tune this
   friction_margin: 2
   max_grf: 800
   collisions:
@@ -64,15 +64,15 @@ costs:
       10, 10, 10,
       #25.5, 25.5, 25.5, # 5.5, 5.5, 5.5
       # Good walking:
-      # 1, 1, .001,          # FL
-      # 1, 1, .001,          # FR
-      # 1, 1, .001,          # RL
-      # 1, 1, .001,]          # RR
+      2, 1, .001,          # FL
+      2, 1, .001,          # FR
+      2, 1, .001,          # RL
+      2, 1, .001,]          # RR
       # For ref generator:
-      1, 1, .1,          # FL
-      1, 1, .1,          # FR
-      1, 1, .1,          # RL
-      1, 1, .1,]          # RR
+      # 1, 1, .1,          # FL
+      # 1, 1, .1,          # FR
+      # 1, 1, .1,          # RL
+      # 1, 1, .1,]          # RR
   - type: VelocityTracking
     name: "VelocityTracking"
     # weight: [2, 2, 2,
@@ -82,7 +82,7 @@ costs:
     #     0.01, 0.01, 0.0001,         # RL
     #     0.01, 0.01, 0.0001]         # RR
     # For reference gen:
-    weight: [0.5, 0.5, 1,
+    weight: [2, 2, 3,
         .5, .5, .5,
         0.01, 0.01, 0.0001,         # FL
         0.01, 0.01, 0.0001,         # FR
@@ -90,15 +90,32 @@ costs:
         0.01, 0.01, 0.0001]         # RR
   - type: TorqueRegularization
     name: "TorqueReg"
-    weight: [.001, .001, .0001,       # FL
-             .001, .001, .0001,       # FR
-             .001, .001, .0001,       # RL
-             .001, .001, .0001]       # RR
+    weight: [.0001, .0001, .0001,       # FL
+             .0001, .0001, .0001,       # FR
+             .0001, .0001, .0001,       # RL
+             .0001, .0001, .0001]       # RR
   - type: ForceRegularization
     name: "ForceReg"
     # weight: [0.001, 0.001, 0.001]
     # For reference gen:
-    weight: [0.0001, 0.0001, 0.0001]
+    weight: [0.001, 0.001, 0.001]
+  # TODO: Why does removing this cause weird things with the MPC?
+  - type: ForwardKinematics
+    name: "FL_foot_fk"
+    frame: "FL_foot"
+    weight: [1, 1, 2]
+  - type: ForwardKinematics
+    name: "FR_foot_fk"
+    frame: "FR_foot"
+    weight: [1, 1, 2]
+  - type: ForwardKinematics
+    name: "RL_foot_fk"
+    frame: "RL_foot"
+    weight: [1, 1, 2]
+  - type: ForwardKinematics
+    name: "RR_foot_fk"
+    frame: "RR_foot"
+    weight: [1, 1, 2]
     # TODO: Investigate this w/ no constraints. Weird stuff happening
   # - type: FootPolytope
   #   name: "FR_foot_polytope"
