@@ -431,6 +431,7 @@ namespace robot
 
             // Compute difference
             const long time_left = mpc_loop_rate_ns - (stop_time - start_time).nanoseconds();
+            std::cout << "MPC Loop time (ms): " << static_cast<double>((stop_time - start_time).nanoseconds())/1e6 << std::endl;
             if (time_left > 0) {
                 while ((-(this->now() - start_time).nanoseconds() + mpc_loop_rate_ns) > 0) {}
             } else {

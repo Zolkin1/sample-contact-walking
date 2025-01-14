@@ -2,7 +2,7 @@ general_settings:
   nodes: 32
   verbose: False #True
   node_dt_type: SmallFirst # Even, SmallFirst, Adaptive
-  node_dt: 0.015 #0.015 #0.025
+  node_dt: 0.02 #0.015 #0.015 #0.025
   first_node_dt: 0.01 
   compile_derivatives: False #True
   base_frame: "torso"
@@ -11,7 +11,7 @@ general_settings:
   initial_constraint_tol: 5e-4
   nodes_full_dynamics: 3 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0
-  terminal_cost_weight: 2 #10
+  terminal_cost_weight: 10 #2 #10
 solver_settings:
   rel_tol: 1e-6 #1e-3
   abs_tol: 1e-6 #1e-3
@@ -69,10 +69,10 @@ costs:
       # 1, 1, .001,          # RL
       # 1, 1, .001,]          # RR
       # For ref generator:
-      1, 1, 1,          # FL
-      1, 1, 1,          # FR
-      1, 1, 1,          # RL
-      1, 1, 1,]          # RR
+      1, 1, .1,          # FL
+      1, 1, .1,          # FR
+      1, 1, .1,          # RL
+      1, 1, .1,]          # RR
   - type: VelocityTracking
     name: "VelocityTracking"
     # weight: [2, 2, 2,
@@ -82,7 +82,7 @@ costs:
     #     0.01, 0.01, 0.0001,         # RL
     #     0.01, 0.01, 0.0001]         # RR
     # For reference gen:
-    weight: [1, 1, 1,
+    weight: [0.5, 0.5, 1,
         .5, .5, .5,
         0.01, 0.01, 0.0001,         # FL
         0.01, 0.01, 0.0001,         # FR
