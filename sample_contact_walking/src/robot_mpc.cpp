@@ -1121,7 +1121,7 @@ namespace robot
 
         t.header.stamp = this->get_clock()->now();
         t.header.frame_id = "target/torso_mocap_site";     // This must match the base link in the estimated state
-        t.child_frame_id = "target/base_link";             // Must match the the base link in the urdf
+        t.child_frame_id = "target/torso"; //"target/base_link";             // Must match the the base link in the urdf
 
         t.transform.translation.x = 0.0;
         t.transform.translation.y = 0.0;
@@ -1289,13 +1289,8 @@ namespace robot
 
                     const auto& swings = contact_schedule_.GetScheduleMap().at(frame);
 
-                    // if ((i > 0 && swings[i-1].first < 0 && swings[i-1].second > 0)) {
-                    //     std::cout << "i: " << i << " frame: " << frame << std::endl;
-                    //     std::cout << "first: " << swings[i-1].first << std::endl;
-                    //     std::cout << "second: " << swings[i-1].second << std::endl;
-                    // }
-
-                    if (i == 0 || !(i > 0 && swings[i-1].first < 0 && swings[i-1].second > 0) || !swing_polys.contains(frame)) {   // TODO: Check this
+                    // TODO: Put back
+                    if (i == 0 || !(i > 0 && swings[i-1].first < 0 && swings[i-1].second > 0) || !swing_polys.contains(frame)) {
                         auto polytope = contact_info.polytopes.back();
                         if (i < contact_info.polytopes.size()) {
                             polytope = contact_info.polytopes[i];

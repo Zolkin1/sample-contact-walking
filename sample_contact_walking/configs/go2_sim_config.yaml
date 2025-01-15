@@ -106,10 +106,9 @@ onboard:
     - pkg: contact_planning
       executable: contact_planner
       params:
-        num_nodes: 32 #32   # Should match the MPC
         default_polytope_size: 0.4 #0.6
-        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile_scene.xml
-        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile2_scene.xml
+        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile_scene.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile2_scene.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
       # ----- Tile Scene ---- #
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9"]
@@ -120,10 +119,12 @@ onboard:
         right_foot_frames: ["RL_foot", "FR_foot"]
         left_foot_frames: ["FL_foot", "RR_foot"]
         foot_offsets: [-0.1934, 0.142, 0.2234, -0.142, 0.2234, 0.142, -0.1934, -0.142]
+        num_nodes: 32   # Should match the MPC
         node_group_1_n: 5
         node_group_2_n: 27
         node_dt_1: 0.015 #0.015
         node_dt_2: 0.025
+        polytope_margin: 0.06   # Should match polytope_delta
       publishers:
         # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting
@@ -142,7 +143,7 @@ onboard:
       timers:
         # Contact planning timer
         - ros_parameter: timer_ctrl_setting
-          timer_period_sec: 0.05 #0.1
+          timer_period_sec: 0.01 #0.1
           callback_group: control_cbg
   estimation:
     - pkg: sample_contact_walking
@@ -218,8 +219,8 @@ onboard:
         - ros_parameter: mujoco_setting
           robot_pkg: go2_model
           # model_xml_path: go2_scene.xml
-          # model_xml_path: go2_tile_scene.xml
-          model_xml_path: go2_tile2_scene.xml
+          model_xml_path: go2_tile_scene.xml
+          # model_xml_path: go2_tile2_scene.xml
           n_u: 36
           time_step: 0.001
           num_steps_per_viz: 16 # No longer used

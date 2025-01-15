@@ -84,8 +84,20 @@ class ContactPlanner(ObeliskController):
         self.node_dt_1 = self.get_parameter("node_dt_1").value
         self.node_dt_2 = self.get_parameter("node_dt_2").value
 
+        self.dt_vec = []
+        for i in range(self.num_nodes):
+            if i < self.node_group_1_n:
+                self.dt_vec.append(self.node_dt_1)
+            else:
+                self.dt_vec.append(self.node_dt_2)
+
         if self.node_group_1_n + self.node_group_2_n != self.num_nodes:
             raise Exception("Invalid node dt groups!")
+
+        self.declare_parameter("polytope_margin", 0.)
+        self.polytope_margin = self.get_parameter("polytope_margin").value
+        if self.polytope_margin < 0:
+            raise Exception(f"Polytope margin should be positive! margin: {self.polytope_margin}")
 
         # OSQP
         self.osqp_prob = osqp.OSQP()
@@ -115,8 +127,6 @@ class ContactPlanner(ObeliskController):
             # self.q_target = np.repeat(self.q_est, 32)
             for i in range(self.q_target_base.shape[1]):
                 self.q_target_base[:,i] = x_hat_msg.q_base
-            # TODO: remove
-            # self.get_logger().info("q_target_base: " + np.array2string(self.q_target_base))
 
         if np.linalg.norm(self.q_est[3:7]) > 0.9:
             self.received_state = True
@@ -173,12 +183,6 @@ class ContactPlanner(ObeliskController):
                     polytope = ContactPolytope()
                     polytope.a_mat = [1., 0., 0., 1.]
 
-                    # TODO: Add the x-y offset of the feet relative to the base frame
-                    # polytope.b_vec = [self.default_size + self.q_target_base_global[0, i*nodes_per_contact], 
-                    #                     self.default_size + self.q_target_base_global[1, i*nodes_per_contact],
-                    #                     -self.default_size + self.q_target_base_global[0, i*nodes_per_contact],
-                    #                     -self.default_size + self.q_target_base_global[1, i*nodes_per_contact]]
-
                     contact_mid_time = self.get_contact_mid_times(current_time_seconds, i, cs_msg.contact_info[j].swing_times)
                     # contact_mid_time_rel = contact_mid_time - current_time_seconds
 
@@ -225,11 +229,7 @@ class ContactPlanner(ObeliskController):
             v_target = np.array(msg.v_target)
 
             for i in range(1, self.num_nodes):
-                dt = 0
-                if i < self.node_group_1_n:
-                    dt = self.node_dt_1
-                else:
-                    dt = self.node_dt_2
+                dt = self.dt_vec[i]
                 
                 # Local frame
                 self.q_target_base[:, i] = self.q_target_base[:, i-1] + dt*v_target[:7]
@@ -322,8 +322,10 @@ class ContactPlanner(ObeliskController):
         q = -2*p
         l = b[2:]
         u = b[:2]
-        # self.get_logger().info(f"l: {l}")
-        # self.get_logger().info(f"u: {u}")
+
+        # Add in the polytope safety margin
+        l = l + [self.polytope_margin, self.polytope_margin]
+        u = u - [self.polytope_margin, self.polytope_margin]
 
         P = sparse.csc_matrix([[2, 0], [0, 2]])
         A_sparse = sparse.csc_matrix(A)
@@ -390,8 +392,7 @@ class ContactPlanner(ObeliskController):
                 else:
                     swing_times.append(gait_start_time)
 
-            # TODO: Don't hard code
-            while swing_times[-1] < current_time_seconds + 0.01 + self.num_nodes*0.025:
+            while swing_times[-1] < current_time_seconds + sum(self.dt_vec):
                 swing_times.append(swing_times[-1] + self.swing_time)
 
             if len(swing_times) % 2 == 1:
@@ -400,20 +401,26 @@ class ContactPlanner(ObeliskController):
         return swing_times
     
     def get_node(self, time):
-        # TODO: Make not hard coded
-        first_dt = 0.01
-        other_dt = 0.025
-        if time < first_dt:
-            return 0
-        else:
-            return math.floor((time - first_dt)/other_dt)
+        if time < 0:
+            raise Exception(f"[get_node] time is too small! time: {time}")
+        
+        if time > sum(self.dt_vec):
+            raise Exception(f"[get_node] time is too large! time:{time}")
+        
+        t = 0
+        i = 0
+        while (t <= time):
+            t = t + self.dt_vec[i]
+            i += 1
+
+        return i-1
 
     def get_contact_mid_times(self, current_time_seconds: float, contact_num: int, swing_times):
         # self.get_logger().info(f"contact num: {contact_num}, swing_times len: {len(swing_times)}")
         if len(swing_times) > 0:
             if contact_num == 0:
                 # The first contact is always before the first recorded swing
-                return swing_times[0] - 0.15 # TODO: Adjust this
+                return swing_times[0] - self.swing_time/2. # TODO: Adjust this
             elif contact_num <= len(swing_times)/2. - 1:
                 # We are in an intermediate contact
                 # Get the mid point by using the surrounding swing times
@@ -424,14 +431,15 @@ class ContactPlanner(ObeliskController):
                 return contact_mid_time
             else:
                 # After the last recorded swing
-                return swing_times[-1] + 0.15 # TODO: Adjust this number
+                return swing_times[-1] + self.swing_time/2. # TODO: Adjust this number
         else:
             return 0.2 # TODO: Adjust this number
 
     def get_position(self, time: float):
-        node = self.get_node(time)
-
-        if node >= self.num_nodes:
+        node = 0
+        if (time < sum(self.dt_vec)):
+            node = self.get_node(time)
+        else:
             node = self.num_nodes - 1
         
         return self.q_target_base[:, node]
