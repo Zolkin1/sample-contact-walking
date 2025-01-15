@@ -1243,6 +1243,16 @@ namespace robot
         recieved_polytope_ = true;
         std::lock_guard<std::mutex> lock(polytope_mutex_);
 
+        // Grab the contact polytopes for the legs currently in swing (where they next land)
+        std::map<std::string, torc::mpc::ContactInfo> swing_polys;
+        for (const auto& [frame, swings] : contact_schedule_.GetScheduleMap()) {
+            for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
+                if ((i > 0 && swings[i-1].first < 0 && swings[i-1].second > 0)) {
+                    swing_polys.insert({frame, contact_schedule_.GetPolytopes(frame)[i]});
+                }
+            }
+        }
+        
         // TODO: Consider removing if this doesn't work
         contact_schedule_.CleanContacts(10);
 
@@ -1275,17 +1285,31 @@ namespace robot
 
                 // Extract contact polytopes
                 for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-                    auto polytope = contact_info.polytopes.back();
-                    if (i < contact_info.polytopes.size()) {
-                        polytope = contact_info.polytopes[i];
-                    } 
+                    // Only update the polytope if we haven't started the swing - may want to allow part of the swing
 
-                    std::vector<double> a_mat = polytope.a_mat;
+                    const auto& swings = contact_schedule_.GetScheduleMap().at(frame);
 
-                    Eigen::Map<matrixx_t> A(a_mat.data(), 2, 2);
-                    Eigen::Vector4d b(polytope.b_vec.data());
-                    if (i < contact_schedule_.GetPolytopes(frame).size()) {
-                        contact_schedule_.SetPolytope(frame, i, A, b);
+                    // if ((i > 0 && swings[i-1].first < 0 && swings[i-1].second > 0)) {
+                    //     std::cout << "i: " << i << " frame: " << frame << std::endl;
+                    //     std::cout << "first: " << swings[i-1].first << std::endl;
+                    //     std::cout << "second: " << swings[i-1].second << std::endl;
+                    // }
+
+                    if (i == 0 || !(i > 0 && swings[i-1].first < 0 && swings[i-1].second > 0) || !swing_polys.contains(frame)) {   // TODO: Check this
+                        auto polytope = contact_info.polytopes.back();
+                        if (i < contact_info.polytopes.size()) {
+                            polytope = contact_info.polytopes[i];
+                        } 
+
+                        std::vector<double> a_mat = polytope.a_mat;
+
+                        Eigen::Map<matrixx_t> A(a_mat.data(), 2, 2);
+                        Eigen::Vector4d b(polytope.b_vec.data());
+                        if (i < contact_schedule_.GetPolytopes(frame).size()) {
+                            contact_schedule_.SetPolytope(frame, i, A, b);
+                        }
+                    } else {
+                        contact_schedule_.SetPolytope(frame, i, swing_polys.at(frame).A_, swing_polys.at(frame).b_);
                     }
                 }
 

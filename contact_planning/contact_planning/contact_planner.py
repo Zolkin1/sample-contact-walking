@@ -75,10 +75,17 @@ class ContactPlanner(ObeliskController):
         self.foot_offset = np.reshape(self.foot_offset, (len(self.right_foot_frames) + len(self.left_foot_frames), 2))
         self.get_logger().error(f"foot offsets: {self.foot_offset}")
 
-        self.declare_parameter("first_dt", 0.01)
-        self.declare_parameter("dt", 0.025)
-        self.first_dt = self.get_parameter("first_dt").value
-        self.dt = self.get_parameter("dt").value
+        self.declare_parameter("node_group_1_n", 1)
+        self.declare_parameter("node_group_2_n", 31)
+        self.declare_parameter("node_dt_1", 0.01)
+        self.declare_parameter("node_dt_2", 0.025)
+        self.node_group_1_n = self.get_parameter("node_group_1_n").value
+        self.node_group_2_n = self.get_parameter("node_group_2_n").value
+        self.node_dt_1 = self.get_parameter("node_dt_1").value
+        self.node_dt_2 = self.get_parameter("node_dt_2").value
+
+        if self.node_group_1_n + self.node_group_2_n != self.num_nodes:
+            raise Exception("Invalid node dt groups!")
 
         # OSQP
         self.osqp_prob = osqp.OSQP()
@@ -219,10 +226,10 @@ class ContactPlanner(ObeliskController):
 
             for i in range(1, self.num_nodes):
                 dt = 0
-                if i == 1:
-                    dt = self.first_dt
+                if i < self.node_group_1_n:
+                    dt = self.node_dt_1
                 else:
-                    dt = self.dt
+                    dt = self.node_dt_2
                 
                 # Local frame
                 self.q_target_base[:, i] = self.q_target_base[:, i-1] + dt*v_target[:7]
@@ -256,6 +263,8 @@ class ContactPlanner(ObeliskController):
             # Compute the distance between the desired point and the polytopes
             # Compute with OSQP (need to time it...)
             min_distances.append(self.compute_min_distance(self.A_mats[i], self.b_vecs[i], desired_foothold))
+            # TODO: Implement kinematic cost
+            # min_distances[-1] += self.compute_fk_cost(desired_foothold)
 
         # Iterate through the list and choose the geom coressponding to the geom with the smallest cost
         min_dist = 100

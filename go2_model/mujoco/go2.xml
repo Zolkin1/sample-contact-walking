@@ -7,7 +7,7 @@
   <compiler angle="radian" meshdir="../meshes" autolimits="true"/>
 
   <!-- <option cone="pyramidal" integrator="implicitfast" timestep="0.001"/> -->
-  <option cone="elliptic" impratio="100" integrator="implicitfast" timestep="0.001"/>
+  <option cone="elliptic" impratio="100" integrator="implicitfast" timestep="0.0005"/>
 
 <!-- All motor control limits are handeled in the joint actuatorfrcrange field. -->
   <default>
