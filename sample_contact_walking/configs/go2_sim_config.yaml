@@ -111,7 +111,7 @@ onboard:
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile2_scene.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
       # ----- Tile Scene ---- #
-        foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9"]
+        foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9", "stair1", "stair2", "stair3"]
       # ----- Swing Timing Paramers ---- #
       # WARNING!! THESE MUST MATCH THE CORRESPONDING PARAMETERS ABOVE
         swing_time: 0.3 #0.2 #0.25
@@ -296,6 +296,9 @@ onboard:
             tile7: box
             tile8: box
             tile9: box
+            stair1: box
+            stair2: box
+            stair3: box
   viz:
     on: True
     viz_tool: foxglove

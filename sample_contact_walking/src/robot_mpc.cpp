@@ -164,7 +164,7 @@ namespace robot
         for (const auto& frame : mpc_->GetContactFrames()) {
             // contact_polytopes_.insert({frame, {}});
             for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-                contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
+                contact_schedule_.SetPolytope(frame, i, A_temp, b_temp, 0);
                 // contact_polytopes_[frame].emplace_back((A_temp, b_temp));
             }
         }
@@ -305,9 +305,11 @@ namespace robot
                     q = q_ic_;
                     v = v_ic_;
 
+                    RCLCPP_ERROR_STREAM_ONCE(this->get_logger(), "About to update contact schedule!.");
                     // TODO: Fix the state for when we re-enter this loop
                      {
                         std::lock_guard<std::mutex> lock(polytope_mutex_);
+                        // TODO: Put back
                         mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
                             this->get_parameter("default_swing_height").as_double(),
                             stance_height,
@@ -315,6 +317,7 @@ namespace robot
                     }
                     vectorx_t q_ref = q;
                     q_ref(2) = z_target_;
+                    RCLCPP_ERROR_STREAM_ONCE(this->get_logger(), "About to compute reference!.");
                     mpc_->GenerateCostReference(q_ref, v, q_target_.value(), v_target_.value(), contact_schedule_);
                     double time = this->now().seconds();
                     mpc_->ComputeNLP(q, v, traj_mpc_);
@@ -605,7 +608,7 @@ namespace robot
                 b_temp = b_temp + Eigen::Vector4d::Constant(-0.1*(frame_idx));
             }
             for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-                contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
+                contact_schedule_.SetPolytope(frame, i, A_temp, b_temp, 0);
             }
 
             frame_idx++;
@@ -809,7 +812,7 @@ namespace robot
                 // TODO: Do better
                 // TODO: Check this to make sure it will work for more than the default polytope
                 geometry_msgs::msg::Point corner;
-                corner.z = 0;
+                corner.z = polytope.height_;
 
                 // std::cout << "b: " << polytope.b_.transpose() << std::endl;
                 corner.x = polytope.b_(0);
@@ -1165,7 +1168,7 @@ namespace robot
                 if (contact_schedule_.GetNumContacts(frame) > 1) {
                     polytope = contact_schedule_.GetPolytopes(frame).at(contact_schedule_.GetPolytopes(frame).size() - 2);
                 }
-                contact_schedule_.SetPolytope(frame, contact_schedule_.GetNumContacts(frame) - 1, polytope.A_, polytope.b_);
+                contact_schedule_.SetPolytope(frame, contact_schedule_.GetNumContacts(frame) - 1, polytope.A_, polytope.b_, 0);
             }
         }
 
@@ -1236,6 +1239,7 @@ namespace robot
         for (const auto& frame : mpc_->GetContactFrames()) {
             mpc_->PrintSwingTraj(frame);
         }
+        RCLCPP_INFO_STREAM(this->get_logger(), "Contact parameters parsed.");
     }
 
     void MpcController::ContactScheduleCallback(const sample_contact_msgs::msg::ContactSchedule& msg) {
@@ -1301,10 +1305,10 @@ namespace robot
                         Eigen::Map<matrixx_t> A(a_mat.data(), 2, 2);
                         Eigen::Vector4d b(polytope.b_vec.data());
                         if (i < contact_schedule_.GetPolytopes(frame).size()) {
-                            contact_schedule_.SetPolytope(frame, i, A, b);
+                            contact_schedule_.SetPolytope(frame, i, A, b, polytope.height);
                         }
                     } else {
-                        contact_schedule_.SetPolytope(frame, i, swing_polys.at(frame).A_, swing_polys.at(frame).b_);
+                        contact_schedule_.SetPolytope(frame, i, swing_polys.at(frame).A_, swing_polys.at(frame).b_, swing_polys.at(frame).height_);
                     }
                 }
 

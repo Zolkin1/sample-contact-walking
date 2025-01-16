@@ -184,30 +184,31 @@ class ContactPlanner(ObeliskController):
                     polytope.a_mat = [1., 0., 0., 1.]
 
                     contact_mid_time = self.get_contact_mid_times(current_time_seconds, i, cs_msg.contact_info[j].swing_times)
-                    # contact_mid_time_rel = contact_mid_time - current_time_seconds
 
                     desired_base_pos = self.get_position(0) # TODO: Is this how I want to handle this?
                     if (contact_mid_time > 0):
-                        desired_base_pos = self.get_position(contact_mid_time)
-
-                    # self.get_logger().info(f"Frame: {frame}")
-                    # self.get_logger().info(f"contact mid time: {contact_mid_time}")
-                    # self.get_logger().info(f"desired_base_pos: {desired_base_pos[:2]}")
+                        desired_base_pos = self.get_position(contact_mid_time).copy()
 
                     # Compute the closest foothold
-                    # Compute this relative to the middle of the foot so that we don't get two seperate polytopes for the toe and heel
-                    # print(f"foot offset: {self.foot_offset[j,:]}")
-                    # print(f"des base pos: {desired_base_pos}")
-                    # TODO: Double check this
                     R = Rotation.from_quat([desired_base_pos[3], desired_base_pos[4], desired_base_pos[5], desired_base_pos[6]])
-                    desired_foothold = desired_base_pos[:2] + (R.as_matrix()[:2,:2]@self.foot_offset[j,:].transpose()).transpose()
+                    desired_foothold = desired_base_pos[:3].copy()
+                    desired_foothold[:2] += (R.as_matrix()[:2,:2]@self.foot_offset[j,:].transpose()).transpose()
 
-                    # self.get_logger().info(f"desired foothold: {desired_foothold[:2]}\n")
+                    # TODO: Read in hnom!!
+                    self.hnom = 0.28
+                    desired_foothold[2] += self.get_height(desired_foothold[:2]) - self.hnom   # Get the height of the terrain at the given location
+                    # self.get_logger().info(f"Frame: {frame}")
+                    # self.get_logger().info(f"contact mid time: {contact_mid_time}")
+                    # self.get_logger().info(f"(4)desired_base_pos: {desired_base_pos[:3]}")
+                    # self.get_logger().info(f"height: {self.get_height(desired_foothold[:2])}")
+
+                    # self.get_logger().info(f"desired foothold: {desired_foothold[:3]}\n")
 
                     idx = self.compute_closest_foothold(desired_foothold)
 
 
                     polytope.b_vec = self.b_vecs[idx].tolist()
+                    polytope.height = self.heights[idx]
                     # print("frame: " + frame)
                     # print(f"b: {polytope.b_vec}")
                     cs_msg.contact_info[j].polytopes.append(polytope)
@@ -224,7 +225,7 @@ class ContactPlanner(ObeliskController):
         """Parse the commanded target."""
         if self.received_state:
             self.q_target_base[:,0] = self.q_est[:7]
-            self.q_target_base_global[:,0] = self.q_est[:7]
+            self.q_target_base_global[:,0] = self.q_est[:7]     # TODO: This line seems wrong
 
             v_target = np.array(msg.v_target)
 
@@ -254,6 +255,8 @@ class ContactPlanner(ObeliskController):
                 full_rotation  = R * delta_rotation
                 self.q_target_base_global[3:7, i] = full_rotation.as_quat()
 
+                # self.get_logger().info(f"{i}: target: {self.q_target_base_global[:3, i]}")
+
             # self.get_logger().info("Updating target!")
 
     def compute_closest_foothold(self, desired_foothold):
@@ -262,7 +265,7 @@ class ContactPlanner(ObeliskController):
         for i in range(len(self.b_vecs)):
             # Compute the distance between the desired point and the polytopes
             # Compute with OSQP (need to time it...)
-            min_distances.append(self.compute_min_distance(self.A_mats[i], self.b_vecs[i], desired_foothold))
+            min_distances.append(self.compute_min_distance(self.A_mats[i], self.b_vecs[i], self.heights[i], desired_foothold))
             # TODO: Implement kinematic cost
             # min_distances[-1] += self.compute_fk_cost(desired_foothold)
 
@@ -283,6 +286,7 @@ class ContactPlanner(ObeliskController):
         # Read in the terrain from Mujoco
         self.b_vecs = []
         self.A_mats = []
+        self.heights = []
 
         for geom_name in foothold_geoms:
             geom_id = mujoco.mj_name2id(self.mujoco_model, mujoco.mjtObj.mjOBJ_GEOM, geom_name)
@@ -300,6 +304,8 @@ class ContactPlanner(ObeliskController):
 
             # TODO: Determine a way to encode the height of the polytope
             # For now assuming it is flush with the ground
+            self.heights.append(geom_pos[2] + half_sizes[2])
+            self.get_logger().info(f"height: {self.heights[-1]}")
 
             # TODO: Deal with geometry at an angle
             
@@ -315,9 +321,9 @@ class ContactPlanner(ObeliskController):
             # self.get_logger().info(f"b: {self.b_vecs[-1]}")
             self.get_logger().info(f"geom pos: {geom_pos[:2]}")
     
-    def compute_min_distance(self, A, b, p):
+    def compute_min_distance(self, A, b, c, p):
         """
-        Compute min (x - p)^2 s.t. Ax <= b using osqp
+        Compute min (x - p)^2 s.t. b[-2:] <= Ax[:2] <= b[:2], x[2] = c using osqp
         """
         q = -2*p
         l = b[2:]
@@ -326,10 +332,16 @@ class ContactPlanner(ObeliskController):
         # Add in the polytope safety margin
         l = l + [self.polytope_margin, self.polytope_margin]
         u = u - [self.polytope_margin, self.polytope_margin]
+        l = np.concatenate((l, [c]))
+        u = np.concatenate((u, [c]))
+        
 
-        P = sparse.csc_matrix([[2, 0], [0, 2]])
-        A_sparse = sparse.csc_matrix(A)
-        # self.get_logger().info(f"A: {A}")
+        id3x3 = np.eye(3,3)
+        P = sparse.csc_matrix(2*id3x3)
+        Amat = id3x3
+        Amat[:2,:2] = A
+        A_sparse = sparse.csc_matrix(Amat)
+        # self.get_logger().info(f"A: {Amat}")
 
         if not self.osqp_setup:
             self.osqp_prob.setup(P, q, A_sparse, l, u, verbose=False)
@@ -442,7 +454,22 @@ class ContactPlanner(ObeliskController):
         else:
             node = self.num_nodes - 1
         
-        return self.q_target_base[:, node]
+        # self.get_logger().info(f"[{node}]: position: {self.q_target_base_global[:3, node]}")
+        return self.q_target_base_global[:, node]
+    
+    def get_height(self, pos):
+        for i in range(len(self.b_vecs)):
+            res = self.A_mats[i]@pos
+            in_poly = True
+            for j in range(len(res)):
+                if not (res[j] <= self.b_vecs[i][j] and res[j] >= self.b_vecs[i][j+2]):
+                    in_poly = False
+
+            if in_poly:
+                return self.heights[i]
+
+        return 0    # Default if there are no geoms - might want to change this to some form of interpolation
+
 
 def main(args: Optional[List] = None):
     spin_obelisk(args, ContactPlanner, SingleThreadedExecutor)

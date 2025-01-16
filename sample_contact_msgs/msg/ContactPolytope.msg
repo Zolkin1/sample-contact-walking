@@ -6,3 +6,6 @@ float64[] a_mat
 # The b vector for the polytope
 float64[] b_vec
 
+# Height of the polytope off the ground
+float64 height
+
