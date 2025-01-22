@@ -13,7 +13,7 @@ general_settings:
   initial_constraint_tol: 5e-4
   nodes_full_dynamics: 3 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0
-  terminal_cost_weight: 2 #2 #10
+  terminal_cost_weight: 10 #2 #2 #10
 solver_settings:
   rel_tol: 1e-3
   abs_tol: 1e-3

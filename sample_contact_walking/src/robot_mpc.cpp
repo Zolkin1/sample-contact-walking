@@ -306,7 +306,7 @@ namespace robot
                     v = v_ic_;
 
                     // TODO: Fix the state for when we re-enter this loop
-                     {
+                    {
                         std::lock_guard<std::mutex> lock(polytope_mutex_);
                         mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
                             this->get_parameter("default_swing_height").as_double(),
@@ -315,7 +315,7 @@ namespace robot
                     }
                     vectorx_t q_ref = q;
                     q_ref(2) = z_target_;
-                    mpc_->GenerateCostReference(q_ref, v, q_target_.value(), v_target_.value(), contact_schedule_);
+                    // mpc_->GenerateCostReference(q_ref, v, q_target_.value(), v_target_.value(), contact_schedule_);
                     double time = this->now().seconds();
                     mpc_->ComputeNLP(q, v, traj_mpc_);
                     {
@@ -357,18 +357,18 @@ namespace robot
                 } 
                 
                 // ----- No Reference ----- //
-                // {
-                //     std::lock_guard<std::mutex> lock(polytope_mutex_);
-                //     mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
-                //         this->get_parameter("default_swing_height").as_double(),
-                //         stance_height,
-                //         this->get_parameter("apex_time").as_double());
-                // } 
-                // // AddPeriodicContacts();   // Don't use when getting CS from the other node
+                {
+                    std::lock_guard<std::mutex> lock(polytope_mutex_);
+                    mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
+                        this->get_parameter("default_swing_height").as_double(),
+                        stance_height,
+                        this->get_parameter("apex_time").as_double());
+                } 
+                AddPeriodicContacts();   // Don't use when getting CS from the other node
                 
                 
                 // ----- Read in state ----- //
-                // TODO: If state is only here for when we remove sim
+                // TODO: If statement is only here for when we remove sim
                 if (first_loop) {
                     first_loop = false;
                 } else {
@@ -382,27 +382,27 @@ namespace robot
                     }
                 }
                 // ----- No Reference ----- //
-                // if (!fixed_target_ || controller_target_) {
-                //     UpdateMpcTargets(q);
-                //     mpc_->SetConfigTarget(q_target_.value());
-                //     mpc_->SetVelTarget(v_target_.value());
-                // }
+                if (!fixed_target_ || controller_target_) {
+                    UpdateMpcTargets(q);
+                    mpc_->SetConfigTarget(q_target_.value());
+                    mpc_->SetVelTarget(v_target_.value());
+                }
 
-                // ----- Reference Generation ----- //
-                // TODO: Unclear if this really provides a performance improvement as the stack works without it.
-                UpdateMpcTargets(q);
+                // // ----- Reference Generation ----- //
+                // // TODO: Unclear if this really provides a performance improvement as the stack works without it.
+                // UpdateMpcTargets(q);
                 // vectorx_t q_ref = q;
                 // q_ref(2) = z_target_;
-                {
-                    std::lock_guard<std::mutex> lock(polytope_mutex_);
-                    mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
-                        this->get_parameter("default_swing_height").as_double(),
-                        stance_height,
-                        this->get_parameter("apex_time").as_double());
-                    // AddPeriodicContacts();   // Don't use when getting CS from the other node
+                // {
+                //     std::lock_guard<std::mutex> lock(polytope_mutex_);
+                //     mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
+                //         this->get_parameter("default_swing_height").as_double(),
+                //         stance_height,
+                //         this->get_parameter("apex_time").as_double());
+                //     // AddPeriodicContacts();   // Don't use when getting CS from the other node
 
-                    mpc_->GenerateCostReference(q, v, q_target_.value(), v_target_.value(), contact_schedule_);
-                }
+                //     mpc_->GenerateCostReference(q, v, q_target_.value(), v_target_.value(), contact_schedule_);
+                // }
 
                 double time = this->now().seconds();
 
@@ -985,7 +985,7 @@ namespace robot
         // this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
         // // }
 
-        ---------- G1 ---------- //
+        // ---------- G1 ---------- //
         obelisk_estimator_msgs::msg::EstimatedState msg;
 
         vectorx_t q = vectorx_t::Zero(mpc_model_->GetConfigDim());
@@ -1239,80 +1239,80 @@ namespace robot
     }
 
     void MpcController::ContactScheduleCallback(const sample_contact_msgs::msg::ContactSchedule& msg) {
-        RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Recieved first contact schedule.");
-        recieved_polytope_ = true;
-        std::lock_guard<std::mutex> lock(polytope_mutex_);
+        // RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Recieved first contact schedule.");
+        // recieved_polytope_ = true;
+        // std::lock_guard<std::mutex> lock(polytope_mutex_);
 
-        // Grab the contact polytopes for the legs currently in swing (where they next land)
-        std::map<std::string, torc::mpc::ContactInfo> swing_polys;
-        for (const auto& [frame, swings] : contact_schedule_.GetScheduleMap()) {
-            for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-                if ((i > 0 && swings[i-1].first < 0 && swings[i-1].second > 0)) {
-                    swing_polys.insert({frame, contact_schedule_.GetPolytopes(frame)[i]});
-                }
-            }
-        }
+        // // Grab the contact polytopes for the legs currently in swing (where they next land)
+        // std::map<std::string, torc::mpc::ContactInfo> swing_polys;
+        // for (const auto& [frame, swings] : contact_schedule_.GetScheduleMap()) {
+        //     for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
+        //         if ((i > 0 && swings[i-1].first < 0 && swings[i-1].second > 0)) {
+        //             swing_polys.insert({frame, contact_schedule_.GetPolytopes(frame)[i]});
+        //         }
+        //     }
+        // }
         
-        // TODO: Consider removing if this doesn't work
-        contact_schedule_.CleanContacts(10);
+        // // TODO: Consider removing if this doesn't work
+        // contact_schedule_.CleanContacts(10);
 
-        for (const auto& contact_info : msg.contact_info) {
-            const std::string& frame = contact_info.robot_contact_frame;
+        // for (const auto& contact_info : msg.contact_info) {
+        //     const std::string& frame = contact_info.robot_contact_frame;
 
-            const auto& sched_map = contact_schedule_.GetScheduleMap();
-            if (sched_map.contains(frame)) {
-                // std::cout << "swing times size: " << contact_info.swing_times.size() << std::endl;
-                // TODO: Try Assigning the swing times from the command
-                for (int i = 0; i < contact_info.swing_times.size()/2; i++) {
-                    contact_schedule_.InsertSwing(frame, contact_info.swing_times.at(2*i), contact_info.swing_times.at(2*i + 1));
-                    // std::cout << "inserting a swing!" << std::endl;
-                }
+        //     const auto& sched_map = contact_schedule_.GetScheduleMap();
+        //     if (sched_map.contains(frame)) {
+        //         // std::cout << "swing times size: " << contact_info.swing_times.size() << std::endl;
+        //         // TODO: Try Assigning the swing times from the command
+        //         for (int i = 0; i < contact_info.swing_times.size()/2; i++) {
+        //             contact_schedule_.InsertSwing(frame, contact_info.swing_times.at(2*i), contact_info.swing_times.at(2*i + 1));
+        //             // std::cout << "inserting a swing!" << std::endl;
+        //         }
 
-                // std::cout << "Commanded swing times" << std::endl;
-                // for (int i = 0; i < contact_info.swing_times.size(); i++) {
-                //     std::cout << "i: " << i << ", swing times: " << contact_info.swing_times[i] << std::endl;
-                // }
-                // std::cout << "Current swing times" << std::endl;
-                // for (int i = 0; i < sched_map.at(frame).size(); i++) {
-                //     std::cout << "i: " << i << ", swing times: " << sched_map.at(frame)[i].first << ", " << sched_map.at(frame)[i].second << std::endl;
-                // }
+        //         // std::cout << "Commanded swing times" << std::endl;
+        //         // for (int i = 0; i < contact_info.swing_times.size(); i++) {
+        //         //     std::cout << "i: " << i << ", swing times: " << contact_info.swing_times[i] << std::endl;
+        //         // }
+        //         // std::cout << "Current swing times" << std::endl;
+        //         // for (int i = 0; i < sched_map.at(frame).size(); i++) {
+        //         //     std::cout << "i: " << i << ", swing times: " << sched_map.at(frame)[i].first << ", " << sched_map.at(frame)[i].second << std::endl;
+        //         // }
 
-                if (contact_schedule_.GetNumContacts(frame) != contact_info.swing_times.size()/2 + 1) {
-                    std::cerr << "cs contact num: " << contact_schedule_.GetNumContacts(frame) << std::endl;
-                    std::cerr << "ci contact num: " << contact_info.swing_times.size()/2 + 1 << std::endl;
-                    throw std::runtime_error("Contacts not moved correctly!");
-                }
+        //         if (contact_schedule_.GetNumContacts(frame) != contact_info.swing_times.size()/2 + 1) {
+        //             std::cerr << "cs contact num: " << contact_schedule_.GetNumContacts(frame) << std::endl;
+        //             std::cerr << "ci contact num: " << contact_info.swing_times.size()/2 + 1 << std::endl;
+        //             throw std::runtime_error("Contacts not moved correctly!");
+        //         }
 
-                // Extract contact polytopes
-                for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-                    // Only update the polytope if we haven't started the swing - may want to allow part of the swing
+        //         // Extract contact polytopes
+        //         for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
+        //             // Only update the polytope if we haven't started the swing - may want to allow part of the swing
 
-                    const auto& swings = contact_schedule_.GetScheduleMap().at(frame);
+        //             const auto& swings = contact_schedule_.GetScheduleMap().at(frame);
 
-                    // TODO: Put back
-                    if (i == 0 || !(i > 0 && swings[i-1].first < 0 && swings[i-1].second > 0) || !swing_polys.contains(frame)) {
-                        auto polytope = contact_info.polytopes.back();
-                        if (i < contact_info.polytopes.size()) {
-                            polytope = contact_info.polytopes[i];
-                        } 
+        //             // TODO: Put back
+        //             if (i == 0 || !(i > 0 && swings[i-1].first < 0 && swings[i-1].second > 0) || !swing_polys.contains(frame)) {
+        //                 auto polytope = contact_info.polytopes.back();
+        //                 if (i < contact_info.polytopes.size()) {
+        //                     polytope = contact_info.polytopes[i];
+        //                 } 
 
-                        std::vector<double> a_mat = polytope.a_mat;
+        //                 std::vector<double> a_mat = polytope.a_mat;
 
-                        Eigen::Map<matrixx_t> A(a_mat.data(), 2, 2);
-                        Eigen::Vector4d b(polytope.b_vec.data());
-                        if (i < contact_schedule_.GetPolytopes(frame).size()) {
-                            contact_schedule_.SetPolytope(frame, i, A, b);
-                        }
-                    } else {
-                        contact_schedule_.SetPolytope(frame, i, swing_polys.at(frame).A_, swing_polys.at(frame).b_);
-                    }
-                }
+        //                 Eigen::Map<matrixx_t> A(a_mat.data(), 2, 2);
+        //                 Eigen::Vector4d b(polytope.b_vec.data());
+        //                 if (i < contact_schedule_.GetPolytopes(frame).size()) {
+        //                     contact_schedule_.SetPolytope(frame, i, A, b);
+        //                 }
+        //             } else {
+        //                 contact_schedule_.SetPolytope(frame, i, swing_polys.at(frame).A_, swing_polys.at(frame).b_);
+        //             }
+        //         }
 
-                // std::cout << "done with " << frame << std::endl;
-            } else {
-                RCLCPP_ERROR_STREAM(this->get_logger(), frame << " is not a valid frame for the MPC contacts.");
-            }
-        }
+        //         // std::cout << "done with " << frame << std::endl;
+        //     } else {
+        //         RCLCPP_ERROR_STREAM(this->get_logger(), frame << " is not a valid frame for the MPC contacts.");
+        //     }
+        // }
     }
 
     void MpcController::JoystickCallback(const sensor_msgs::msg::Joy& msg) {

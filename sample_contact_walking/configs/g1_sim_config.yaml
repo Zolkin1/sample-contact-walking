@@ -23,7 +23,7 @@ onboard:
         max_mpc_solves: -25 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.4 #0.4 #0.25
-        first_swing_time: 5.0 #0.5 #2. #0.5 #5.0 #0.5
+        first_swing_time: 0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -130,7 +130,7 @@ onboard:
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4"]
       # ----- Swing Timing Paramers ---- #
       # WARNING!! THESE MUST MATCH THE CORRESPONDING PARAMETERS ABOVE
-        first_step_time: 2.
+        first_step_time: 0.1 #2.
         swing_time: 0.4
         right_foot_frames: ["right_toe", "right_heel"]
         left_foot_frames: ["left_toe", "left_heel"]

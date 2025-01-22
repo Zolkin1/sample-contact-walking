@@ -82,7 +82,8 @@ RUN cd /home/${USER} && git clone https://github.com/giaf/blasfeo && git clone h
     cd /home/${USER}/blasfeo && mkdir build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBLASFEO_EXAMPLES=OFF && \
     make -j8 && sudo make install -j && cd /home/${USER}/hpipm && mkdir build && \
-    cd build && make -j8 && sudo make install -j && cd /home/${USER} && \
+    cd build && cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DHPIPM_TESTING=OFF && \
+    make -j8 && sudo make install -j && cd /home/${USER} && \
     git clone https://github.com/Zolkin1/hpipm-cpp.git && cd /home/${USER}/hpipm-cpp && mkdir build && \
     cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j8 && sudo make install -j 
 
