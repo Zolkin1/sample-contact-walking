@@ -11,7 +11,7 @@ general_settings:
   scale_cost: False
   max_initial_solves: 20
   initial_constraint_tol: 5e-4
-  nodes_full_dynamics: 3 #4   # Also determines how many nodes have torque constraints
+  nodes_full_dynamics: 20 #3 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0
   terminal_cost_weight: 10 #2 #10
 solver_settings:
@@ -46,7 +46,7 @@ constraints:
       frame2: "RL_foot"
       radius1: 0.06
       radius2: 0.06
-  polytope_delta: 0.06
+  polytope_delta: 0.06 # 0.06 good for stepping stones
   polytope_shrinking_rad: 0.2
 costs:
   - type: ConfigurationTracking

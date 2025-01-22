@@ -99,6 +99,9 @@ class ContactPlanner(ObeliskController):
         if self.polytope_margin < 0:
             raise Exception(f"Polytope margin should be positive! margin: {self.polytope_margin}")
 
+        # TODO: Read in hnom!!
+        self.hnom = 0.28
+
         # OSQP
         self.osqp_prob = osqp.OSQP()
         self.osqp_setup = False
@@ -185,17 +188,17 @@ class ContactPlanner(ObeliskController):
 
                     contact_mid_time = self.get_contact_mid_times(current_time_seconds, i, cs_msg.contact_info[j].swing_times)
 
-                    desired_base_pos = self.get_position(0) # TODO: Is this how I want to handle this?
-                    if (contact_mid_time > 0):
-                        desired_base_pos = self.get_position(contact_mid_time).copy()
+                    # Compute the desired pose - includes adjusting orientation for terrain
+                    desired_base_pose = self.compute_des_base_pose(max(contact_mid_time, 0), self.foot_offset)
+                    # desired_base_pose = self.get_position(0) # TODO: Is this how I want to handle this?
+                    # if (contact_mid_time > 0):
+                    #     desired_base_pose = self.get_position(contact_mid_time).copy()
 
                     # Compute the closest foothold
-                    R = Rotation.from_quat([desired_base_pos[3], desired_base_pos[4], desired_base_pos[5], desired_base_pos[6]])
-                    desired_foothold = desired_base_pos[:3].copy()
-                    desired_foothold[:2] += (R.as_matrix()[:2,:2]@self.foot_offset[j,:].transpose()).transpose()
+                    R = Rotation.from_quat([desired_base_pose[3], desired_base_pose[4], desired_base_pose[5], desired_base_pose[6]])
+                    desired_foothold = desired_base_pose[:3].copy()
+                    desired_foothold += R.as_matrix()@np.concatenate((self.foot_offset[j,:], [0]))
 
-                    # TODO: Read in hnom!!
-                    self.hnom = 0.28
                     desired_foothold[2] += self.get_height(desired_foothold[:2]) - self.hnom   # Get the height of the terrain at the given location
                     # self.get_logger().info(f"Frame: {frame}")
                     # self.get_logger().info(f"contact mid time: {contact_mid_time}")
@@ -469,6 +472,77 @@ class ContactPlanner(ObeliskController):
                 return self.heights[i]
 
         return 0    # Default if there are no geoms - might want to change this to some form of interpolation
+
+
+    def compute_des_base_pose(self, time, hip_offsets):
+        hip_pos = np.zeros((np.shape(hip_offsets)[0], 3))
+        hip_pos[:,:2] = hip_offsets.copy()
+        avg_height = 0
+        for i in range(len(hip_offsets)):
+            # (1) Compute the 2D hip positions
+            hip_pos[i,:2] = self.get_position(time)[:2] + hip_offsets[i,:]
+            
+            # (2) Compute the 3D hip positions
+            hip_pos[i,2] = self.get_height(hip_pos[i,:2]) + self.hnom
+
+            avg_height += self.get_height(hip_pos[i,:2]) 
+        
+        avg_height /= float(len(hip_offsets))
+
+        # (3) Compute the pose
+        # (3)(a) Fit plane
+        A = np.zeros((len(hip_offsets), 3))
+        b = np.zeros((len(hip_offsets),))
+
+        for i in range(len(hip_offsets)):
+            A[i,:] = [hip_pos[i,0], hip_pos[i,1], 1]
+            b[i] = hip_pos[i,2]
+
+        plane_vars = np.linalg.inv(A.T@A)@A.T@b
+        
+        plane_normal = np.concatenate((-plane_vars[:2], [1]))
+        plane_normal = plane_normal/np.linalg.norm(plane_normal)
+
+        # (3)(b) project points
+        point_on_plane = np.array([0,0,plane_vars[2]])
+
+        base_pos = np.array(self.get_position(time)[:3])
+        base_quat = np.array(self.get_position(time)[3:7])
+        heading_point = base_pos.copy()
+
+        base_pos[2] += avg_height
+        # self.get_logger().info(f"avg_height: {avg_height}")
+
+        v = base_pos - point_on_plane
+        temp = point_on_plane + v - v.dot(plane_normal)*plane_normal
+        base_pos[2] = temp[2]  # Just project the z height
+
+        R = Rotation.from_quat([base_quat[0], base_quat[1], base_quat[2], base_quat[3]])
+        heading_point[:2] += R.as_matrix()[:2,:2]@np.array([1,0]).T
+        # self.get_logger().info(f"heading point: {heading_point}")
+
+        v = heading_point - point_on_plane
+        temp = point_on_plane + v - v.dot(plane_normal)*plane_normal
+        heading_point[2] = temp[2]  # Just project the z height
+        # heading_point = temp.copy()
+
+        # (3)(c) create orientation
+        x_axis = heading_point - base_pos
+        x_axis = x_axis/np.linalg.norm(x_axis)
+
+        y_axis = np.linalg.cross(plane_normal, x_axis)
+        y_axis = y_axis/np.linalg.norm(y_axis)
+
+        Rout = np.array([x_axis.T, y_axis.T, plane_normal.T])
+    
+        floating_base_out = np.zeros((7,))
+
+        floating_base_out[:3] = base_pos
+        floating_base_out[3:7] = Rotation.from_matrix(Rout).as_quat()
+
+        # (4) Return 
+        return np.concatenate([base_pos, base_quat])
+        # return floating_base_out    # TODO: Consider putting back!
 
 
 def main(args: Optional[List] = None):
