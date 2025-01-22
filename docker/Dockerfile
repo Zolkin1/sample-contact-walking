@@ -77,6 +77,15 @@ RUN cd /home/${USER} && git clone https://github.com/coin-or/CppAD.git /home/${U
     cmake .. && \
     sudo make install -j8
 
+# HPIPM, BLASFEO, HPIPM_CPP
+RUN cd /home/${USER} && git clone https://github.com/giaf/blasfeo && git clone https://github.com/giaf/hpipm && \
+    cd /home/${USER}/blasfeo && mkdir build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBLASFEO_EXAMPLES=OFF && \
+    make -j8 && sudo make install -j && cd /home/${USER}/hpipm && mkdir build && \
+    cd build && make -j8 && sudo make install -j && cd /home/${USER} && \
+    git clone https://github.com/Zolkin1/hpipm-cpp.git && cd /home/${USER}/hpipm-cpp && mkdir build && \
+    cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j8 && sudo make install -j 
+
 # you must run the setup script from a directory where the user has permissions
 # run docker setup script in Dockerfile
 WORKDIR /home/${USER}

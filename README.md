@@ -11,10 +11,16 @@ Enter the docker container:
 docker compose -f docker/docker-compose.yml run --build sample-walking
 ```
 
+Update library path for hpipm:
+```
+export LD_LIBRARY_PATH=/opt/blasfeo/lib:/opt/hpipm/lib:$LD_LIBRARY_PATH
+```
+
 Build and activate Obelisk:
 ```
 obk
 ```
+
 Build the messages pacakge first:
 ```
 colcon build --symlink-install --packages-select sample_contact_msgs

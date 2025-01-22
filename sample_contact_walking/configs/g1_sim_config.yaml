@@ -124,7 +124,6 @@ onboard:
     - pkg: contact_planning
       executable: contact_planner
       params:
-        num_nodes: 32   # Should match the MPC
         default_polytope_size: 0.4 #0.6
         mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
       # ----- Tile Scene ---- #
@@ -135,6 +134,13 @@ onboard:
         swing_time: 0.4
         right_foot_frames: ["right_toe", "right_heel"]
         left_foot_frames: ["left_toe", "left_heel"]
+        foot_offsets: [0.145, 0.1164, -0.025, 0.1164, 0.145, -0.1164, -0.025, -0.1164]
+        num_nodes: 32   # Should match the MPC
+        node_group_1_n: 5
+        node_group_2_n: 27
+        node_dt_1: 0.015 #0.015
+        node_dt_2: 0.025
+        polytope_margin: 0.06   # Should match polytope_delta
       publishers:
         # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting
