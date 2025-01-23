@@ -10,6 +10,7 @@
 #include "sample_contact_msgs/msg/contact_schedule.hpp"
 
 #include "full_order_mpc.h"
+#include "hpipm_mpc.h"
 // #include "cross_entropy.h"
 
 namespace robot {
@@ -141,10 +142,13 @@ namespace robot {
             double next_right_insertion_time_;
             double next_left_insertion_time_;
 
-            std::shared_ptr<torc::mpc::FullOrderMpc> mpc_;
+            // std::shared_ptr<torc::mpc::FullOrderMpc> mpc_;
             std::unique_ptr<torc::models::FullOrderRigidBody> model_;               // Full model
             std::unique_ptr<torc::models::FullOrderRigidBody> mpc_model_;           // Potentially reduced model for the MPC
             torc::mpc::ContactSchedule contact_schedule_;
+
+            std::shared_ptr<torc::mpc::MpcSettings> mpc_settings_;
+            std::shared_ptr<torc::mpc::HpipmMpc> mpc_;
 
             // MPC Skipped joint indexes
             // TODO: Find a better way to do this

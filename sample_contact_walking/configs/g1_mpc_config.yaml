@@ -1,6 +1,6 @@
 general_settings:
   nodes: 32
-  verbose: False #True
+  verbose: True #True
   node_dt_type: two_groups # Even, two_groups, Adaptive
   node_group_1_n: 5
   node_group_2_n: 27
@@ -13,18 +13,33 @@ general_settings:
   initial_constraint_tol: 5e-4
   nodes_full_dynamics: 3 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0
-  terminal_cost_weight: 10 #2 #2 #10
+  terminal_cost_weight: 20 #10 #2 #2 #10
 solver_settings:
-  rel_tol: 1e-3
-  abs_tol: 1e-3
-  verbose: False
-  polish: False
-  rho: 0.01
-  alpha: 1.6 # 1.6, 1.1
-  sigma: 1e-6
-  adaptive_rho: False
-  max_iter: 20 #50 #50 #20 Increasing this definetly helps 40-60 seems like a good balance
-  scaling: 10 # Solve gets faster as scaling goes down, but also the quality gets worse. There is a balance
+# HPIPM:
+  mode: Robust #Speed #Robust #Balance -- To get a success the best chance is with Robust and give more iterations
+  alpha_min: 1e-8
+  max_iter: 30 #9 #5 #10
+  mu0: 100
+  tol_stat: 1e-8
+  tol_eq: 1e-8
+  tol_comp: 1e-8
+  tol_ineq: 1e-8
+  reg_prim: 1e-12
+  warm_start: 0
+  pred_corr: 1
+  ric_alg: 1
+  split_step: 0
+# OSQP
+  # rel_tol: 1e-3
+  # abs_tol: 1e-3
+  # verbose: False
+  # polish: False
+  # rho: 0.01
+  # alpha: 1.6 # 1.6, 1.1
+  # sigma: 1e-6
+  # adaptive_rho: False
+  # max_iter: 20 #50 #50 #20 Increasing this definetly helps 40-60 seems like a good balance
+  # scaling: 10 # Solve gets faster as scaling goes down, but also the quality gets worse. There is a balance
 constraints:
   friction_coef: 0.6 #0.7  # TODO: Tune this
   friction_margin: 2
@@ -132,6 +147,9 @@ contacts:
   contact_frames: ["left_toe", "left_heel", "right_toe", "right_heel"]
   # hip_offsets: [-0.025, 0.1164, -0.025, -0.1164]
   hip_offsets: [0.145, 0.1164, -0.025, 0.1164, 0.145, -0.1164, -0.025, -0.1164]
+  apex_height: 0.08
+  apex_time: 0.75
+  default_ground_height: 0
 joint_defaults:
   joints: ["left_ankle_roll_joint", "right_ankle_roll_joint",
            "waist_yaw_joint", "waist_roll_joint", "waist_pitch_joint", 
@@ -160,3 +178,16 @@ line_search:
   constraint_reduction_mult: 1e-6
   alpha_step: 0.5 # Since the line search is high variance, lowering this helps
   armijo_constant: 1e-4
+targets:
+  q_target: [0, 0, 0.77, #0.73, #0.77, #0.793, if the height is too high we get some singularity issues
+              0, 0, 0, 1,
+             -0.2, 0, 0, 0.4, -0.216,
+             -0.2, 0, 0, 0.4, -0.216,
+             0, 0, 0, 0.2,
+             0, 0, 0, 0.2]
+  v_target: [0, 0, 0,
+             0, 0, 0,
+             0, 0, 0, 0, 0,
+             0, 0, 0, 0, 0,
+             0, 0, 0, 0,
+             0, 0, 0, 0,]

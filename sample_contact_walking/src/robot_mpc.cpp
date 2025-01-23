@@ -70,16 +70,154 @@ namespace robot
         std::string model_name = name + robot_name + "_model";
         model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path);
 
-        // Create and configure MPC
-        mpc_ = std::make_shared<torc::mpc::FullOrderMpc>(name + robot_name + "robot_mpc_obk", this->get_parameter("params_path").as_string(), urdf_path);
-        RCLCPP_INFO_STREAM(this->get_logger(), "MPC Created...");
+        // ------------------------------------ //
+        // ----- Create and configure MPC ----- //
+        // ------------------------------------ //
+        // ---------- Settings ---------- //
+        mpc_settings_ = std::make_shared<torc::mpc::MpcSettings>(this->get_parameter("params_path").as_string());
+        // mpc_settings_ = std::make_shared<torc::mpc::MpcSettings>("/home/zolkin/torc/tests/test_data/g1_mpc_config.yaml");
+        mpc_settings_->Print();
+        mpc_model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path, mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values);
+        // mpc_model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, "/home/zolkin/torc/tests/test_data/g1_hand.urdf", mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values);
+        // ---------- Constraints ---------- //
+        torc::models::FullOrderRigidBody mpc_model_temp(model_name, urdf_path, mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values);
+        // torc::models::FullOrderRigidBody mpc_model_temp(model_name, "/home/zolkin/torc/tests/test_data/g1_hand.urdf", mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values);
+        // Dynamics //
+        std::vector<torc::mpc::DynamicsConstraint> dynamics_constraints;
+        dynamics_constraints.emplace_back(mpc_model_temp, mpc_settings_->contact_frames, "robot_full_order",
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, true, 0, mpc_settings_->nodes_full_dynamics);
+        dynamics_constraints.emplace_back(mpc_model_temp, mpc_settings_->contact_frames, "robot_centroidal", mpc_settings_->deriv_lib_path,
+            mpc_settings_->compile_derivs, false, mpc_settings_->nodes_full_dynamics, mpc_settings_->nodes);
 
-        mpc_->Configure();
-        RCLCPP_INFO_STREAM(this->get_logger(), "MPC Configured...");
+        // Box constraints //
+        // Config
+        std::vector<int> config_lims_idxs;
+        for (int i = 0; i < mpc_model_->GetConfigDim() - torc::mpc::FLOATING_BASE; ++i) {
+            config_lims_idxs.push_back(i + torc::mpc::FLOATING_VEL);
+        }
+        torc::mpc::BoxConstraint config_box(1, mpc_settings_->nodes, model_name + "config_box",
+            mpc_model_->GetLowerConfigLimits().tail(mpc_model_->GetConfigDim() - torc::mpc::FLOATING_BASE),
+            mpc_model_->GetUpperConfigLimits().tail(mpc_model_->GetConfigDim() - torc::mpc::FLOATING_BASE),
+            config_lims_idxs);
 
-        // Create MPC model
-        mpc_model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path, mpc_->GetJointSkipNames(), mpc_->GetJointSkipValues());
+        // Vel
+        std::vector<int> vel_lims_idxs;
+        for (int i = 0; i < mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL; ++i) {
+            vel_lims_idxs.push_back(i + torc::mpc::FLOATING_VEL);
+        }
+        torc::mpc::BoxConstraint vel_box(1, mpc_settings_->nodes, model_name + "vel_box",
+            -mpc_model_->GetVelocityJointLimits().tail(mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL),
+            mpc_model_->GetVelocityJointLimits().tail(mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL),
+            vel_lims_idxs);
 
+        // Torque
+        std::vector<int> tau_lims_idxs;
+        for (int i = 0; i < mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL; ++i) {
+            tau_lims_idxs.push_back(i);
+        }
+        torc::mpc::BoxConstraint tau_box(0, mpc_settings_->nodes, model_name + "tau_box",
+            -mpc_model_->GetTorqueJointLimits().tail(mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL),
+            mpc_model_->GetTorqueJointLimits().tail(mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL),
+            tau_lims_idxs);
+
+        // ---------- Friction Cone Constraints ---------- //
+        torc::mpc::FrictionConeConstraint friction_cone_constraint(0,mpc_settings_->nodes-1, model_name + "friction_cone_cone",
+            mpc_settings_->friction_coef, mpc_settings_->friction_margin, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);
+
+        // ---------- Swing Constraints ---------- //
+        torc::mpc::SwingConstraint swing_constraint(2, mpc_settings_->nodes, model_name + "swing_constraint", mpc_model_temp, mpc_settings_->contact_frames,
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);
+
+        // ---------- Holonomic Constraints ---------- //
+        torc::mpc::HolonomicConstraint holonomic_constraint(2, mpc_settings_->nodes, model_name + "holonomic_constraint", mpc_model_temp, 
+            mpc_settings_->contact_frames, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);  // The -1 in the last node helps with weird issues (feasibility I think)
+
+        std::cout << "===== Constraints Created =====" << std::endl;
+
+        // --------------------------------- //
+        // ------------- Costs ------------- //
+        // --------------------------------- //
+        // ---------- Velocity Tracking ---------- //
+        torc::mpc::LinearLsCost vel_tracking(0, mpc_settings_->nodes, model_name + "vel_tracking", mpc_settings_->cost_data.at(1).weight,
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);
+
+        // ---------- Tau Tracking ---------- //
+        torc::mpc::LinearLsCost tau_tracking(0, mpc_settings_->nodes, model_name + "tau_tracking", mpc_settings_->cost_data.at(2).weight,
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);
+
+        // ---------- Force Tracking ---------- //
+        torc::mpc::LinearLsCost force_tracking(0, mpc_settings_->nodes, model_name + "force_tracking", mpc_settings_->cost_data.at(3).weight,
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);
+
+        // ---------- Config Tracking ---------- //
+        torc::mpc::ConfigTrackingCost config_tracking(0, mpc_settings_->nodes, model_name + "config_tracking", mpc_settings_->cost_data.at(0).weight,
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_model_temp);
+
+        std::cout << "===== Costs Created =====" << std::endl;
+
+        // --------------------------------- //
+        // -------------- MPC -------------- //
+        // --------------------------------- //
+        // torc::mpc::MpcSettings mpc_settings_temp("/home/zolkin/torc/tests/test_data/g1_mpc_config.yaml");
+        torc::mpc::MpcSettings mpc_settings_temp(this->get_parameter("params_path").as_string());
+        mpc_ = std::make_shared<torc::mpc::HpipmMpc>(mpc_settings_temp, mpc_model_temp);
+
+        std::cout << "===== MPC Created =====" << std::endl;
+        mpc_->SetDynamicsConstraints(std::move(dynamics_constraints));
+        mpc_->SetConfigBox(config_box);
+        mpc_->SetVelBox(vel_box);
+        mpc_->SetTauBox(tau_box);
+        mpc_->SetFrictionCone(std::move(friction_cone_constraint));
+        mpc_->SetSwingConstraint(std::move(swing_constraint));
+        mpc_->SetHolonomicConstraint(std::move(holonomic_constraint));
+        std::cout << "===== MPC Constraints Added =====" << std::endl;
+
+        mpc_->SetVelTrackingCost(std::move(vel_tracking));
+        mpc_->SetTauTrackingCost(std::move(tau_tracking));
+        mpc_->SetForceTrackingCost(std::move(force_tracking));
+        mpc_->SetConfigTrackingCost(std::move(config_tracking));
+        std::cout << "===== MPC Costs Added =====" << std::endl;
+
+        // torc::mpc::SimpleTrajectory q_target(mpc_model_->GetConfigDim(), mpc_settings_->nodes);
+        // q_target.SetAllData(mpc_settings_->q_target);
+        // mpc_->SetConfigTarget(q_target);
+
+        // torc::mpc::SimpleTrajectory v_target(mpc_model_->GetVelDim(), mpc_settings_->nodes);
+        // v_target.SetAllData(mpc_settings_->v_target);
+        // mpc_->SetVelTarget(v_target);
+
+        // mpc_->SetLinTrajConfig(q_target);
+        // mpc_->SetLinTrajVel(v_target);
+
+        // torc::mpc::ContactSchedule cs(mpc_settings_->contact_frames);
+        // cs.InsertSwing("right_toe", 0.1, 0.4);
+        // cs.InsertSwing("right_heel", 0.1, 0.4);
+        // cs.InsertSwing("left_toe", 0.4, 0.8);   // TODO: Why does making it swing past the end of the traj hurt it?
+        // cs.InsertSwing("left_heel", 0.4, 0.8);
+        // mpc_->UpdateContactSchedule(cs);
+
+        // vectorx_t q = mpc_settings_->q_target;
+
+        // mpc_->Compute(q, vectorx_t::Zero(mpc_model_->GetVelDim()), traj_mpc_);
+        // traj_mpc_.ExportToCSV(std::filesystem::current_path() / "trajectory_output.csv");
+
+        // --------------------------------- //
+        // ------------ Targets ------------ //
+        // --------------------------------- //
+        torc::mpc::Trajectory traj;
+        q_target_ = torc::mpc::SimpleTrajectory(mpc_model_->GetConfigDim(), mpc_settings_->nodes);
+        q_target_->SetAllData(mpc_settings_->q_target);
+        // mpc_->SetConfigTarget(q_target_.value());
+        z_target_ = mpc_settings_->q_target[2];
+
+        v_target_ = torc::mpc::SimpleTrajectory(mpc_model_->GetVelDim(), mpc_settings_->nodes);
+        v_target_->SetAllData(mpc_settings_->v_target);
+        // mpc_->SetVelTarget(v_target_.value());
+
+        // mpc_->SetLinTrajConfig(q_target_.value());
+        // mpc_->SetLinTrajVel(v_target_.value());
+
+        // Other variables
         this->declare_parameter<std::vector<long int>>("skip_indexes", {-1});
         skipped_joint_indexes_ = this->get_parameter("skip_indexes").as_integer_array();
         if (skipped_joint_indexes_[0] == -1 && (model_->GetConfigDim() == mpc_model_->GetConfigDim())) {
@@ -91,25 +229,26 @@ namespace robot
 
         // Parse contact schedule info
         ParseContactParameters();
+        
 
-        // Setup q and v targets
-        this->declare_parameter<std::vector<double>>("target_config");
-        this->declare_parameter<std::vector<double>>("target_vel");
-        std::vector<double> q_targ_temp, v_targ_temp;
+        // // Setup q and v targets
+        // this->declare_parameter<std::vector<double>>("target_config");
+        // this->declare_parameter<std::vector<double>>("target_vel");
+        // std::vector<double> q_targ_temp, v_targ_temp;
 
-        this->get_parameter("target_config", q_targ_temp);
-        this->get_parameter("target_vel", v_targ_temp);
+        // this->get_parameter("target_config", q_targ_temp);
+        // this->get_parameter("target_vel", v_targ_temp);
 
-        vectorx_t q_target_eig = torc::utils::StdToEigenVector(q_targ_temp);
-        vectorx_t v_target_eig = torc::utils::StdToEigenVector(v_targ_temp);
-        q_target_ = torc::mpc::SimpleTrajectory(mpc_model_->GetConfigDim(), mpc_->GetNumNodes());
-        v_target_ = torc::mpc::SimpleTrajectory(mpc_model_->GetVelDim(), mpc_->GetNumNodes());
-        q_target_->SetAllData(q_target_eig);
-        v_target_->SetAllData(v_target_eig);
-        z_target_ = q_target_.value()[0](2);
+        // vectorx_t q_target_eig = torc::utils::StdToEigenVector(q_targ_temp);
+        // vectorx_t v_target_eig = torc::utils::StdToEigenVector(v_targ_temp);
+        // q_target_ = torc::mpc::SimpleTrajectory(mpc_model_->GetConfigDim(), mpc_->GetNumNodes());
+        // v_target_ = torc::mpc::SimpleTrajectory(mpc_model_->GetVelDim(), mpc_->GetNumNodes());
+        // q_target_->SetAllData(q_target_eig);
+        // v_target_->SetAllData(v_target_eig);
+        // z_target_ = q_target_.value()[0](2);
 
-        mpc_->SetConfigTarget(q_target_.value());
-        mpc_->SetVelTarget(v_target_.value());
+        // mpc_->SetConfigTarget(q_target_.value());
+        // mpc_->SetVelTarget(v_target_.value());
 
         // Set initial conditions
         this->declare_parameter<std::vector<double>>("mpc_ic_config");
@@ -122,56 +261,36 @@ namespace robot
         q_ic_ = torc::utils::StdToEigenVector(q_ic_temp);
         v_ic_ = torc::utils::StdToEigenVector(v_ic_temp);
 
-        RCLCPP_INFO_STREAM(this->get_logger(), "q target: " << q_target_.value()[0].transpose());
-        RCLCPP_INFO_STREAM(this->get_logger(), "v target: " << v_target_.value()[0].transpose());
-        RCLCPP_INFO_STREAM(this->get_logger(), "q ic: " << q_ic_.transpose());
-        RCLCPP_INFO_STREAM(this->get_logger(), "v ic: " << v_ic_.transpose());
+        // RCLCPP_INFO_STREAM(this->get_logger(), "q target: " << q_target_.value()[0].transpose());
+        // RCLCPP_INFO_STREAM(this->get_logger(), "v target: " << v_target_.value()[0].transpose());
+        // RCLCPP_INFO_STREAM(this->get_logger(), "q ic: " << q_ic_.transpose());
+        // RCLCPP_INFO_STREAM(this->get_logger(), "v ic: " << v_ic_.transpose());
 
         this->declare_parameter<bool>("fixed_target", true);
         this->get_parameter("fixed_target", fixed_target_);
         this->declare_parameter<bool>("controller_target", false);
         this->get_parameter("controller_target", controller_target_);
 
-        // Create default trajectory
-        traj_out_.UpdateSizes(mpc_model_->GetConfigDim(), mpc_model_->GetVelDim(), mpc_model_->GetNumInputs(), mpc_->GetContactFrames(), mpc_->GetNumNodes());
-        traj_out_.SetDefault(q_ic_);
-        traj_out_.SetDtVector(mpc_->GetDtVector());
+        // // Contact Polytope defaults
+        // matrixx_t A_temp = matrixx_t::Identity(2, 2);
+        // Eigen::Vector4d b_temp = Eigen::Vector4d::Zero();
+        // b_temp << 10, 10, -10, -10;
+        // for (const auto& frame : mpc_->GetContactFrames()) {
+        //     // contact_polytopes_.insert({frame, {}});
+        //     for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
+        //         contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
+        //         // contact_polytopes_[frame].emplace_back((A_temp, b_temp));
+        //     }
+        // }
 
-
-        // Warm start trajectory forces
-        double time = 0;
-        for (int i = 0; i < traj_out_.GetNumNodes(); i++) {
-            int num_contacts = 0;
-            for (const auto& frame : mpc_->GetContactFrames()) {
-                if (contact_schedule_.InContact(frame, time)) {
-                    num_contacts++;
-                }
-            }
-
-            for (const auto& frame : mpc_->GetContactFrames()) {
-                if (contact_schedule_.InContact(frame, time)) {
-                    traj_out_.SetForce(i, frame, {0, 0, 9.81*mpc_model_->GetMass()/num_contacts});
-                }
-            }
-
-            time += traj_out_.GetDtVec()[i];
-        }
-
-        // Contact Polytope defaults
-        matrixx_t A_temp = matrixx_t::Identity(2, 2);
-        Eigen::Vector4d b_temp = Eigen::Vector4d::Zero();
-        b_temp << 10, 10, -10, -10;
-        for (const auto& frame : mpc_->GetContactFrames()) {
-            // contact_polytopes_.insert({frame, {}});
-            for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-                contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
-                // contact_polytopes_[frame].emplace_back((A_temp, b_temp));
-            }
-        }
-
-        mpc_->SetWarmStartTrajectory(traj_out_);
+        // mpc_->SetWarmStartTrajectory(traj_out_);
+        traj_out_ = mpc_->GetTrajectory();
+        traj_out_.SetConfiguration(0, q_ic_);
+        traj_out_.SetVelocity(0, v_ic_);
         traj_mpc_ = traj_out_;
-        RCLCPP_INFO_STREAM(this->get_logger(), "Warm start trajectory created...");
+        // mpc_->SetLinTrajConfig(traj_out_.GetConfigTrajectory());
+        // mpc_->SetLinTrajVel(traj_out_.GetVelocityTrajectory());
+        // RCLCPP_INFO_STREAM(this->get_logger(), "Warm start trajectory created...");
 
         // Go to initial condition
         TransitionState(SeekInitialCond);
@@ -271,12 +390,12 @@ namespace robot
 
         const long max_mpc_solves = this->get_parameter("max_mpc_solves").as_int();
         
-        std::vector<double> stance_height(mpc_->GetContactFrames().size());
-        int frame_idx = 0;
-        for (const auto& frame : mpc_->GetContactFrames()) {
-            stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
-            frame_idx++;
-        }
+        // std::vector<double> stance_height(mpc_settings_->num_contact_locations);
+        // int frame_idx = 0;
+        // for (const auto& frame : mpc_settings_->contact_frames) {
+        //     stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
+        //     frame_idx++;
+        // }
 
         static bool first_loop = true;
         auto prev_time = this->now();
@@ -304,20 +423,42 @@ namespace robot
                     // TODO: Remove
                     q = q_ic_;
                     v = v_ic_;
-
                     // TODO: Fix the state for when we re-enter this loop
                     {
                         std::lock_guard<std::mutex> lock(polytope_mutex_);
-                        mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
-                            this->get_parameter("default_swing_height").as_double(),
-                            stance_height,
-                            this->get_parameter("apex_time").as_double());
+                        // mpc_->UpdateContactSchedule(contact_schedule_);  // TODO: Put back
                     }
                     vectorx_t q_ref = q;
                     q_ref(2) = z_target_;
                     // mpc_->GenerateCostReference(q_ref, v, q_target_.value(), v_target_.value(), contact_schedule_);
+
+                    // TODO: Remove
+                    v.setZero();
+                    q = mpc_settings_->q_target;
+
+                    torc::mpc::SimpleTrajectory q_target(mpc_model_->GetConfigDim(), mpc_settings_->nodes);
+                    q_target.SetAllData(mpc_settings_->q_target);
+                    mpc_->SetConfigTarget(q_target);
+
+                    torc::mpc::SimpleTrajectory v_target(mpc_model_->GetVelDim(), mpc_settings_->nodes);
+                    v_target.SetAllData(mpc_settings_->v_target);
+                    mpc_->SetVelTarget(v_target);
+
+                    mpc_->SetLinTrajConfig(q_target);
+                    mpc_->SetLinTrajVel(v_target);
+
+                    torc::mpc::ContactSchedule cs(mpc_settings_->contact_frames);
+                    cs.InsertSwing("right_toe", 0.1, 0.4);
+                    cs.InsertSwing("right_heel", 0.1, 0.4);
+                    cs.InsertSwing("left_toe", 0.4, 0.8);   // TODO: Why does making it swing past the end of the traj hurt it?
+                    cs.InsertSwing("left_heel", 0.4, 0.8);
+                    mpc_->UpdateContactSchedule(cs);
+
                     double time = this->now().seconds();
-                    mpc_->ComputeNLP(q, v, traj_mpc_);
+                    mpc_->Compute(q, vectorx_t::Zero(mpc_model_->GetVelDim()), traj_mpc_);
+                    traj_mpc_.ExportToCSV(std::filesystem::current_path() / "trajectory_output.csv");
+                    // mpc_->Compute(q, v, traj_mpc_);
+                    // mpc_->Compute(q, v, traj_mpc_);
                     {
                         // Get the traj mutex to protect it
                         std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -345,12 +486,12 @@ namespace robot
 
                 // TODO: Do I Need this - can I remove it?
                 // TODO: If I need to, I can go back to using the measured foot height
-                std::vector<double> stance_height(mpc_->GetContactFrames().size());
-                int frame_idx = 0;
-                for (const auto& frame : mpc_->GetContactFrames()) {
-                    stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
-                    frame_idx++;
-                }
+                // std::vector<double> stance_height(mpc_settings_->num_contact_locations);
+                // int frame_idx = 0;
+                // for (const auto& frame : mpc_settings_->contact_frames) {
+                //     stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
+                //     frame_idx++;
+                // }
 
                 if (!recieved_polytope_) {
                     UpdateContactPolytopes();
@@ -359,10 +500,11 @@ namespace robot
                 // ----- No Reference ----- //
                 {
                     std::lock_guard<std::mutex> lock(polytope_mutex_);
-                    mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
-                        this->get_parameter("default_swing_height").as_double(),
-                        stance_height,
-                        this->get_parameter("apex_time").as_double());
+                    mpc_->UpdateContactSchedule(contact_schedule_);
+                    // mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
+                    //     this->get_parameter("default_swing_height").as_double(),
+                    //     stance_height,
+                    //     this->get_parameter("apex_time").as_double());
                 } 
                 AddPeriodicContacts();   // Don't use when getting CS from the other node
                 
@@ -405,9 +547,10 @@ namespace robot
                 // }
 
                 double time = this->now().seconds();
-
+                // TODO: Remove
+                v.setZero();
                 // ---- Solve MPC ----- //
-                mpc_->Compute(q, v, traj_mpc_);
+                // mpc_->Compute(q, v, traj_mpc_);
                 {
                     // Get the traj mutex to protect it
                     std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -418,8 +561,9 @@ namespace robot
                 }
 
                 // Every tenth solve check to see if the user wants to print stats
-                if (mpc_->GetTotalSolves() % 10 == 0 && print_timings_) {
-                    mpc_->PrintAggregateStats();
+                if (mpc_->GetSolveCounter() % 10 == 0 && print_timings_) {
+                    // TODO: re-implement
+                    // mpc_->PrintAggregateStats();
                     print_timings_ = false;
                 }
 
@@ -493,7 +637,7 @@ namespace robot
 
             // Check if we need to insert other elements into the targets
             if (q.size() != model_->GetConfigDim()) {
-                const auto joint_skip_values = mpc_->GetJointSkipValues();
+                const auto& joint_skip_values = mpc_settings_->joint_skip_values;
                 std::vector<double> q_vec(q.data(), q.data() + q.size());
                 std::vector<double> v_vec(v.data(), v.data() + v.size());
                 std::vector<double> tau_vec(tau.data(), tau.data() + tau.size());
@@ -564,7 +708,7 @@ namespace robot
     void MpcController::UpdateMpcTargets(const vectorx_t& q) {
         std::lock_guard<std::mutex> lock(target_state_mut_);
 
-        const std::vector<double>& dt_vec = mpc_->GetDtVector();
+        const std::vector<double>& dt_vec = mpc_settings_->dt;
 
         q_target_.value()[0](0) = q(0);
         q_target_.value()[0](1) = q(1);
@@ -597,7 +741,7 @@ namespace robot
         matrixx_t A_temp = matrixx_t::Identity(2, 2);
         Eigen::Vector4d b_temp = Eigen::Vector4d::Zero();
         int frame_idx = 0;
-        for (const auto& frame : mpc_->GetContactFrames()) {
+        for (const auto& frame : mpc_settings_->contact_frames) {
             b_temp << 10 + q_(0), 10 + q_(1), -10 + q_(0), -10 + q_(1); //10, 10, -10, -10;
             if (frame_idx % 2 == 0) {
                 b_temp = b_temp + Eigen::Vector4d::Constant(0.1*(frame_idx + 1));
@@ -1078,8 +1222,8 @@ namespace robot
         msg.joint_names[41] = "right_hand_index_0_joint";
         msg.joint_names[42] = "right_hand_index_1_joint";
 
-        const auto joint_skip_names = mpc_->GetJointSkipNames();
-        const auto joint_skip_values = mpc_->GetJointSkipValues();
+        const auto joint_skip_names = mpc_settings_->joint_skip_names;
+        const auto joint_skip_values = mpc_settings_->joint_skip_values;
 
         for (int i = 0; i < msg.joint_names.size(); i++) {
             const auto idx = mpc_model_->GetJointID(msg.joint_names[i]);
@@ -1159,7 +1303,7 @@ namespace robot
         }
 
         // Set polytopes for newly created contacts
-        for (const auto& frame : mpc_->GetContactFrames()) {
+        for (const auto& frame : mpc_settings_->contact_frames) {
             if (contact_schedule_.GetNumContacts(frame) > 0 && contact_schedule_.GetPolytopes(frame).back().A_.size() == 0) {
                 torc::mpc::ContactInfo polytope = contact_schedule_.GetDefaultContactInfo();
                 if (contact_schedule_.GetNumContacts(frame) > 1) {
@@ -1169,7 +1313,7 @@ namespace robot
             }
         }
 
-        contact_schedule_.CleanContacts(-0.1);
+        contact_schedule_.CleanContacts(-1); //-0.1);
         // for (const auto& frame : mpc_->GetContactFrames()) {
         //     std::cout << frame << " num Contacts: " << contact_schedule_.GetNumContacts(frame) << std::endl;
         // }
@@ -1200,7 +1344,7 @@ namespace robot
         }
 
 
-        contact_schedule_.SetFrames(mpc_->GetContactFrames());
+        contact_schedule_.SetFrames(mpc_settings_->contact_frames);
 
         if (right_foot_first_) {
             for (const auto& rf : right_frames_) {
@@ -1218,24 +1362,13 @@ namespace robot
 
         AddPeriodicContacts();
 
-        this->declare_parameter<double>("default_swing_height", 0.1);
-        this->declare_parameter<double>("default_stand_foot_height", 0.0);
-        this->declare_parameter<double>("apex_time", 0.5);
+        // TODO: Maybe put back
+        // mpc_->UpdateContactSchedule(contact_schedule_);
 
-        std::vector<double> stance_height(mpc_->GetContactFrames().size());
-        for (auto& height : stance_height) {
-            height = this->get_parameter("default_stand_foot_height").as_double();
-        }
-
-        mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
-            this->get_parameter("default_swing_height").as_double(),
-            stance_height,
-            this->get_parameter("apex_time").as_double());
-
-        mpc_->PrintContactSchedule();
-        for (const auto& frame : mpc_->GetContactFrames()) {
-            mpc_->PrintSwingTraj(frame);
-        }
+        // mpc_->PrintContactSchedule();    // TODO: Consider re-implementing
+        // for (const auto& frame : mpc_settings_->contact_frames) {
+        //     mpc_->PrintSwingTraj(frame);
+        // }
     }
 
     void MpcController::ContactScheduleCallback(const sample_contact_msgs::msg::ContactSchedule& msg) {
