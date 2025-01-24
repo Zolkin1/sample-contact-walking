@@ -47,3 +47,5 @@ MUJOCO_LOG.*
 adcg_sources/
 
 contact_planning/contact_planning/__pycache__/
+
+trajectory_output.csv

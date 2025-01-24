@@ -129,6 +129,7 @@ namespace robot
             mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);
 
         // ---------- Holonomic Constraints ---------- //
+        //2, nodes
         torc::mpc::HolonomicConstraint holonomic_constraint(2, mpc_settings_->nodes, model_name + "holonomic_constraint", mpc_model_temp, 
             mpc_settings_->contact_frames, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);  // The -1 in the last node helps with weird issues (feasibility I think)
 
@@ -207,15 +208,15 @@ namespace robot
         torc::mpc::Trajectory traj;
         q_target_ = torc::mpc::SimpleTrajectory(mpc_model_->GetConfigDim(), mpc_settings_->nodes);
         q_target_->SetAllData(mpc_settings_->q_target);
-        // mpc_->SetConfigTarget(q_target_.value());
+        mpc_->SetConfigTarget(q_target_.value());
         z_target_ = mpc_settings_->q_target[2];
 
         v_target_ = torc::mpc::SimpleTrajectory(mpc_model_->GetVelDim(), mpc_settings_->nodes);
         v_target_->SetAllData(mpc_settings_->v_target);
-        // mpc_->SetVelTarget(v_target_.value());
+        mpc_->SetVelTarget(v_target_.value());
 
-        // mpc_->SetLinTrajConfig(q_target_.value());
-        // mpc_->SetLinTrajVel(v_target_.value());
+        mpc_->SetLinTrajConfig(q_target_.value());
+        mpc_->SetLinTrajVel(v_target_.value());
 
         // Other variables
         this->declare_parameter<std::vector<long int>>("skip_indexes", {-1});
@@ -426,39 +427,40 @@ namespace robot
                     // TODO: Fix the state for when we re-enter this loop
                     {
                         std::lock_guard<std::mutex> lock(polytope_mutex_);
-                        // mpc_->UpdateContactSchedule(contact_schedule_);  // TODO: Put back
+                        mpc_->UpdateContactSchedule(contact_schedule_);
                     }
-                    vectorx_t q_ref = q;
-                    q_ref(2) = z_target_;
+                    // vectorx_t q_ref = q;
+                    // q_ref(2) = z_target_;
                     // mpc_->GenerateCostReference(q_ref, v, q_target_.value(), v_target_.value(), contact_schedule_);
 
                     // TODO: Remove
-                    v.setZero();
-                    q = mpc_settings_->q_target;
+                    // v.setZero();
+                    // q = mpc_settings_->q_target;
 
-                    torc::mpc::SimpleTrajectory q_target(mpc_model_->GetConfigDim(), mpc_settings_->nodes);
-                    q_target.SetAllData(mpc_settings_->q_target);
-                    mpc_->SetConfigTarget(q_target);
+                    // torc::mpc::SimpleTrajectory q_target(mpc_model_->GetConfigDim(), mpc_settings_->nodes);
+                    // q_target.SetAllData(mpc_settings_->q_target);
+                    // mpc_->SetConfigTarget(q_target);
 
-                    torc::mpc::SimpleTrajectory v_target(mpc_model_->GetVelDim(), mpc_settings_->nodes);
-                    v_target.SetAllData(mpc_settings_->v_target);
-                    mpc_->SetVelTarget(v_target);
+                    // torc::mpc::SimpleTrajectory v_target(mpc_model_->GetVelDim(), mpc_settings_->nodes);
+                    // v_target.SetAllData(mpc_settings_->v_target);
+                    // mpc_->SetVelTarget(v_target);
 
-                    mpc_->SetLinTrajConfig(q_target);
-                    mpc_->SetLinTrajVel(v_target);
+                    // mpc_->SetLinTrajConfig(q_target);
+                    // mpc_->SetLinTrajVel(v_target);
 
-                    torc::mpc::ContactSchedule cs(mpc_settings_->contact_frames);
-                    cs.InsertSwing("right_toe", 0.1, 0.4);
-                    cs.InsertSwing("right_heel", 0.1, 0.4);
-                    cs.InsertSwing("left_toe", 0.4, 0.8);   // TODO: Why does making it swing past the end of the traj hurt it?
-                    cs.InsertSwing("left_heel", 0.4, 0.8);
-                    mpc_->UpdateContactSchedule(cs);
+                    // torc::mpc::ContactSchedule cs(mpc_settings_->contact_frames);
+                    // cs.InsertSwing("right_toe", 0.1, 0.4);
+                    // cs.InsertSwing("right_heel", 0.1, 0.4);
+                    // cs.InsertSwing("left_toe", 0.4, 0.8);   // TODO: Why does making it swing past the end of the traj hurt it?
+                    // cs.InsertSwing("left_heel", 0.4, 0.8);
+                    // mpc_->UpdateContactSchedule(cs);
 
                     double time = this->now().seconds();
-                    mpc_->Compute(q, vectorx_t::Zero(mpc_model_->GetVelDim()), traj_mpc_);
-                    traj_mpc_.ExportToCSV(std::filesystem::current_path() / "trajectory_output.csv");
-                    // mpc_->Compute(q, v, traj_mpc_);
-                    // mpc_->Compute(q, v, traj_mpc_);
+                    mpc_->Compute(q, v, traj_mpc_);
+                    // traj_mpc_.ExportToCSV(std::filesystem::current_path() / "trajectory_output.csv");
+                    // TODO: Should I remove these?
+                    mpc_->Compute(q, v, traj_mpc_);
+                    mpc_->Compute(q, v, traj_mpc_);
                     {
                         // Get the traj mutex to protect it
                         std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -500,7 +502,7 @@ namespace robot
                 // ----- No Reference ----- //
                 {
                     std::lock_guard<std::mutex> lock(polytope_mutex_);
-                    mpc_->UpdateContactSchedule(contact_schedule_);
+                    // mpc_->UpdateContactSchedule(contact_schedule_);
                     // mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
                     //     this->get_parameter("default_swing_height").as_double(),
                     //     stance_height,
@@ -526,8 +528,8 @@ namespace robot
                 // ----- No Reference ----- //
                 if (!fixed_target_ || controller_target_) {
                     UpdateMpcTargets(q);
-                    mpc_->SetConfigTarget(q_target_.value());
-                    mpc_->SetVelTarget(v_target_.value());
+                    // mpc_->SetConfigTarget(q_target_.value());
+                    // mpc_->SetVelTarget(v_target_.value());
                 }
 
                 // // ----- Reference Generation ----- //
@@ -547,10 +549,8 @@ namespace robot
                 // }
 
                 double time = this->now().seconds();
-                // TODO: Remove
-                v.setZero();
                 // ---- Solve MPC ----- //
-                // mpc_->Compute(q, v, traj_mpc_);
+                mpc_->Compute(q_ic_, v_ic_, traj_mpc_);
                 {
                     // Get the traj mutex to protect it
                     std::lock_guard<std::mutex> lock(traj_out_mut_);
