@@ -144,18 +144,25 @@ onboard:
       publishers:
         # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting
-          topic: /obelisk/g1/blah_blah_contact_schedule
-          msg_type: PositionSetpoint #ContactSchedule   # TODO: This won't work until I update Obelisk
+          topic: /obelisk/g1/contact_schedule
+          msg_type: ContactSchedule
           key: "contact_schedule_pub"
           history_depth: 10
-          non_obelisk: False
+          callback_group: None
       subscribers:
         - ros_parameter: sub_est_setting
           topic: /obelisk/g1/target_state # est_state, target_state
           msg_type: EstimatedState
+          key: "est_state_sub"
           history_depth: 10
           callback_group: estimation_cbg
-          non_obelisk: False
+        # Joystick Sub
+        - ros_parameter: joystick_sub_setting
+          topic: /obelisk/g1/joy
+          msg_type: Joy
+          key: "joystick_sub"
+          history_depth: 10
+          callback_group: None
       timers:
         # Contact planning timer
         - ros_parameter: timer_ctrl_setting

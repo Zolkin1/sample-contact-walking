@@ -69,6 +69,10 @@ constraints:
       frame2: "waist_support_link"
       radius1: 0.06
       radius2: 0.06
+  swing_start_node: 2
+  swing_end_node: 32
+  holonomic_start_node: 2 
+  holonomic_end_node: 32
 costs:
 # NOTE: The resulting behaviour is suprisingly sensitive
   - type: ConfigurationTracking

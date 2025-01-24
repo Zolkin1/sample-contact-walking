@@ -12,7 +12,7 @@ from obelisk_control_msgs.msg import PositionSetpoint
 from rclpy.lifecycle import LifecycleState, TransitionCallbackReturn
 
 from obelisk_py.core.control import ObeliskController
-from obelisk_py.core.obelisk_typing import ObeliskControlMsg, ObeliskEstimatorMsg
+from obelisk_estimator_msgs.msg import EstimatedState
 from sample_contact_msgs.msg import ContactInfo, ContactPolytope, ContactSchedule, CommandedTarget
 from sensor_msgs.msg import Joy
 
@@ -24,19 +24,12 @@ class ContactPlanner(ObeliskController):
 
     def __init__(self, node_name: str = "example_position_setpoint_controller") -> None:
         """Initialize the example position setpoint controller."""
-        super().__init__(node_name)
+        super().__init__(node_name, ContactSchedule, EstimatedState)
         self.get_logger().info("INITIALIZING")
 
-        # Contact schedule publisher
-        # TODO: Remove when obelisk is updated
-        self.contact_schedule_pub_ = self.create_publisher(ContactSchedule, 'obelisk/go2/contact_schedule', 10, non_obelisk=True)
-
-        # Command Subcriber
-        self.command_sub_ = self.create_subscription(CommandedTarget, 'obelisk/go2/commanded_target', self.command_target_callback, 10, non_obelisk=True)
-
-        # Joystick Subscriber
-        self.joystick_sub_ = self.create_subscription(Joy, 'obelisk/go2/joy', self.joystick_callback, 10, non_obelisk=True)
-
+        # # Joystick Subscriber
+        self.register_obk_subscription("joystick_sub_setting", self.joystick_callback, Joy)
+    
         self.declare_parameter("num_nodes", 32)
         self.num_nodes = self.get_parameter("num_nodes").get_parameter_value().integer_value
 
@@ -112,12 +105,13 @@ class ContactPlanner(ObeliskController):
         self.get_logger().info("CONFIGURING")
         return TransitionCallbackReturn.SUCCESS
 
-    def update_x_hat(self, x_hat_msg: ObeliskEstimatorMsg) -> None:
+    def update_x_hat(self, x_hat_msg) -> None:
         """Update the state estimate.
 
         Parameters:
             x_hat_msg: The Obelisk message containing the state estimate.
         """
+        # TODO: DOUBLE CHECK THIS
         self.q_est = np.concatenate((x_hat_msg.q_base, x_hat_msg.q_joints))
         # self.get_logger().info(f"q est size: {self.q_est.shape}")
         # self.get_logger().info(f"q est base size: {len(x_hat_msg.q_base)}")
@@ -212,13 +206,9 @@ class ContactPlanner(ObeliskController):
                     # print(f"b: {polytope.b_vec}")
                     cs_msg.contact_info[j].polytopes.append(polytope)
 
-            # TODO: Need to update obelisk
-
-            self.contact_schedule_pub_.publish(cs_msg)
-
-            # self.obk_publishers["pub_ctrl"].publish(cs_msg)
+            self.obk_publishers["pub_ctrl"].publish(cs_msg)
             # self.get_logger().info("Publishing a contact schedule")
-            # return cs_msg
+            return cs_msg
     
     def command_target_callback(self, msg: CommandedTarget):
         """Parse the commanded target."""
@@ -348,6 +338,7 @@ class ContactPlanner(ObeliskController):
 
         if msg.buttons[X_button]:
             self.mpc_start_time = self.get_clock().now().nanoseconds*1e-9
+            self.get_logger().info("JOY STICK RECIEVED") # TODO Remove
 
         return
 
