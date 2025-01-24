@@ -30,6 +30,7 @@ RUN apt-get update && apt-get install -y \
     libeigen3-dev \
     x11-apps \
     locales \
+    evtest \
     sudo && \
     rm -rf /var/lib/apt/lists/* && \
     locale-gen en_US.UTF-8
@@ -61,10 +62,10 @@ ENV PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/opt/openrobots/lib/pkgconfig"
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/opt/openrobots/lib"
 ENV CMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}:/opt/openrobots"
 
-RUN echo "About to pull obelisk. Updated 12/2/24."
+RUN echo "Pulling Obelisk..."
 
 # clone Obelisk into this docker image at the $OBELISK_ROOT path
-RUN git clone -b main https://github.com/Caltech-AMBER/obelisk.git /home/${USER}/obelisk
+RUN git clone -b v0.1.0-alpha https://github.com/Caltech-AMBER/obelisk.git /home/${USER}/obelisk
 ENV OBELISK_ROOT=/home/${USER}/obelisk
 
 # CppAD and CppAD Codegen
