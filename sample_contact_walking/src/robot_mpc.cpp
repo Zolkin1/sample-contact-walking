@@ -85,11 +85,11 @@ namespace robot
         // Dynamics //
         std::vector<torc::mpc::DynamicsConstraint> dynamics_constraints;
         dynamics_constraints.emplace_back(mpc_model_temp, mpc_settings_->contact_frames, "robot_full_order",
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, true, 0, mpc_settings_->nodes_full_dynamics);
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, true, 0, mpc_settings_->nodes + 1);
         dynamics_constraints.emplace_back(mpc_model_temp, mpc_settings_->contact_frames, "robot_centroidal", mpc_settings_->deriv_lib_path,
-            mpc_settings_->compile_derivs, false, mpc_settings_->nodes_full_dynamics, mpc_settings_->nodes);
+            mpc_settings_->compile_derivs, false, mpc_settings_->nodes_full_dynamics + 100, mpc_settings_->nodes + 100);
 
-        // Box constraints //
+        // Box constraints // 
         // Config
         std::vector<int> config_lims_idxs;
         for (int i = 0; i < mpc_model_->GetConfigDim() - torc::mpc::FLOATING_BASE; ++i) {
@@ -289,6 +289,7 @@ namespace robot
         traj_out_.SetConfiguration(0, q_ic_);
         traj_out_.SetVelocity(0, v_ic_);
         traj_mpc_ = traj_out_;
+        mpc_->SetLinTraj(traj_mpc_);
         // mpc_->SetLinTrajConfig(traj_out_.GetConfigTrajectory());
         // mpc_->SetLinTrajVel(traj_out_.GetVelocityTrajectory());
         // RCLCPP_INFO_STREAM(this->get_logger(), "Warm start trajectory created...");
@@ -427,38 +428,13 @@ namespace robot
                     // TODO: Fix the state for when we re-enter this loop
                     {
                         std::lock_guard<std::mutex> lock(polytope_mutex_);
-                        mpc_->UpdateContactSchedule(contact_schedule_);
+                        mpc_->UpdateContactSchedule(contact_schedule_);  // TODO: There is an issue with polytopes here
                     }
-                    // vectorx_t q_ref = q;
-                    // q_ref(2) = z_target_;
-                    // mpc_->GenerateCostReference(q_ref, v, q_target_.value(), v_target_.value(), contact_schedule_);
-
-                    // TODO: Remove
-                    // v.setZero();
-                    // q = mpc_settings_->q_target;
-
-                    // torc::mpc::SimpleTrajectory q_target(mpc_model_->GetConfigDim(), mpc_settings_->nodes);
-                    // q_target.SetAllData(mpc_settings_->q_target);
-                    // mpc_->SetConfigTarget(q_target);
-
-                    // torc::mpc::SimpleTrajectory v_target(mpc_model_->GetVelDim(), mpc_settings_->nodes);
-                    // v_target.SetAllData(mpc_settings_->v_target);
-                    // mpc_->SetVelTarget(v_target);
-
-                    // mpc_->SetLinTrajConfig(q_target);
-                    // mpc_->SetLinTrajVel(v_target);
-
-                    // torc::mpc::ContactSchedule cs(mpc_settings_->contact_frames);
-                    // cs.InsertSwing("right_toe", 0.1, 0.4);
-                    // cs.InsertSwing("right_heel", 0.1, 0.4);
-                    // cs.InsertSwing("left_toe", 0.4, 0.8);   // TODO: Why does making it swing past the end of the traj hurt it?
-                    // cs.InsertSwing("left_heel", 0.4, 0.8);
-                    // mpc_->UpdateContactSchedule(cs);
 
                     double time = this->now().seconds();
-                    mpc_->Compute(q, v, traj_mpc_);
-                    // traj_mpc_.ExportToCSV(std::filesystem::current_path() / "trajectory_output.csv");
-                    // TODO: Should I remove these?
+                    if (mpc_) {
+                        mpc_->Compute(q, v, traj_mpc_);
+                    }
                     mpc_->Compute(q, v, traj_mpc_);
                     mpc_->Compute(q, v, traj_mpc_);
                     {
@@ -472,8 +448,6 @@ namespace robot
 
                     prev_time = this->now();
                 }
-
-
 
                 // Shift the contact schedule
                 {
@@ -502,11 +476,7 @@ namespace robot
                 // ----- No Reference ----- //
                 {
                     std::lock_guard<std::mutex> lock(polytope_mutex_);
-                    // mpc_->UpdateContactSchedule(contact_schedule_);
-                    // mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
-                    //     this->get_parameter("default_swing_height").as_double(),
-                    //     stance_height,
-                    //     this->get_parameter("apex_time").as_double());
+                    mpc_->UpdateContactSchedule(contact_schedule_);
                 } 
                 AddPeriodicContacts();   // Don't use when getting CS from the other node
                 
@@ -528,8 +498,8 @@ namespace robot
                 // ----- No Reference ----- //
                 if (!fixed_target_ || controller_target_) {
                     UpdateMpcTargets(q);
-                    // mpc_->SetConfigTarget(q_target_.value());
-                    // mpc_->SetVelTarget(v_target_.value());
+                    mpc_->SetConfigTarget(q_target_.value());
+                    mpc_->SetVelTarget(v_target_.value());
                 }
 
                 // // ----- Reference Generation ----- //
@@ -550,7 +520,7 @@ namespace robot
 
                 double time = this->now().seconds();
                 // ---- Solve MPC ----- //
-                mpc_->Compute(q_ic_, v_ic_, traj_mpc_);
+                mpc_->Compute(q, v, traj_mpc_);
                 {
                     // Get the traj mutex to protect it
                     std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -1130,6 +1100,8 @@ namespace robot
         // // }
 
         // ---------- G1 ---------- //
+        // static int msg_counter = 0;
+        // if (msg_counter < 10) {
         obelisk_estimator_msgs::msg::EstimatedState msg;
 
         vectorx_t q = vectorx_t::Zero(mpc_model_->GetConfigDim());
@@ -1148,6 +1120,7 @@ namespace robot
             // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj)
             if (GetState() == Mpc) {
                 // RCLCPP_WARN_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
+                // TODO: Put back
                 traj_out_.GetConfigInterp(time_into_traj, q);
                 traj_out_.GetVelocityInterp(time_into_traj, v);
             } else {
@@ -1258,6 +1231,8 @@ namespace robot
         // if (!sim_ready_) {
         this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
         // }
+        // }
+        // msg_counter++;
     }
 
     void MpcController::MakeTargetTorsoMocapTransform() {
