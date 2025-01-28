@@ -23,30 +23,30 @@ onboard:
         max_mpc_solves: -25 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.4 #0.4 #0.25
-        first_swing_time: 0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
+        first_swing_time: 2. #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
         right_frames: ["right_toe", "right_heel"]
         left_frames: ["left_toe", "left_heel"]
 # ---------- Targets ---------- #
-        target_config: [0, 0, 0.72, #0.73, #0.77, #0.793, if the height is too high we get some singularity issues
-                        0, 0, 0, 1,
-                        # 0, 0, 0.7, 0.7,
-                        -0.2, 0, 0, 0.4, -0.216,
-                        -0.2, 0, 0, 0.4, -0.216,
-                        # -0.3, 0, 0, 0.52, -0.23, #0,
-                        # -0.3, 0, 0, 0.52, -0.23, #0,
-                        # 0, 0, 0,  # Removing the waist joints for now
-                        0, 0, 0, 0.2,
-                        0, 0, 0, 0.2]
-        target_vel: [0., 0, 0, 
-                    0, 0, 0,
-                    0, 0, 0, 0, 0, #0,
-                    0, 0, 0, 0, 0, #0,
-                    # 0, 0, 0,
-                    0, 0, 0, 0,
-                    0, 0, 0, 0,]
+        # target_config: [0, 0, 0.72, #0.73, #0.77, #0.793, if the height is too high we get some singularity issues
+        #                 0, 0, 0, 1,
+        #                 # 0, 0, 0.7, 0.7,
+        #                 -0.2, 0, 0, 0.4, -0.216,
+        #                 -0.2, 0, 0, 0.4, -0.216,
+        #                 # -0.3, 0, 0, 0.52, -0.23, #0,
+        #                 # -0.3, 0, 0, 0.52, -0.23, #0,
+        #                 # 0, 0, 0,  # Removing the waist joints for now
+        #                 0, 0, 0, 0.2,
+        #                 0, 0, 0, 0.2]
+        # target_vel: [0., 0, 0, 
+        #             0, 0, 0,
+        #             0, 0, 0, 0, 0, #0,
+        #             0, 0, 0, 0, 0, #0,
+        #             # 0, 0, 0,
+        #             0, 0, 0, 0,
+        #             0, 0, 0, 0,]
         # TODO: Remove these
         mpc_ic_config: [0, 0, 0.77, 
                         0, 0, 0, 1,
@@ -54,8 +54,8 @@ onboard:
                         -0.3, 0, 0, 0.52, -0.23, #0,
                         -0.3, 0, 0, 0.52, -0.23, #0,
                         # 0, 0, 0,
-                        0, 0, 0, 0.2,
-                        0, 0, 0, 0.2]
+                        0, 0.27, 0, 0.9,
+                        0, -0.27, 0, 0.9]
         mpc_ic_vel: [0., 0, 0, 
                     0, 0, 0,
                     0, 0, 0, 0, 0, #0,

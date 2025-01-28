@@ -1,9 +1,9 @@
 general_settings:
-  nodes: 20 #32
-  verbose: True #True
+  nodes: 32
+  verbose: False #True
   node_dt_type: two_groups # Even, two_groups, Adaptive
   node_group_1_n: 5
-  node_group_2_n: 15 #27
+  node_group_2_n: 27
   node_dt_1: 0.015
   node_dt_2: 0.025
   compile_derivatives: False #True
@@ -16,19 +16,19 @@ general_settings:
   terminal_cost_weight: 20 #10 #2 #2 #10
 solver_settings:
 # HPIPM:
-  mode: Balance #Speed #Robust #Balance -- To get a success the best chance is with Robust and give more iterations
+  mode: Speed #Balance #Robust #Speed #Robust #Balance -- To get a success the best chance is with Robust and give more iterations
   alpha_min: 1e-8
-  max_iter: 9 #30 #9 #5 #10
-  mu0: 100
+  max_iter: 7 #8 #30 #9 #5 #10 # With 30 and robust I am having a ahrd time getting it to work
+  mu0: 10 #100
   tol_stat: 1e-8
   tol_eq: 1e-8
   tol_comp: 1e-8
   tol_ineq: 1e-8
   reg_prim: 1e-12
-  warm_start: 0
-  pred_corr: 1 #0 #1 # I thought turning this off was critical, but maybe not (?)
+  warm_start: 0 #0
+  pred_corr: 1 #1 #0 #1 # I thought turning this off was critical, but maybe not (?)
   ric_alg: 1
-  split_step: 0
+  split_step: 0 #1 #0
 # OSQP
   # rel_tol: 1e-3
   # abs_tol: 1e-3
@@ -43,49 +43,51 @@ solver_settings:
 constraints:
   friction_coef: 0.6 #0.7  # TODO: Tune this
   friction_margin: 2
-  max_grf: 8000
+  max_grf: 800 #500 #8000
   collisions:
     - frame1: "left_toe"
       frame2: "right_toe"
-      radius1: 0.13 #0.13
-      radius2: 0.13 #0.13
+      radius1: 0.1 #0.13
+      radius2: 0.1 #0.13
     - frame1: "left_heel"
       frame2: "right_heel"
-      radius1: 0.13 #0.13
-      radius2: 0.13 #0.13
+      radius1: 0.1 #0.13
+      radius2: 0.1 #0.13
     - frame1: "left_toe"
       frame2: "right_heel"
-      radius1: 0.1
-      radius2: 0.1
+      radius1: 0.07
+      radius2: 0.07
     - frame1: "left_heel"
       frame2: "right_toe"
-      radius1: 0.1
-      radius2: 0.1
-    - frame1: "left_wrist_yaw_link"
-      frame2: "waist_support_link"
-      radius1: 0.06
-      radius2: 0.06
-    - frame1: "right_wrist_yaw_link"
-      frame2: "waist_support_link"
-      radius1: 0.06
-      radius2: 0.06
+      radius1: 0.07
+      radius2: 0.07
+    # - frame1: "left_wrist_yaw_link"
+    #   frame2: "waist_support_link"
+    #   radius1: 0.06
+    #   radius2: 0.06
+    # - frame1: "right_wrist_yaw_link"
+    #   frame2: "waist_support_link"
+    #   radius1: 0.06
+    #   radius2: 0.06
   swing_start_node: 2
   swing_end_node: 32
   holonomic_start_node: 2 
   holonomic_end_node: 32
+  collision_start_node: 2
+  collision_end_node: 32
 costs:
 # NOTE: The resulting behaviour is suprisingly sensitive
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    weight:  [2, 2, 15, #2, 2, 5,  #15, 
+    weight:  [2, 2, 5, #2, 2, 5,  #15, 
               # 4, 4, 4,
               2, 2, 2,
-              0.005, 1, 1, 0.01, 1, #1,         # Left Leg
-              0.005, 1, 1, 0.01, 1, #1,         # Right Leg
+              0.5, .1, 1, 0.1, 1, #1,         # Left Leg
+              0.5, .1, 1, 0.1, 1, #1,         # Right Leg
               # 0.5, 0.5, 0.5, 0.5,      # Left Arm
               # 0.5, 0.5, 0.5, 0.5]      # Right Arm
-              1, 1, 1, 1,      # Left Arm
-              1, 1, 1, 1]      # Right Arm
+              .2, .2, .2, .2,      # Left Arm
+              .2, .2, .2, .2]      # Right Arm
     # weight:  [1, 1, 5, #2, 2, 5,  #15, 
     #       2, 2, 2,
     #       20, 20, 20, 20, 20,       # Left Leg
@@ -119,7 +121,7 @@ costs:
     name: "ForceReg"
     # weight: [0.005, 0.005, 0.001]
     # weight: [0.02, 0.02, 0.001]
-    weight: [0.01, 0.01, 0.0001]
+    weight: [0.01, 0.01, 0.001]
     # weight: [0.02, 0.02, 0.0002]
     # weight: [0.2, 0.2, 0.1]
   # - type: FootPolytope
@@ -187,8 +189,8 @@ targets:
               0, 0, 0, 1,
              -0.2, 0, 0, 0.4, -0.216,
              -0.2, 0, 0, 0.4, -0.216,
-             0, 0, 0, 0.2,
-             0, 0, 0, 0.2]
+             0, 0.27, 0, 0.9,
+             0, -0.27, 0, 0.9]
   v_target: [0, 0, 0,
              0, 0, 0,
              0, 0, 0, 0, 0,

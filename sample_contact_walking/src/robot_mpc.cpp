@@ -121,17 +121,21 @@ namespace robot
             tau_lims_idxs);
 
         // ---------- Friction Cone Constraints ---------- //
-        torc::mpc::FrictionConeConstraint friction_cone_constraint(0,mpc_settings_->nodes-1, model_name + "friction_cone_cone",
+        torc::mpc::FrictionConeConstraint friction_cone_constraint(0, mpc_settings_->nodes - 1, model_name + "friction_cone_cone",
             mpc_settings_->friction_coef, mpc_settings_->friction_margin, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);
 
         // ---------- Swing Constraints ---------- //
-        torc::mpc::SwingConstraint swing_constraint(2, mpc_settings_->nodes, model_name + "swing_constraint", mpc_model_temp, mpc_settings_->contact_frames,
+        torc::mpc::SwingConstraint swing_constraint(mpc_settings_->swing_start_node, mpc_settings_->swing_end_node, model_name + "swing_constraint", mpc_model_temp, mpc_settings_->contact_frames,
             mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);
 
         // ---------- Holonomic Constraints ---------- //
         //2, nodes
-        torc::mpc::HolonomicConstraint holonomic_constraint(2, mpc_settings_->nodes, model_name + "holonomic_constraint", mpc_model_temp, 
+        torc::mpc::HolonomicConstraint holonomic_constraint(mpc_settings_->holonomic_start_node, mpc_settings_->holonomic_end_node, model_name + "holonomic_constraint", mpc_model_temp, 
             mpc_settings_->contact_frames, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);  // The -1 in the last node helps with weird issues (feasibility I think)
+
+        // ---------- Collision Constraints ---------- //
+        torc::mpc::CollisionConstraint collision_constraint(mpc_settings_->collision_start_node, mpc_settings_->collision_end_node,
+            model_name + "collision_constraint", mpc_model_temp, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->collision_data);
 
         std::cout << "===== Constraints Created =====" << std::endl;
 
@@ -171,6 +175,7 @@ namespace robot
         mpc_->SetFrictionCone(std::move(friction_cone_constraint));
         mpc_->SetSwingConstraint(std::move(swing_constraint));
         mpc_->SetHolonomicConstraint(std::move(holonomic_constraint));
+        mpc_->SetCollisionConstraint(std::move(collision_constraint));
         std::cout << "===== MPC Constraints Added =====" << std::endl;
 
         mpc_->SetVelTrackingCost(std::move(vel_tracking));
@@ -530,6 +535,30 @@ namespace robot
                     traj_start_time_ = time;
                 }
 
+                // Verify trajectory
+                // Verify forces
+                // double check_time = 0;
+                // bool bad_force = false;
+                // for (int i = 0; i < mpc_settings_->nodes; i++) {
+                //     for (int j = 0; j < mpc_settings_->contact_frames.size(); j++) {
+                //         RCLCPP_INFO_STREAM(this->get_logger(), "[" << i << "], [" << mpc_settings_->contact_frames[j] << "], contact: " 
+                //         << contact_schedule_.InContact(mpc_settings_->contact_frames[j], check_time) << " Time: " << check_time << 
+                //             "Force: " << traj_mpc_.GetForce(i, mpc_settings_->contact_frames[j]).transpose());
+                //         // if (!contact_schedule_.InContact(mpc_settings_->contact_frames[j], check_time)) {
+                //         //     if (traj_mpc_.GetForce(i, mpc_settings_->contact_frames[j]).norm() > 5 &&  i != mpc_settings_->nodes - 1) {
+                //         //         RCLCPP_ERROR_STREAM(this->get_logger(), "Node: " << i << ", Time: " << check_time << 
+                //         //             ", Force: " << traj_mpc_.GetForce(i, mpc_settings_->contact_frames[j]).transpose());
+                //         //         bad_force = true;
+                //         //     }
+                //         // }
+                //     }
+                //     check_time += mpc_settings_->dt[i];
+                // }
+
+                // if (bad_force) {
+                //     throw std::runtime_error("Bad force!");
+                // }
+
                 // Every tenth solve check to see if the user wants to print stats
                 if (mpc_->GetSolveCounter() % 10 == 0 && print_timings_) {
                     // TODO: re-implement
@@ -553,7 +582,7 @@ namespace robot
                 while ((-(this->now() - start_time).nanoseconds() + mpc_loop_rate_ns) > 0) {}
             } else {
                 // TODO: Put back!
-                // RCLCPP_WARN_STREAM(this->get_logger(), "MPC computation took longer than loop rate allowed for. " << std::abs(time_left)*1e-6 << "ms over time.");
+                RCLCPP_WARN_STREAM(this->get_logger(), "MPC computation took longer than loop rate allowed for. " << std::abs(time_left)*1e-6 << "ms over time.");
             }
         }
     }
@@ -604,6 +633,9 @@ namespace robot
                 v = v_ic_;
                 tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
             }
+
+            // TODO: Remove
+            // tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
 
             // Check if we need to insert other elements into the targets
             if (q.size() != model_->GetConfigDim()) {
@@ -813,9 +845,9 @@ namespace robot
 
                 vector3_t force_interp;
                 {
+                    std::lock_guard<std::mutex> lock(traj_out_mut_);
                     double time = this->get_clock()->now().seconds();
                     double time_into_traj = time - traj_start_time_;
-                    std::lock_guard<std::mutex> lock(traj_out_mut_);
                     traj_out_.GetForceInterp(time_into_traj, force_frames_[i - viz_frames_.size()], force_interp);
                 }
 
@@ -1321,6 +1353,7 @@ namespace robot
 
         contact_schedule_.SetFrames(mpc_settings_->contact_frames);
 
+        // TODO: Put back
         if (right_foot_first_) {
             for (const auto& rf : right_frames_) {
                 contact_schedule_.InsertSwingByDuration(rf, first_swing_time_, swing_time_);
@@ -1334,7 +1367,6 @@ namespace robot
             next_left_insertion_time_ = first_swing_time_ + 2*swing_time_;
             next_right_insertion_time_ = first_swing_time_ + swing_time_;
         }
-
         AddPeriodicContacts();
 
         // TODO: Maybe put back
