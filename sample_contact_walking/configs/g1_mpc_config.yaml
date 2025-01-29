@@ -16,17 +16,22 @@ general_settings:
   terminal_cost_weight: 20 #10 #2 #2 #10
 solver_settings:
 # HPIPM:
-  mode: Speed #Balance #Robust #Speed #Robust #Balance -- To get a success the best chance is with Robust and give more iterations
+# Some note: 
+# - Having a lower barrier seems to help significantly
+# - For robust with lots of iterations I need pred_corr turned off, but when I have balance with even moderate iterations (15) it can (and should) be on
+# - mu0 around 1-5 seems best for the timing I'm looking at
+# - Even with balance, too many iterations causes issues
+  mode: Balance #Robust #Speed #Robust #Balance -- To get a success the best chance is with Robust and give more iterations
   alpha_min: 1e-8
-  max_iter: 7 #8 #30 #9 #5 #10 # With 30 and robust I am having a ahrd time getting it to work
-  mu0: 10 #100
+  max_iter: 7 #10 #30 #7 #8 #30 #9 #5 #10 # With 30 and robust I am having a ahrd time getting it to work
+  mu0: 1 #100
   tol_stat: 1e-8
   tol_eq: 1e-8
   tol_comp: 1e-8
   tol_ineq: 1e-8
-  reg_prim: 1e-12
+  reg_prim: 1e-12 #1e-12
   warm_start: 0 #0
-  pred_corr: 1 #1 #0 #1 # I thought turning this off was critical, but maybe not (?)
+  pred_corr: 1 #1 # I thought turning this off was critical, but maybe not (?)
   ric_alg: 1
   split_step: 0 #1 #0
 # OSQP
@@ -71,15 +76,15 @@ constraints:
     #   radius2: 0.06
   swing_start_node: 2
   swing_end_node: 32
-  holonomic_start_node: 2 
-  holonomic_end_node: 32
+  holonomic_start_node: 1 
+  holonomic_end_node: 31
   collision_start_node: 2
   collision_end_node: 32
 costs:
 # NOTE: The resulting behaviour is suprisingly sensitive
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    weight:  [2, 2, 5, #2, 2, 5,  #15, 
+    weight:  [2, 2, 10, #2, 2, 5,  #15, 
               # 4, 4, 4,
               2, 2, 2,
               0.5, .1, 1, 0.1, 1, #1,         # Left Leg
@@ -102,7 +107,7 @@ costs:
     #       0.5, 0.5, 0.5, 0.5]      # Right Arm
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [3, 3, 5, #2, 2, 2, #3, 3, 3, #5, 
+    weight: [3, 3, 2, #2, 2, 2, #3, 3, 3, #5, 
             # 5, 5, 5,
             2, 1, 2,
             0.05, 1, 1, 0.01, 0.1, #0.001,         # Left Leg
@@ -185,10 +190,10 @@ line_search:
   alpha_step: 0.5 # Since the line search is high variance, lowering this helps
   armijo_constant: 1e-4
 targets:
-  q_target: [0, 0, 0.77, #0.73, #0.77, #0.793, if the height is too high we get some singularity issues
+  q_target: [0, 0, 0.74, #0.73, #0.77, #0.793, if the height is too high we get some singularity issues
               0, 0, 0, 1,
-             -0.2, 0, 0, 0.4, -0.216,
-             -0.2, 0, 0, 0.4, -0.216,
+             -0.5, 0, 0, 0.7, -0.216,
+             -0.5, 0, 0, 0.7, -0.216,
              0, 0.27, 0, 0.9,
              0, -0.27, 0, 0.9]
   v_target: [0, 0, 0,

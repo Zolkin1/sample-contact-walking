@@ -85,9 +85,13 @@ namespace robot
         // Dynamics //
         std::vector<torc::mpc::DynamicsConstraint> dynamics_constraints;
         dynamics_constraints.emplace_back(mpc_model_temp, mpc_settings_->contact_frames, "robot_full_order",
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, true, 0, mpc_settings_->nodes + 1);
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, true, 0 - 100, mpc_settings_->nodes_full_dynamics - 100);
         dynamics_constraints.emplace_back(mpc_model_temp, mpc_settings_->contact_frames, "robot_centroidal", mpc_settings_->deriv_lib_path,
-            mpc_settings_->compile_derivs, false, mpc_settings_->nodes_full_dynamics + 100, mpc_settings_->nodes + 100);
+            mpc_settings_->compile_derivs, false, mpc_settings_->nodes_full_dynamics - 100, mpc_settings_->nodes - 100);
+
+        torc::mpc::SRBConstraint srb_dynamics(0, mpc_settings_->nodes, //mpc_settings_->nodes_full_dynamics, mpc_settings_->nodes,
+             model_name + "robot_srb",
+            mpc_settings_->contact_frames, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_model_temp, mpc_settings_->q_target);
 
         // Box constraints // 
         // Config
@@ -169,6 +173,7 @@ namespace robot
 
         std::cout << "===== MPC Created =====" << std::endl;
         mpc_->SetDynamicsConstraints(std::move(dynamics_constraints));
+        mpc_->SetSrbConstraint(std::move(srb_dynamics));
         mpc_->SetConfigBox(config_box);
         mpc_->SetVelBox(vel_box);
         mpc_->SetTauBox(tau_box);
