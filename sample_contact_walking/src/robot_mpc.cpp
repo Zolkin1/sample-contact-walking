@@ -85,11 +85,11 @@ namespace robot
         // Dynamics //
         std::vector<torc::mpc::DynamicsConstraint> dynamics_constraints;
         dynamics_constraints.emplace_back(mpc_model_temp, mpc_settings_->contact_frames, "robot_full_order",
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, true, 0 - 100, mpc_settings_->nodes_full_dynamics - 100);
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, true, 0, mpc_settings_->nodes);
         dynamics_constraints.emplace_back(mpc_model_temp, mpc_settings_->contact_frames, "robot_centroidal", mpc_settings_->deriv_lib_path,
             mpc_settings_->compile_derivs, false, mpc_settings_->nodes_full_dynamics - 100, mpc_settings_->nodes - 100);
 
-        torc::mpc::SRBConstraint srb_dynamics(0, mpc_settings_->nodes, //mpc_settings_->nodes_full_dynamics, mpc_settings_->nodes,
+        torc::mpc::SRBConstraint srb_dynamics(0-100, mpc_settings_->nodes-100, //mpc_settings_->nodes_full_dynamics - 100, mpc_settings_->nodes - 100,
              model_name + "robot_srb",
             mpc_settings_->contact_frames, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_model_temp, mpc_settings_->q_target);
 
@@ -357,6 +357,11 @@ namespace robot
             q_(i) = msg.q_base.at(i);
         }
 
+        if ((q_.segment<4>(3).norm() - 1) > 1e-8) {
+            recieved_first_state_ = false;
+            throw std::runtime_error("recieved q is not normalized!");
+        }
+
         // Only receive the joints that we use in the MPC
         for (size_t i = 0; i < msg.q_joints.size(); i++) {
             const auto joint_idx = mpc_model_->GetJointID(msg.joint_names[i]);
@@ -442,11 +447,9 @@ namespace robot
                     }
 
                     double time = this->now().seconds();
-                    if (mpc_) {
+                    for (int i = 0; i < 1; i++) {   // TODO: If i run too many iterations of this then sometimes I get a quat normilazation error in the next loop
                         mpc_->Compute(q, v, traj_mpc_);
                     }
-                    mpc_->Compute(q, v, traj_mpc_);
-                    mpc_->Compute(q, v, traj_mpc_);
                     {
                         // Get the traj mutex to protect it
                         std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -505,6 +508,12 @@ namespace robot
                         v = v_;
                     }
                 }
+                q.segment<4>(3).normalize();
+                if (std::abs(q.segment<4>(3).norm() - 1) > 1e-8) {
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "q: " << q.transpose());
+                    throw std::runtime_error("quat has zero norm!");
+                }
+
                 // ----- No Reference ----- //
                 if (!fixed_target_ || controller_target_) {
                     UpdateMpcTargets(q);
@@ -623,6 +632,7 @@ namespace robot
                     if (q.size() == 0) {
                         RCLCPP_WARN_STREAM(this->get_logger(), "Trajectory interpolation time is after the trajectory ends!");
                         q = traj_out_.GetConfiguration(traj_out_.GetNumNodes()-1);
+                        RCLCPP_WARN_STREAM(this->get_logger(), "q is: " << q.transpose());
                     }
 
                     if (v.size() == 0) {
@@ -640,7 +650,7 @@ namespace robot
             }
 
             // TODO: Remove
-            // tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
+            tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
 
             // Check if we need to insert other elements into the targets
             if (q.size() != model_->GetConfigDim()) {
@@ -1160,6 +1170,13 @@ namespace robot
                 // TODO: Put back
                 traj_out_.GetConfigInterp(time_into_traj, q);
                 traj_out_.GetVelocityInterp(time_into_traj, v);
+
+                q.segment<4>(3).normalize();
+                if (std::abs(q.segment<4>(3).norm() - 1) > 1e-8) {
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "q: " << q.transpose());
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Setting the quaternion because it has 0 norm!");
+                    // throw std::runtime_error("[debug viz] quat has zero norm!");
+                }
             } else {
                 q = q_ic_;
                 v = v_ic_;

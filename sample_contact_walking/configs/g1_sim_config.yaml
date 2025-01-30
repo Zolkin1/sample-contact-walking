@@ -19,11 +19,11 @@ onboard:
         default_stand_foot_height: 0.005 #0.01
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.008 #0.01 #0.013 #0.01 # Can run closer to 8-9 ms now
+        mpc_loop_period_sec: 0.01 #0.01 #0.013 #0.01 # Can run closer to 8-9 ms now
         max_mpc_solves: -25 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.4 #0.4 #0.25
-        first_swing_time: 2. #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
+        first_swing_time: 1. #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -50,7 +50,7 @@ onboard:
         # TODO: Remove these
         mpc_ic_config: [0, 0, 0.77, 
                         0, 0, 0, 1,
-                        # 0, 0, 0.7, 0.7,
+                        # 0, 0, 0.707106781, 0.707106781, # TODO: Fix the frame issue
                         -0.3, 0, 0, 0.52, -0.23, #0,
                         -0.3, 0, 0, 0.52, -0.23, #0,
                         # 0, 0, 0,
@@ -241,8 +241,9 @@ onboard:
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model
+          model_xml_path: g1_29dof_with_hand_fixed_base.xml
           # model_xml_path: tile_scene.xml
-          model_xml_path: basic_scene.xml
+          # model_xml_path: basic_scene.xml
           # model_xml_path: stairs_scene.xml
           # model_xml_path: g1_29dof_with_hand.xml
           # n_u: 129

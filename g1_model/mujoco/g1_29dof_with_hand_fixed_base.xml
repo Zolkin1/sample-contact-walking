@@ -15,17 +15,17 @@ Position and velocity actuators added. -->
     <!-- ############## -->
     <!-- Hip Pitch -->
     <default class="hip_pitch_pos">
-      <position kp="540" ctrllimited="false"/>
+      <position kp="200" ctrllimited="false"/>
       <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="hip_pitch_vel">
-      <position kv="4" ctrllimited="false"/>
+      <position kv="6" ctrllimited="false"/>
       <!-- <position kv="0" ctrllimited="false"/> -->
     </default>
 
     <!-- Hip Roll -->
     <default class="hip_roll_pos">
-      <position kp="560" ctrllimited="false"/>
+      <position kp="100" ctrllimited="false"/>
       <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="hip_roll_vel">
@@ -35,7 +35,7 @@ Position and velocity actuators added. -->
 
     <!-- Hip Yaw -->
     <default class="hip_yaw_pos">
-      <position kp="520" ctrllimited="false"/>
+      <position kp="100" ctrllimited="false"/>
       <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="hip_yaw_vel">
@@ -45,7 +45,7 @@ Position and velocity actuators added. -->
 
     <!-- Knee -->
     <default class="knee_pos">
-      <position kp="570" ctrllimited="false"/>
+      <position kp="120" ctrllimited="false"/>
       <!-- 270 -->
       <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
@@ -57,7 +57,7 @@ Position and velocity actuators added. -->
 
     <!-- Ankle Pitch -->
     <default class="ankle_pitch_pos">
-      <position kp="200" ctrllimited="false"/>
+      <position kp="50" ctrllimited="false"/>
       <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="ankle_pitch_vel">
@@ -272,18 +272,30 @@ Position and velocity actuators added. -->
     <mesh name="right_hand_index_1_link" file="right_hand_index_1_link.STL"/>
   </asset>
 
+    <visual>
+        <headlight diffuse="0.6 0.6 0.6" ambient="0.1 0.1 0.1" specular="0.9 0.9 0.9"/>
+        <rgba haze="0.15 0.25 0.35 1"/>
+        <global azimuth="-140" elevation="-20"/>
+    </visual>
+
+    <asset>
+        <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
+        <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300"/>
+        <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
+    </asset>
+
   <worldbody>
-    <body name="pelvis" pos="0 0 0.793">
-      <inertial pos="0 0 -0.07605" quat="1 0 -0.000399148 0" mass="3.813" diaginertia="0.010549 0.0093089 0.0079184"/>
-      <joint name="floating_base_joint" type="free" limited="false" actuatorfrclimited="false"/>
-      <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.2 0.2 0.2 1" mesh="pelvis"/>
-      <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="pelvis_contour_link"/>
-      <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="pelvis_contour_link"/>
-      <site name="torso_mocap_site" pos="0 0 0" euler="0 0 0"/>
+    <body name="pelvis" pos="0 0 0.74">
+        <inertial pos="0 0 -0.07605" quat="1 0 -0.000399148 0" mass="3.813" diaginertia="0.010549 0.0093089 0.0079184"/>
+        <site name="torso_mocap_site" pos="0 0 0" euler="0 0 0"/>
+        <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.2 0.2 0.2 1" mesh="pelvis"/>
+        <!-- <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="pelvis_contour_link"/> -->
+        <!-- <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="pelvis_contour_link"/> -->
 
       <!-- Left Leg -->
       <body name="left_hip_pitch_link" pos="0 0.064452 -0.1027">
         <inertial pos="0.002741 0.047791 -0.02606" quat="0.954862 0.293964 0.0302556 0.030122" mass="1.35" diaginertia="0.00181517 0.00153422 0.00116212"/>
+        <!-- <joint name="floating_base_joint" type="free" limited="false" actuatorfrclimited="false"/> -->
         <joint name="left_hip_pitch_joint" pos="0 0 0" axis="0 1 0" range="-2.5307 2.8798" actuatorfrcrange="-88 88"/>
         <!-- <joint name="left_hip_pitch_joint" pos="0 0 0" axis="0 1 0" range="-2.5307 2.8798"/> -->
         <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.2 0.2 0.2 1" mesh="left_hip_pitch_link"/>
@@ -930,9 +942,7 @@ Position and velocity actuators added. -->
             0 0 0 0 0 0 0
             0 0 0 0 0 0 0"/> -->
     <key name="standing" 
-      qpos="0 0 0.74
-            0 0 0 0
-            -0.5 0 0 0.72 -0.23 0
+      qpos="-0.5 0 0 0.72 -0.23 0
             -0.5 0 0 0.72 -0.23 0
             0 0 0.03
             0 0.27 0 0.9 0 0 0
@@ -944,7 +954,7 @@ Position and velocity actuators added. -->
             0 0 0
             0 0.27 0 0.9 0 0 0
             0 0 0 0 0 0 0
-            0 0.27 0 0.9 0 0 0
+            0 -0.27 0 0.9 0 0 0
             0 0 0 0 0 0 0
             
             0 0 0 0 0 0
