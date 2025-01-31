@@ -85,11 +85,12 @@ namespace robot
         // Dynamics //
         std::vector<torc::mpc::DynamicsConstraint> dynamics_constraints;
         dynamics_constraints.emplace_back(mpc_model_temp, mpc_settings_->contact_frames, "robot_full_order",
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, true, 0, mpc_settings_->nodes);
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, true, 0, mpc_settings_->nodes_full_dynamics);
+
         dynamics_constraints.emplace_back(mpc_model_temp, mpc_settings_->contact_frames, "robot_centroidal", mpc_settings_->deriv_lib_path,
             mpc_settings_->compile_derivs, false, mpc_settings_->nodes_full_dynamics - 100, mpc_settings_->nodes - 100);
 
-        torc::mpc::SRBConstraint srb_dynamics(0-100, mpc_settings_->nodes-100, //mpc_settings_->nodes_full_dynamics - 100, mpc_settings_->nodes - 100,
+        torc::mpc::SRBConstraint srb_dynamics(mpc_settings_->nodes_full_dynamics, mpc_settings_->nodes, // 0 - 100, mpc_settings_->nodes - 100,  
              model_name + "robot_srb",
             mpc_settings_->contact_frames, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_model_temp, mpc_settings_->q_target);
 
@@ -650,7 +651,7 @@ namespace robot
             }
 
             // TODO: Remove
-            tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
+            // tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
 
             // Check if we need to insert other elements into the targets
             if (q.size() != model_->GetConfigDim()) {
@@ -1069,114 +1070,26 @@ namespace robot
         //     this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
         // }
 
-        // // ---------- Go2 ---------- //
-        // // TODO: Consider putting back
-        // // if (traj_start_time_ < 0) {
-        // //     traj_start_time_ = this->get_clock()->now().seconds();
-        // // }
-        // obelisk_estimator_msgs::msg::EstimatedState msg;
-
-        // vectorx_t q = vectorx_t::Zero(mpc_model_->GetConfigDim());
-        // vectorx_t v = vectorx_t::Zero(mpc_model_->GetVelDim());
-        // double time = this->get_clock()->now().seconds();
-        // {
-        //     std::lock_guard<std::mutex> lock(traj_out_mut_);
-        //     double time_into_traj = time - traj_start_time_;
-
-        //     // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
-        //     q = vectorx_t::Zero(model_->GetConfigDim());
-        //     v = vectorx_t::Zero(model_->GetVelDim());
-        //     if (GetState() == Mpc) {
-        //         traj_out_.GetConfigInterp(time_into_traj, q);
-        //         traj_out_.GetVelocityInterp(time_into_traj, v);
-        //     } else {
-        //         q = q_ic_;
-        //         v = v_ic_;
-        //     }
+        // ---------- Go2 ---------- //
+        // TODO: Consider putting back
+        // if (traj_start_time_ < 0) {
+        //     traj_start_time_ = this->get_clock()->now().seconds();
         // }
-
-        // // traj_out_.GetConfigInterp(0.01, q);
-        // msg.base_link_name = "torso";
-        // vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
-        // vectorx_t q_tail = q.tail(model_->GetNumInputs());
-        // msg.q_base = torc::utils::EigenToStdVector(q_head);
-        // msg.q_joints.resize(model_->GetNumInputs());
-        // msg.v_joints.resize(model_->GetNumInputs());
-
-        // msg.joint_names.resize(q_tail.size());
-        // msg.joint_names[0] = "FL_hip_joint";
-        // msg.joint_names[1] = "FR_hip_joint";
-        // msg.joint_names[2] = "RL_hip_joint";
-        // msg.joint_names[3] = "RR_hip_joint";
-        // msg.joint_names[4] = "FL_thigh_joint";
-        // msg.joint_names[5] = "FR_thigh_joint";
-        // msg.joint_names[6] = "RL_thigh_joint";
-        // msg.joint_names[7] = "RR_thigh_joint";
-        // msg.joint_names[8] = "FL_calf_joint";
-        // msg.joint_names[9] = "FR_calf_joint";
-        // msg.joint_names[10] = "RL_calf_joint";
-        // msg.joint_names[11] = "RR_calf_joint";
-
-        // for (int i = 0; i < msg.joint_names.size(); i++) {
-        //     const auto idx = model_->GetJointID(msg.joint_names[i]);
-        //     if (idx.has_value()) {
-        //         msg.q_joints[i] = q(5 + idx.value());
-        //         if (4 + idx.value() > v.size()) {
-        //             RCLCPP_ERROR_STREAM(this->get_logger(), "v idx out of bounds!");
-        //         } else {
-        //             msg.v_joints[i] = v(4 + idx.value());
-        //         }
-        //     } else {
-        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Joint index not found!");
-        //     }
-        // }
-
-        // // traj_out_.GetVelocityInterp(0.01, v);
-        // vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
-
-        // // vectorx_t temp = vectorx_t::Zero(6);
-        // msg.v_base = torc::utils::EigenToStdVector(v_head);
-
-        // msg.header.stamp = this->now();
-
-        // // RCLCPP_ERROR_STREAM(this->get_logger(), "Publishing state viz");
-        // // std::cerr << "Here " << std::endl;
-
-        // // if (!sim_ready_) {
-        // this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
-        // // }
-
-        // ---------- G1 ---------- //
-        // static int msg_counter = 0;
-        // if (msg_counter < 10) {
         obelisk_estimator_msgs::msg::EstimatedState msg;
 
         vectorx_t q = vectorx_t::Zero(mpc_model_->GetConfigDim());
         vectorx_t v = vectorx_t::Zero(mpc_model_->GetVelDim());
-
         double time = this->get_clock()->now().seconds();
-        // TODO: Do I need to use nanoseconds?
-        // double time_into_traj = 0.75;
         {
             std::lock_guard<std::mutex> lock(traj_out_mut_);
             double time_into_traj = time - traj_start_time_;
-            // RCLCPP_INFO_STREAM(this->get_logger(), "Time: " << time);
-            // RCLCPP_INFO_STREAM(this->get_logger(), "Traj start time: " << traj_start_time_);
-            // double time_into_traj = 0;
 
-            // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj)
+            // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
+            q = vectorx_t::Zero(model_->GetConfigDim());
+            v = vectorx_t::Zero(model_->GetVelDim());
             if (GetState() == Mpc) {
-                // RCLCPP_WARN_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
-                // TODO: Put back
                 traj_out_.GetConfigInterp(time_into_traj, q);
                 traj_out_.GetVelocityInterp(time_into_traj, v);
-
-                q.segment<4>(3).normalize();
-                if (std::abs(q.segment<4>(3).norm() - 1) > 1e-8) {
-                    RCLCPP_ERROR_STREAM(this->get_logger(), "q: " << q.transpose());
-                    RCLCPP_ERROR_STREAM(this->get_logger(), "Setting the quaternion because it has 0 norm!");
-                    // throw std::runtime_error("[debug viz] quat has zero norm!");
-                }
             } else {
                 q = q_ic_;
                 v = v_ic_;
@@ -1184,7 +1097,7 @@ namespace robot
         }
 
         // traj_out_.GetConfigInterp(0.01, q);
-        msg.base_link_name = "pelvis";
+        msg.base_link_name = "torso";
         vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
         vectorx_t q_tail = q.tail(model_->GetNumInputs());
         msg.q_base = torc::utils::EigenToStdVector(q_head);
@@ -1192,68 +1105,21 @@ namespace robot
         msg.v_joints.resize(model_->GetNumInputs());
 
         msg.joint_names.resize(q_tail.size());
-        // Left Leg
-        msg.joint_names[0] = "left_hip_pitch_joint";
-        msg.joint_names[1] = "left_hip_roll_joint";
-        msg.joint_names[2] = "left_hip_yaw_joint";
-        msg.joint_names[3] = "left_knee_joint";
-        msg.joint_names[4] = "left_ankle_pitch_joint";
-        msg.joint_names[5] = "left_ankle_roll_joint";
-
-        // Right Leg
-        msg.joint_names[6] = "right_hip_pitch_joint";
-        msg.joint_names[7] = "right_hip_roll_joint";
-        msg.joint_names[8] = "right_hip_yaw_joint";
-        msg.joint_names[9] = "right_knee_joint";
-        msg.joint_names[10] = "right_ankle_pitch_joint";
-        msg.joint_names[11] = "right_ankle_roll_joint";
-
-        // Torso
-        msg.joint_names[12] = "waist_yaw_joint";
-        msg.joint_names[13] = "waist_roll_joint";
-        msg.joint_names[14] = "waist_pitch_joint";
-
-        // Left Arm
-        msg.joint_names[15] = "left_shoulder_pitch_joint";
-        msg.joint_names[16] = "left_shoulder_roll_joint";
-        msg.joint_names[17] = "left_shoulder_yaw_joint";
-        msg.joint_names[18] = "left_elbow_joint";
-        msg.joint_names[19] = "left_wrist_roll_joint";
-        msg.joint_names[20] = "left_wrist_pitch_joint";
-        msg.joint_names[21] = "left_wrist_yaw_joint";
-
-        // Left Hand
-        msg.joint_names[22] = "left_hand_thumb_0_joint";
-        msg.joint_names[23] = "left_hand_thumb_1_joint";
-        msg.joint_names[24] = "left_hand_thumb_2_joint";
-        msg.joint_names[25] = "left_hand_middle_0_joint";
-        msg.joint_names[26] = "left_hand_middle_1_joint";
-        msg.joint_names[27] = "left_hand_index_0_joint";
-        msg.joint_names[28] = "left_hand_index_1_joint";
-
-        // Right Arm
-        msg.joint_names[29] = "right_shoulder_pitch_joint";
-        msg.joint_names[30] = "right_shoulder_roll_joint";
-        msg.joint_names[31] = "right_shoulder_yaw_joint";
-        msg.joint_names[32] = "right_elbow_joint";
-        msg.joint_names[33] = "right_wrist_roll_joint";
-        msg.joint_names[34] = "right_wrist_pitch_joint";
-        msg.joint_names[35] = "right_wrist_yaw_joint";
-
-        // Right Hand
-        msg.joint_names[36] = "right_hand_thumb_0_joint";
-        msg.joint_names[37] = "right_hand_thumb_1_joint";
-        msg.joint_names[38] = "right_hand_thumb_2_joint";
-        msg.joint_names[39] = "right_hand_middle_0_joint";
-        msg.joint_names[40] = "right_hand_middle_1_joint";
-        msg.joint_names[41] = "right_hand_index_0_joint";
-        msg.joint_names[42] = "right_hand_index_1_joint";
-
-        const auto joint_skip_names = mpc_settings_->joint_skip_names;
-        const auto joint_skip_values = mpc_settings_->joint_skip_values;
+        msg.joint_names[0] = "FL_hip_joint";
+        msg.joint_names[1] = "FR_hip_joint";
+        msg.joint_names[2] = "RL_hip_joint";
+        msg.joint_names[3] = "RR_hip_joint";
+        msg.joint_names[4] = "FL_thigh_joint";
+        msg.joint_names[5] = "FR_thigh_joint";
+        msg.joint_names[6] = "RL_thigh_joint";
+        msg.joint_names[7] = "RR_thigh_joint";
+        msg.joint_names[8] = "FL_calf_joint";
+        msg.joint_names[9] = "FR_calf_joint";
+        msg.joint_names[10] = "RL_calf_joint";
+        msg.joint_names[11] = "RR_calf_joint";
 
         for (int i = 0; i < msg.joint_names.size(); i++) {
-            const auto idx = mpc_model_->GetJointID(msg.joint_names[i]);
+            const auto idx = model_->GetJointID(msg.joint_names[i]);
             if (idx.has_value()) {
                 msg.q_joints[i] = q(5 + idx.value());
                 if (4 + idx.value() > v.size()) {
@@ -1261,14 +1127,6 @@ namespace robot
                 } else {
                     msg.v_joints[i] = v(4 + idx.value());
                 }
-            } else if (std::find(joint_skip_names.begin(), joint_skip_names.end(), msg.joint_names[i]) != joint_skip_names.end()) {     // Check if the joint is a skipped joint
-                // Find the index
-                for (int skip_idx = 0; skip_idx < joint_skip_names.size(); skip_idx++) {
-                    if (joint_skip_names[skip_idx] == msg.joint_names[i]) {
-                        msg.q_joints[i] = joint_skip_values[skip_idx];
-                        break;
-                    }
-                } 
             } else {
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Joint index not found!");
             }
@@ -1282,11 +1140,154 @@ namespace robot
 
         msg.header.stamp = this->now();
 
+        // RCLCPP_ERROR_STREAM(this->get_logger(), "Publishing state viz");
+        // std::cerr << "Here " << std::endl;
+
         // if (!sim_ready_) {
         this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
         // }
+
+        // // ---------- G1 ---------- //
+        // // static int msg_counter = 0;
+        // // if (msg_counter < 10) {
+        // obelisk_estimator_msgs::msg::EstimatedState msg;
+
+        // vectorx_t q = vectorx_t::Zero(mpc_model_->GetConfigDim());
+        // vectorx_t v = vectorx_t::Zero(mpc_model_->GetVelDim());
+
+        // double time = this->get_clock()->now().seconds();
+        // // TODO: Do I need to use nanoseconds?
+        // // double time_into_traj = 0.75;
+        // {
+        //     std::lock_guard<std::mutex> lock(traj_out_mut_);
+        //     double time_into_traj = time - traj_start_time_;
+        //     // RCLCPP_INFO_STREAM(this->get_logger(), "Time: " << time);
+        //     // RCLCPP_INFO_STREAM(this->get_logger(), "Traj start time: " << traj_start_time_);
+        //     // double time_into_traj = 0;
+
+        //     // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj)
+        //     if (GetState() == Mpc) {
+        //         // RCLCPP_WARN_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
+        //         // TODO: Put back
+        //         traj_out_.GetConfigInterp(time_into_traj, q);
+        //         traj_out_.GetVelocityInterp(time_into_traj, v);
+
+        //         q.segment<4>(3).normalize();
+        //         if (std::abs(q.segment<4>(3).norm() - 1) > 1e-8) {
+        //             RCLCPP_ERROR_STREAM(this->get_logger(), "q: " << q.transpose());
+        //             RCLCPP_ERROR_STREAM(this->get_logger(), "Setting the quaternion because it has 0 norm!");
+        //             // throw std::runtime_error("[debug viz] quat has zero norm!");
+        //         }
+        //     } else {
+        //         q = q_ic_;
+        //         v = v_ic_;
+        //     }
         // }
-        // msg_counter++;
+
+        // // traj_out_.GetConfigInterp(0.01, q);
+        // msg.base_link_name = "pelvis";
+        // vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
+        // vectorx_t q_tail = q.tail(model_->GetNumInputs());
+        // msg.q_base = torc::utils::EigenToStdVector(q_head);
+        // msg.q_joints.resize(model_->GetNumInputs());
+        // msg.v_joints.resize(model_->GetNumInputs());
+
+        // msg.joint_names.resize(q_tail.size());
+        // // Left Leg
+        // msg.joint_names[0] = "left_hip_pitch_joint";
+        // msg.joint_names[1] = "left_hip_roll_joint";
+        // msg.joint_names[2] = "left_hip_yaw_joint";
+        // msg.joint_names[3] = "left_knee_joint";
+        // msg.joint_names[4] = "left_ankle_pitch_joint";
+        // msg.joint_names[5] = "left_ankle_roll_joint";
+
+        // // Right Leg
+        // msg.joint_names[6] = "right_hip_pitch_joint";
+        // msg.joint_names[7] = "right_hip_roll_joint";
+        // msg.joint_names[8] = "right_hip_yaw_joint";
+        // msg.joint_names[9] = "right_knee_joint";
+        // msg.joint_names[10] = "right_ankle_pitch_joint";
+        // msg.joint_names[11] = "right_ankle_roll_joint";
+
+        // // Torso
+        // msg.joint_names[12] = "waist_yaw_joint";
+        // msg.joint_names[13] = "waist_roll_joint";
+        // msg.joint_names[14] = "waist_pitch_joint";
+
+        // // Left Arm
+        // msg.joint_names[15] = "left_shoulder_pitch_joint";
+        // msg.joint_names[16] = "left_shoulder_roll_joint";
+        // msg.joint_names[17] = "left_shoulder_yaw_joint";
+        // msg.joint_names[18] = "left_elbow_joint";
+        // msg.joint_names[19] = "left_wrist_roll_joint";
+        // msg.joint_names[20] = "left_wrist_pitch_joint";
+        // msg.joint_names[21] = "left_wrist_yaw_joint";
+
+        // // Left Hand
+        // msg.joint_names[22] = "left_hand_thumb_0_joint";
+        // msg.joint_names[23] = "left_hand_thumb_1_joint";
+        // msg.joint_names[24] = "left_hand_thumb_2_joint";
+        // msg.joint_names[25] = "left_hand_middle_0_joint";
+        // msg.joint_names[26] = "left_hand_middle_1_joint";
+        // msg.joint_names[27] = "left_hand_index_0_joint";
+        // msg.joint_names[28] = "left_hand_index_1_joint";
+
+        // // Right Arm
+        // msg.joint_names[29] = "right_shoulder_pitch_joint";
+        // msg.joint_names[30] = "right_shoulder_roll_joint";
+        // msg.joint_names[31] = "right_shoulder_yaw_joint";
+        // msg.joint_names[32] = "right_elbow_joint";
+        // msg.joint_names[33] = "right_wrist_roll_joint";
+        // msg.joint_names[34] = "right_wrist_pitch_joint";
+        // msg.joint_names[35] = "right_wrist_yaw_joint";
+
+        // // Right Hand
+        // msg.joint_names[36] = "right_hand_thumb_0_joint";
+        // msg.joint_names[37] = "right_hand_thumb_1_joint";
+        // msg.joint_names[38] = "right_hand_thumb_2_joint";
+        // msg.joint_names[39] = "right_hand_middle_0_joint";
+        // msg.joint_names[40] = "right_hand_middle_1_joint";
+        // msg.joint_names[41] = "right_hand_index_0_joint";
+        // msg.joint_names[42] = "right_hand_index_1_joint";
+
+        // const auto joint_skip_names = mpc_settings_->joint_skip_names;
+        // const auto joint_skip_values = mpc_settings_->joint_skip_values;
+
+        // for (int i = 0; i < msg.joint_names.size(); i++) {
+        //     const auto idx = mpc_model_->GetJointID(msg.joint_names[i]);
+        //     if (idx.has_value()) {
+        //         msg.q_joints[i] = q(5 + idx.value());
+        //         if (4 + idx.value() > v.size()) {
+        //             RCLCPP_ERROR_STREAM(this->get_logger(), "v idx out of bounds!");
+        //         } else {
+        //             msg.v_joints[i] = v(4 + idx.value());
+        //         }
+        //     } else if (std::find(joint_skip_names.begin(), joint_skip_names.end(), msg.joint_names[i]) != joint_skip_names.end()) {     // Check if the joint is a skipped joint
+        //         // Find the index
+        //         for (int skip_idx = 0; skip_idx < joint_skip_names.size(); skip_idx++) {
+        //             if (joint_skip_names[skip_idx] == msg.joint_names[i]) {
+        //                 msg.q_joints[i] = joint_skip_values[skip_idx];
+        //                 break;
+        //             }
+        //         } 
+        //     } else {
+        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Joint index not found!");
+        //     }
+        // }
+
+        // // traj_out_.GetVelocityInterp(0.01, v);
+        // vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
+
+        // // vectorx_t temp = vectorx_t::Zero(6);
+        // msg.v_base = torc::utils::EigenToStdVector(v_head);
+
+        // msg.header.stamp = this->now();
+
+        // // if (!sim_ready_) {
+        // this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
+        // // }
+        // // }
+        // // msg_counter++;
     }
 
     void MpcController::MakeTargetTorsoMocapTransform() {

@@ -1,6 +1,6 @@
 general_settings:
   nodes: 32 #64 #32
-  verbose: False #True
+  verbose: True #True
   node_dt_type: two_groups # Even, two_groups, Adaptive
   node_group_1_n: 5
   node_group_2_n: 27
@@ -11,20 +11,35 @@ general_settings:
   scale_cost: False
   max_initial_solves: 20
   initial_constraint_tol: 5e-4
-  nodes_full_dynamics: 3 #4   # Also determines how many nodes have torque constraints
+  nodes_full_dynamics: 6 #3 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0
-  terminal_cost_weight: 10 #2 #10
+  terminal_cost_weight: 40 #2 #10
 solver_settings:
-  rel_tol: 1e-6 #1e-3
-  abs_tol: 1e-6 #1e-3
-  verbose: False
-  polish: False
-  rho: 0.01
-  alpha: 1.6 # 1.6, 1.1
-  sigma: 1e-6
-  adaptive_rho: False
-  max_iter: 20 #50 #20
-  scaling: 10
+# HPIPM:
+  mode: Balance #Speed #Robust #Balance -- To get a success the best chance is with Robust and give more iterations
+  alpha_min: 1e-8
+  max_iter: 15 #9 #5 #10
+  mu0: 20 #100
+  tol_stat: 1e-8
+  tol_eq: 1e-8
+  tol_comp: 1e-8
+  tol_ineq: 1e-8
+  reg_prim: 1e-12
+  warm_start: 0
+  pred_corr: 1 #1 #1 -- Setting this one seems to hurt the constraint violation across solves
+  ric_alg: 1
+  split_step: 0 #0
+# OSQP
+  # rel_tol: 1e-6 #1e-3
+  # abs_tol: 1e-6 #1e-3
+  # verbose: False
+  # polish: False
+  # rho: 0.01
+  # alpha: 1.6 # 1.6, 1.1
+  # sigma: 1e-6
+  # adaptive_rho: False
+  # max_iter: 20 #50 #20
+  # scaling: 10
 constraints:
   friction_coef: 0.5  # TODO: Tune this
   friction_margin: 2
@@ -48,6 +63,12 @@ constraints:
       radius2: 0.06
   polytope_delta: 0.06
   polytope_shrinking_rad: 0.2
+  swing_start_node: 2
+  swing_end_node: 32
+  holonomic_start_node: 1 #1 # 2 #22 #2
+  holonomic_end_node: 31 #32 #24 #32
+  collision_start_node: 2
+  collision_end_node: 32
 costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
@@ -61,11 +82,11 @@ costs:
     #       1, 1, .001,          # RL
     #       1, 1, .001,]          # RR
     # For ref generator:
-    weight:  [2.0, 2.0, 10, #20, #2, 2, 150, or 2,2,30
+    weight:  [2.0, 2.0, 20, #20, #2, 2, 150, or 2,2,30
       # 2, 2, 2,
       # 5, 5, 5,
-      10, 10, 10,
-      #25.5, 25.5, 25.5, # 5.5, 5.5, 5.5
+      # 10, 10, 10,
+      250.5, 250.5, 25.5, # 5.5, 5.5, 5.5
       # Good walking:
       1, 1, .001,          # FL
       1, 1, .001,          # FR
@@ -85,8 +106,8 @@ costs:
     #     0.01, 0.01, 0.0001,         # RL
     #     0.01, 0.01, 0.0001]         # RR
     # For reference gen:
-    weight: [2, 2, 3, #2, 2, 3,
-        .5, .5, .5,
+    weight: [1, 1, 5, #2, 2, 3,
+        15, 15, 15,
         0.01, 0.01, 0.0001,         # FL
         0.01, 0.01, 0.0001,         # FR
         0.01, 0.01, 0.0001,         # RL
@@ -101,7 +122,7 @@ costs:
     name: "ForceReg"
     # weight: [0.001, 0.001, 0.001]
     # For reference gen:
-    weight: [0.001, 0.001, 0.001]
+    weight: [0.0001, 0.0001, 0.0001]
   # TODO: Why does removing this cause weird things with the MPC?
   - type: ForwardKinematics
     name: "FL_foot_fk"
@@ -148,7 +169,9 @@ contacts:
   contact_frames: ["RL_foot", "FR_foot", "FL_foot", "RR_foot"]
   # hip_offsets: [-0.1934, 0.142, 0.1734, -0.142, 0.1734, 0.142, -0.1934, -0.142]
   hip_offsets: [-0.1934, 0.142, 0.2234, -0.142, 0.2234, 0.142, -0.1934, -0.142]
-
+  apex_height: 0.08
+  apex_time: 0.75
+  default_ground_height: 0.01
 line_search:
   alpha_min: 1e-3
   large_constraint_vio: 1e-2
@@ -156,3 +179,16 @@ line_search:
   constraint_reduction_mult: 1e-6
   alpha_step: 0.5 # Since the line search is high variance, lowering this helps
   armijo_constant: 1e-4
+targets:
+  q_target: [0, 0, 0.28,
+              0, 0, 0, 1,
+              0, 0.9, -1.8,
+              0, 0.9, -1.8,
+              0, 0.9, -1.8,
+              0, 0.9, -1.8]
+  v_target: [0., 0.0, 0.,
+              0, 0, 0,
+              0, 0.0, 0.,
+              0, 0.0, 0.,
+              0, 0.0, 0.,
+              0, 0.0, 0.]

@@ -23,7 +23,7 @@ onboard:
         max_mpc_solves: -25 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.4 #0.4 #0.25
-        first_swing_time: 1. #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
+        first_swing_time: 200. #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -102,7 +102,7 @@ onboard:
       subscribers:
         # Estimated state subscriber
         - ros_parameter: sub_est_setting
-          topic: /obelisk/g1/target_state # est_state, target_state
+          topic: /obelisk/g1/est_state # est_state, target_state
           history_depth: 10
           callback_group: estimation_cbg
           non_obelisk: False
@@ -151,7 +151,7 @@ onboard:
           callback_group: None
       subscribers:
         - ros_parameter: sub_est_setting
-          topic: /obelisk/g1/target_state # est_state, target_state
+          topic: /obelisk/g1/est_state # est_state, target_state
           msg_type: EstimatedState
           key: "est_state_sub"
           history_depth: 10
@@ -241,9 +241,9 @@ onboard:
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model
-          model_xml_path: g1_29dof_with_hand_fixed_base.xml
+          # model_xml_path: g1_29dof_with_hand_fixed_base.xml
           # model_xml_path: tile_scene.xml
-          # model_xml_path: basic_scene.xml
+          model_xml_path: basic_scene.xml
           # model_xml_path: stairs_scene.xml
           # model_xml_path: g1_29dof_with_hand.xml
           # n_u: 129

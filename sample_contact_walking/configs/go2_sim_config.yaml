@@ -18,29 +18,29 @@ onboard:
         default_stand_foot_height: 0.01 #0.01
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.006 #0.008 #0.01 #0.01
+        mpc_loop_period_sec: 0.01 #0.008 #0.01 #0.01
         max_mpc_solves: -37 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.3 #0.2 #0.25
-        first_swing_time: 0.1 #2.
+        first_swing_time: 1. #0.1 #2.
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
         right_frames: ["RL_foot", "FR_foot"]
         left_frames: ["FL_foot", "RR_foot"]
 # ---------- Targets ---------- #
-        target_config: [0, 0, 0.28,
-                    0, 0, 0, 1,
-                    0, 0.9, -1.8,
-                    0, 0.9, -1.8,
-                    0, 0.9, -1.8,
-                    0, 0.9, -1.8]
-        target_vel: [0., 0.0, 0.,
-                    0, 0, 0,
-                    0, 0.0, 0.,
-                    0, 0.0, 0.,
-                    0, 0.0, 0.,
-                    0, 0.0, 0.]
+        # target_config: [0, 0, 0.28,
+        #             0, 0, 0, 1,
+        #             0, 0.9, -1.8,
+        #             0, 0.9, -1.8,
+        #             0, 0.9, -1.8,
+        #             0, 0.9, -1.8]
+        # target_vel: [0., 0.0, 0.,
+        #             0, 0, 0,
+        #             0, 0.0, 0.,
+        #             0, 0.0, 0.,
+        #             0, 0.0, 0.,
+        #             0, 0.0, 0.]
         mpc_ic_config: [0, 0, 0.28,
                     0, 0, 0, 1,         # Why is the quaternion flipped here?
                     0, 0.9, -1.8,
@@ -218,8 +218,8 @@ onboard:
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: go2_model
-          # model_xml_path: go2_scene.xml
-          model_xml_path: go2_tile_scene.xml
+          model_xml_path: go2_scene.xml
+          # model_xml_path: go2_tile_scene.xml
           # model_xml_path: go2_tile2_scene.xml
           n_u: 36
           time_step: 0.001
