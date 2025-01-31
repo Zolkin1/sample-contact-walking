@@ -22,7 +22,7 @@ onboard:
         max_mpc_solves: -37 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.3 #0.2 #0.25
-        first_swing_time: 1. #0.1 #2.
+        first_swing_time: 0.1 #0.1 #2.
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -84,7 +84,7 @@ onboard:
       subscribers:
         # Estimated state subscriber
         - ros_parameter: sub_est_setting
-          topic: /obelisk/go2/est_state # est_state, target_state
+          topic: /obelisk/go2/target_state # est_state, target_state
           history_depth: 10
           callback_group: estimation_cbg
           non_obelisk: False
@@ -118,28 +118,38 @@ onboard:
         first_swing_time: 0.1
         right_foot_frames: ["RL_foot", "FR_foot"]
         left_foot_frames: ["FL_foot", "RR_foot"]
-        foot_offsets: [-0.1934, 0.142, 0.2234, -0.142, 0.2234, 0.142, -0.1934, -0.142]
+        foot_offsets: [-0.2234, 0.142, 0.2234, -0.142, 0.2234, 0.142, -0.2234, -0.142]
         num_nodes: 32   # Should match the MPC
         node_group_1_n: 5
         node_group_2_n: 27
         node_dt_1: 0.015 #0.015
         node_dt_2: 0.025
-        polytope_margin: 0.06   # Should match polytope_delta
+        polytope_margin: 0.01   # Should match polytope_delta
       publishers:
         # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting
-          topic: /obelisk/go2/blah_blah_contact_schedule
-          msg_type: PositionSetpoint #ContactSchedule   # TODO: This won't work until I update Obelisk
+          topic: /obelisk/go2/contact_schedule
+          msg_type: ContactSchedule
           key: "contact_schedule_pub"
           history_depth: 10
-          non_obelisk: False
       subscribers:
         - ros_parameter: sub_est_setting
-          topic: /obelisk/go2/est_state # est_state, target_state
+          topic: /obelisk/go2/target_state # est_state, target_state
           msg_type: EstimatedState
           history_depth: 10
           callback_group: estimation_cbg
-          non_obelisk: False
+          key: "est_state_sub"
+        # Joystick Sub
+        - ros_parameter: joystick_sub_setting
+          topic: /obelisk/go2/joy
+          msg_type: Joy
+          key: "joystick_sub"
+          history_depth: 10
+          callback_group: None
+        - ros_parameter: commanded_target_setting
+          topic: /obelisk/go2/commanded_target
+          msg_type: CommandedTarget
+          key: "command_sub"
       timers:
         # Contact planning timer
         - ros_parameter: timer_ctrl_setting

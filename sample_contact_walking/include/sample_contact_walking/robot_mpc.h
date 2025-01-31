@@ -147,6 +147,8 @@ namespace robot {
             std::unique_ptr<torc::models::FullOrderRigidBody> mpc_model_;           // Potentially reduced model for the MPC
             torc::mpc::ContactSchedule contact_schedule_;
 
+            std::unique_ptr<torc::mpc::ReferenceGenerator> ref_gen_;
+
             std::shared_ptr<torc::mpc::MpcSettings> mpc_settings_;
             std::shared_ptr<torc::mpc::HpipmMpc> mpc_;
 

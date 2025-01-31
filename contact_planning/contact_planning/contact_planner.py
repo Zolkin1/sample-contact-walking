@@ -27,8 +27,11 @@ class ContactPlanner(ObeliskController):
         super().__init__(node_name, ContactSchedule, EstimatedState)
         self.get_logger().info("INITIALIZING")
 
-        # # Joystick Subscriber
+        # Joystick Subscriber
         self.register_obk_subscription("joystick_sub_setting", self.joystick_callback, Joy)
+
+        # Command
+        self.register_obk_subscription("commanded_target_setting", self.command_target_callback, CommandedTarget)
     
         self.declare_parameter("num_nodes", 32)
         self.num_nodes = self.get_parameter("num_nodes").get_parameter_value().integer_value
@@ -38,7 +41,6 @@ class ContactPlanner(ObeliskController):
 
         self.declare_parameter("default_polytope_size", 0.7)
         self.default_size = self.get_parameter("default_polytope_size").value
-
 
         self.declare_parameter("mujoco_xml_path", "")
         self.mujoco_xml_path = self.get_parameter("mujoco_xml_path").value
@@ -66,7 +68,7 @@ class ContactPlanner(ObeliskController):
         self.declare_parameter("foot_offsets", [0.0])
         self.foot_offset = np.array(self.get_parameter("foot_offsets").value)
         self.foot_offset = np.reshape(self.foot_offset, (len(self.right_foot_frames) + len(self.left_foot_frames), 2))
-        self.get_logger().error(f"foot offsets: {self.foot_offset}")
+        self.get_logger().info(f"foot offsets: {self.foot_offset}")
 
         self.declare_parameter("node_group_1_n", 1)
         self.declare_parameter("node_group_2_n", 31)
@@ -98,6 +100,8 @@ class ContactPlanner(ObeliskController):
 
         self.received_state = False
         self.mpc_start_time = -1
+
+        self.get_logger().info(f"Finished Constructor")
 
     def on_configure(self, state: LifecycleState) -> TransitionCallbackReturn:
         """Configure the controller."""
