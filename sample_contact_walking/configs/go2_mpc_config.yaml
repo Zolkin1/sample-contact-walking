@@ -4,22 +4,22 @@ general_settings:
   node_dt_type: two_groups # Even, two_groups, Adaptive
   node_group_1_n: 5
   node_group_2_n: 27
-  node_dt_1: 0.015 #0.015 
+  node_dt_1: 0.015 #0.015 #0.015 
   node_dt_2: 0.025 #0.025 #0.015 #0.015 #0.025
   compile_derivatives: False #True
   base_frame: "torso"
   scale_cost: False
   max_initial_solves: 20
   initial_constraint_tol: 5e-4
-  nodes_full_dynamics: 10 #30 #10 #3 #4   # Also determines how many nodes have torque constraints
+  nodes_full_dynamics: 4 #10 #30 #10 #3 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0
-  terminal_cost_weight: 20 #2 #10
+  terminal_cost_weight: 10 #2 #10
 solver_settings:
 # HPIPM:
-  mode: Balance #Speed #Robust #Balance -- To get a success the best chance is with Robust and give more iterations
+  mode: Robust #Balance #Speed #Robust #Balance -- To get a success the best chance is with Robust and give more iterations
   alpha_min: 1e-8
-  max_iter: 10 #15 #15 #10
-  mu0: 10 #20 #10 #100
+  max_iter: 30 #10 #15 #15 #10
+  mu0: 100 #1 #20 #10 #100
   tol_stat: 1e-8 #1e-8
   tol_eq: 1e-8
   tol_comp: 1e-8 #1e-8
@@ -90,10 +90,10 @@ costs:
       # 10, 10, 10,
       250.5, 250.5, 25.5, # 5.5, 5.5, 5.5
       # Good walking:
-      1, 1, .001,          # FL
-      1, 1, .001,          # FR
-      1, 1, .001,          # RL
-      1, 1, .001,]          # RR
+      .2, .1, .001,          # FL
+      .2, .1, .001,          # FR
+      .2, .1, .001,          # RL
+      .2, .1, .001,]          # RR
       # # For polytopes:
       # .02, .02, .01,          # FL
       # .02, .02, .01,          # FR
@@ -101,7 +101,7 @@ costs:
       # .02, .02, .01,]          # RR
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [1, 1, 5, #2, 2, 3,
+    weight: [2, 2, 5, #2, 2, 3,
         # 5, 5, 5,
         15, 15, 15,
         0.01, 0.01, 0.0001,         # FL
@@ -130,19 +130,19 @@ costs:
   - type: ForwardKinematics
     name: "FL_foot_fk"
     frame: "FL_foot"
-    weight: [2.2, 2.2, 2]
+    weight: [2, 2, 1]
   - type: ForwardKinematics
     name: "FR_foot_fk"
     frame: "FR_foot"
-    weight: [2.2, 2.2, 2]
+    weight: [2, 2, 3]
   - type: ForwardKinematics
     name: "RL_foot_fk"
     frame: "RL_foot"
-    weight: [2.2, 2.2, 2]
+    weight: [2, 2, 3]
   - type: ForwardKinematics
     name: "RR_foot_fk"
     frame: "RR_foot"
-    weight: [2.2, 2.2, 2]
+    weight: [2, 2, 3]
     # TODO: Investigate this w/ no constraints. Weird stuff happening
   # - type: FootPolytope
   #   name: "FR_foot_polytope"

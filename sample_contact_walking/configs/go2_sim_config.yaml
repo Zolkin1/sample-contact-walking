@@ -18,7 +18,7 @@ onboard:
         default_stand_foot_height: 0.01 #0.01
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.01 #0.008 #0.01 #0.01
+        mpc_loop_period_sec: 0.007 #0.01 #0.008 #0.01 #0.01
         max_mpc_solves: -37 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.3 #0.2 #0.25
@@ -118,7 +118,7 @@ onboard:
         first_swing_time: 0.1
         right_foot_frames: ["RL_foot", "FR_foot"]
         left_foot_frames: ["FL_foot", "RR_foot"]
-        foot_offsets: [-0.2234, 0.142, 0.2234, -0.142, 0.2234, 0.142, -0.2234, -0.142]
+        foot_offsets: [-0.2234, 0.142, 0.1934, -0.142, 0.1934, 0.142, -0.2234, -0.142]
         num_nodes: 32   # Should match the MPC
         node_group_1_n: 5
         node_group_2_n: 27

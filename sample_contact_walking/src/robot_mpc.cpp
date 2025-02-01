@@ -96,7 +96,7 @@ namespace robot
         dynamics_constraints.emplace_back(mpc_model_temp, mpc_settings_->contact_frames, "robot_centroidal", mpc_settings_->deriv_lib_path,
             mpc_settings_->compile_derivs, false, mpc_settings_->nodes_full_dynamics, mpc_settings_->nodes);
 
-        torc::mpc::SRBConstraint srb_dynamics(mpc_settings_->nodes_full_dynamics, mpc_settings_->nodes,  // 0, mpc_settings_->nodes
+        torc::mpc::SRBConstraint srb_dynamics(mpc_settings_->nodes_full_dynamics, mpc_settings_->nodes,
              model_name + "robot_srb",
             mpc_settings_->contact_frames, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_model_temp, mpc_settings_->q_target);
 
@@ -173,6 +173,14 @@ namespace robot
         torc::mpc::ConfigTrackingCost config_tracking(0, mpc_settings_->nodes, model_name + "config_tracking", mpc_settings_->cost_data.at(0).weight,
             mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_model_temp);
 
+        // ---------- Forward Kinematics Tracking ---------- //
+        // For now they all need the same weight
+        // Need to read the contact frames from the settings (TODO, later)
+        RCLCPP_ERROR_STREAM(this->get_logger(), "weight: " << mpc_settings_->cost_data.at(4).weight.transpose());
+        torc::mpc::ForwardKinematicsCost fk_cost(0, mpc_settings_->nodes, model_name + "fk_cost", mpc_settings_->cost_data.at(4).weight,
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_model_temp, mpc_settings_->contact_frames);
+
+
         std::cout << "===== Costs Created =====" << std::endl;
 
         // --------------------------------- //
@@ -199,6 +207,7 @@ namespace robot
         mpc_->SetTauTrackingCost(std::move(tau_tracking));
         mpc_->SetForceTrackingCost(std::move(force_tracking));
         mpc_->SetConfigTrackingCost(std::move(config_tracking));
+        mpc_->SetFowardKinematicsCost(std::move(fk_cost));
         std::cout << "===== MPC Costs Added =====" << std::endl;
 
         // torc::mpc::SimpleTrajectory q_target(mpc_model_->GetConfigDim(), mpc_settings_->nodes);
@@ -553,12 +562,12 @@ namespace robot
                 {
                     std::lock_guard<std::mutex> lock(polytope_mutex_);
                     mpc_->UpdateContactSchedule(contact_schedule_);
-                    std::map<std::string, std::vector<torc::mpc::vector2_t>> contact_foot_pos;
+                    std::map<std::string, std::vector<torc::mpc::vector3_t>> contact_foot_pos;
                     const auto [q_ref, v_ref] = ref_gen_->GenerateReference(q, v, q_target_.value(), v_target_.value(), mpc_->GetSwingTrajectory(),
                         mpc_settings_->hip_offsets, contact_schedule_, contact_foot_pos);
-                    mpc_->SetConfigTarget(q_ref);
-                    mpc_->SetVelTarget(v_ref);
-                    // TODO: Add in the FK cost and reference!
+                    // mpc_->SetConfigTarget(q_ref);
+                    // mpc_->SetVelTarget(v_ref);
+                    mpc_->SetForwardKinematicsTarget(contact_foot_pos);
                 }
 
                 double time = this->now().seconds();
@@ -751,9 +760,16 @@ namespace robot
 
         const std::vector<double>& dt_vec = mpc_settings_->dt;
 
-        q_target_.value()[0](0) = q(0);
-        q_target_.value()[0](1) = q(1);
-        q_target_.value()[0](2) = z_target_;
+        static torc::mpc::vector3_t q_base_target = q.head<3>();
+
+        if (v_target_.value()[0].head<2>().norm() > 0.05) {
+            q_base_target(0) = q(0);
+            q_base_target(1) = q(1);
+        }
+
+        q_base_target(2) = z_target_;
+
+        q_target_.value()[0].head<3>() = q_base_target;
 
         const quat_t q_quat(q.segment<QUAT_VARS>(POS_VARS));
         vector3_t euler_angles = q_quat.toRotationMatrix().eulerAngles(2, 1, 0);
