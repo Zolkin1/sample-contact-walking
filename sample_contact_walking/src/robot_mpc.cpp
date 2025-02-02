@@ -524,7 +524,7 @@ namespace robot
                 //     std::lock_guard<std::mutex> lock(polytope_mutex_);
                 //     mpc_->UpdateContactSchedule(contact_schedule_); // TODO: Need to do this at the same time as the reference generation
                 // }
-                AddPeriodicContacts();   // Don't use when getting CS from the other node
+                // AddPeriodicContacts();   // Don't use when getting CS from the other node
                 
                 
                 // ----- Read in state ----- //
