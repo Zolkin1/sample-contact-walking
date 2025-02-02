@@ -18,7 +18,7 @@ solver_settings:
 # HPIPM:
   mode: Balance #Balance #Balance #Speed #Robust #Balance -- To get a success the best chance is with Robust and give more iterations
   alpha_min: 1e-8
-  max_iter: 20 #14 #10 #15 #15 #10
+  max_iter: 10 #15 #20 #20 #14 #10 #15 #15 #10
   mu0: 1 #1 #20 #10 #100
   tol_stat: 1e-8 #1e-8
   tol_eq: 1e-8
@@ -88,17 +88,17 @@ costs:
       # 2, 2, 2,
       # 5, 5, 5,
       # 10, 10, 10,
-      250.5, 250.5, 25.5, # 5.5, 5.5, 5.5
+      350.5, 350.5, 25.5, # 5.5, 5.5, 5.5
       # W/ ref:
       # .7, .7, .001,          # FL
       # .7, .7, .001,          # FR
       # .7, .7, .001,          # RL
       # .7, .7, .001,]          # RR
       # # W/o ref
-      2.5, 1, .001,          # FL
-      2.5, 1, .001,          # FR
-      2.5, 1, .001,          # RL
-      2.5, 1, .001,]          # RR
+      2, 1, .001,          # FL
+      2, 1, .001,          # FR
+      2, 1, .001,          # RL
+      2, 1, .001,]          # RR
   - type: VelocityTracking
     name: "VelocityTracking"
     weight: [2, 2, 5, #2, 2, 3,
@@ -130,7 +130,7 @@ costs:
   - type: ForwardKinematics
     name: "FL_foot_fk"
     frame: "FL_foot"
-    weight: [.1, .1, 1] #TODO: Adding this has a minimal effect
+    weight: [1, 1, 1] #TODO: Adding this has a minimal effect
   - type: ForwardKinematics
     name: "FR_foot_fk"
     frame: "FR_foot"
