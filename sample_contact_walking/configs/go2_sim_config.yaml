@@ -119,7 +119,8 @@ onboard:
         first_swing_time: 0.1
         right_foot_frames: ["RL_foot", "FR_foot"]
         left_foot_frames: ["FL_foot", "RR_foot"]
-        foot_offsets: [-0.2234, 0.142, 0.1934, -0.142, 0.1934, 0.142, -0.2234, -0.142]
+        # foot_offsets: [-0.2234, 0.142, 0.1934, -0.142, 0.1934, 0.142, -0.2234, -0.142]
+        foot_offsets: [-0.3234, 0.142, 0.034, -0.142, 0.034, 0.142, -0.3234, -0.142]
         num_nodes: 32   # Should match the MPC
         node_group_1_n: 5
         node_group_2_n: 27
@@ -229,8 +230,8 @@ onboard:
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: go2_model
-          model_xml_path: go2_scene.xml
-          # model_xml_path: go2_tile_scene.xml
+          # model_xml_path: go2_scene.xml
+          model_xml_path: go2_tile_scene.xml
           # model_xml_path: go2_tile2_scene.xml
           n_u: 36
           time_step: 0.001
