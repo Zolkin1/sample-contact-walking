@@ -19,6 +19,8 @@
 
 #include "sample_contact_msgs/msg/commanded_target.hpp"
 
+#include "torc_timer.h"
+
 // TODO:
 //  - Check for paths first relative to $SAMPLE_WALKING_ROOT then as a global path
 //  - Add ROS diagonstic messages: https://docs.foxglove.dev/docs/visualization/panels/diagnostics#diagnosticarray
@@ -59,6 +61,9 @@ namespace robot
                     "contact_schedule_sub_setting", "contact_schedule_sub",
                     std::bind(&MpcController::ContactScheduleCallback, this, std::placeholders::_1));
 
+        this->declare_parameter("robot_type", -1);
+
+
         //  Update model
         this->declare_parameter<std::string>("urdf_path", "");
         std::filesystem::path urdf_path(this->get_parameter("urdf_path").as_string());
@@ -89,15 +94,17 @@ namespace robot
         // ---------- Constraints ---------- //
         // torc::models::FullOrderRigidBody mpc_model_temp(model_name, "/home/zolkin/torc/tests/test_data/g1_hand.urdf", mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values);
         // Dynamics //
-        std::vector<torc::mpc::DynamicsConstraint> dynamics_constraints;
-        dynamics_constraints.emplace_back(mpc_model_temp, mpc_settings_->contact_frames, "robot_full_order",
+        // ---------- Full Order Dynamics ---------- //
+        torc::mpc::DynamicsConstraint dynamics_constraint(mpc_model_temp, mpc_settings_->contact_frames, model_name + "_robot_full_order",
             mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, true, 0, mpc_settings_->nodes_full_dynamics);
 
-        dynamics_constraints.emplace_back(mpc_model_temp, mpc_settings_->contact_frames, "robot_centroidal", mpc_settings_->deriv_lib_path,
-            mpc_settings_->compile_derivs, false, mpc_settings_->nodes_full_dynamics, mpc_settings_->nodes);
+        // ---------- Centroidal Dynamics ---------- //
+        torc::mpc::CentroidalDynamicsConstraint centroidal_dynamics(mpc_model_temp, mpc_settings_->contact_frames, model_name + "_robot_centroidal",
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->nodes_full_dynamics, mpc_settings_->nodes); // 0, mpc_settings_->nodes
 
-        torc::mpc::SRBConstraint srb_dynamics(mpc_settings_->nodes_full_dynamics, mpc_settings_->nodes,
-             model_name + "robot_srb",
+        // ---------- SRB Dynamics ---------- //
+        torc::mpc::SRBConstraint srb_dynamics(mpc_settings_->nodes_full_dynamics - 100, mpc_settings_->nodes, // 0 - 100, mpc_settings_->nodes - 100,
+             model_name + "_robot_srb",
             mpc_settings_->contact_frames, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_model_temp, mpc_settings_->q_target);
 
         // Box constraints // 
@@ -191,8 +198,9 @@ namespace robot
         mpc_ = std::make_shared<torc::mpc::HpipmMpc>(mpc_settings_temp, mpc_model_temp);
         std::cout << "===== MPC Created =====" << std::endl;
 
-        mpc_->SetDynamicsConstraints(std::move(dynamics_constraints));
-        mpc_->SetSrbConstraint(std::move(srb_dynamics));
+        mpc_->SetDynamicsConstraints(std::move(dynamics_constraint));
+        mpc_->SetCentroidalDynamicsConstraints(std::move(centroidal_dynamics));
+        // mpc_->SetSrbConstraint(std::move(srb_dynamics));
         mpc_->SetConfigBox(config_box);
         mpc_->SetVelBox(vel_box);
         mpc_->SetTauBox(tau_box);
@@ -207,7 +215,7 @@ namespace robot
         mpc_->SetTauTrackingCost(std::move(tau_tracking));
         mpc_->SetForceTrackingCost(std::move(force_tracking));
         mpc_->SetConfigTrackingCost(std::move(config_tracking));
-        mpc_->SetFowardKinematicsCost(std::move(fk_cost));
+        mpc_->SetFowardKinematicsCost(std::move(fk_cost));  // TODO: Fix for biped
         std::cout << "===== MPC Costs Added =====" << std::endl;
 
         // torc::mpc::SimpleTrajectory q_target(mpc_model_->GetConfigDim(), mpc_settings_->nodes);
@@ -438,6 +446,9 @@ namespace robot
         static bool first_loop = true;
         auto prev_time = this->now();
 
+        torc::utils::TORCTimer setup_timer;
+        torc::utils::TORCTimer mpc_timer;
+
         while (true) {
             // Start the timer
             auto start_time = this->now();
@@ -483,6 +494,7 @@ namespace robot
                     prev_time = this->now();
                 }
 
+                setup_timer.Tic();
                 // Shift the contact schedule
                 {
                     std::lock_guard<std::mutex> lock(polytope_mutex_);
@@ -507,12 +519,12 @@ namespace robot
                     UpdateContactPolytopes();
                 } 
                 
-                // // ----- No Reference ----- //
+                // ----- No Reference ----- //
                 // {
                 //     std::lock_guard<std::mutex> lock(polytope_mutex_);
                 //     mpc_->UpdateContactSchedule(contact_schedule_); // TODO: Need to do this at the same time as the reference generation
                 // }
-                // AddPeriodicContacts();   // Don't use when getting CS from the other node
+                AddPeriodicContacts();   // Don't use when getting CS from the other node
                 
                 
                 // ----- Read in state ----- //
@@ -569,10 +581,13 @@ namespace robot
                     // mpc_->SetVelTarget(v_ref);
                     mpc_->SetForwardKinematicsTarget(contact_foot_pos);
                 }
+                setup_timer.Toc();
 
+                mpc_timer.Tic();
                 double time = this->now().seconds();
                 // ---- Solve MPC ----- //
                 mpc_->Compute(q, v, traj_mpc_);
+                // mpc_->Compute(q, v, traj_mpc_); // TODO: Remove after debugging
                 {
                     // Get the traj mutex to protect it
                     std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -581,6 +596,7 @@ namespace robot
                     // Assign start time too
                     traj_start_time_ = time;
                 }
+                mpc_timer.Toc();
 
                 // Verify trajectory
                 // Verify forces
@@ -624,6 +640,11 @@ namespace robot
 
             // Compute difference
             const long time_left = mpc_loop_rate_ns - (stop_time - start_time).nanoseconds();
+            if ((stop_time - start_time).nanoseconds()*1e-6 > 100) {
+                std::cerr << "MPC Setup: " << setup_timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
+                std::cerr << "MPC Compute + Copy: " << mpc_timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
+                throw std::runtime_error("MPC computation took longer than 100ms!");
+            }
             // std::cout << "MPC Loop time (ms): " << static_cast<double>((stop_time - start_time).nanoseconds())/1e6 << std::endl;
             if (time_left > 0) {
                 while ((-(this->now() - start_time).nanoseconds() + mpc_loop_rate_ns) > 0) {}
@@ -675,6 +696,21 @@ namespace robot
                     if (tau.size() == 0) {
                         tau = traj_out_.GetTau(traj_out_.GetNumNodes()-1);
                     }
+
+                    std::vector<torc::models::ExternalForce<double>> f_ext;
+                    for (const auto& frame : mpc_settings_->contact_frames) {
+                        vector3_t F;
+                        traj_out_.GetForceInterp(time_into_traj, frame, F);
+                        f_ext.emplace_back(frame, F);
+                    }
+
+                    // // Centroidal ID
+                    // vectorx_t v2;
+                    // traj_out_.GetVelocityInterp(time_into_traj + 1e-8, v2);
+                    // vectorx_t a = (v2 - v)/1e-8;
+                    // // TODO: Move this
+                    // pinocchio::Data data(mpc_model_->GetModel());
+                    // tau = torc::models::InverseDynamics(mpc_model_->GetModel(), data, q, v, a, f_ext).tail(mpc_model_->GetVelDim() - 6);
                 }
             } else if (ctrl_state_ == SeekInitialCond) {
                 q = q_ic_;
@@ -1049,6 +1085,7 @@ namespace robot
     }
 
     void MpcController::PublishTrajStateViz() {
+        static int robot_type = this->get_parameter("robot_type").as_int();
         // ---------- Achilles ---------- //
         // std::lock_guard<std::mutex> lock(traj_out_mut_);
 
@@ -1109,26 +1146,115 @@ namespace robot
         //     this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
         // }
 
-        // ---------- Go2 ---------- //
-        // TODO: Consider putting back
-        // if (traj_start_time_ < 0) {
-        //     traj_start_time_ = this->get_clock()->now().seconds();
-        // }
+        if (robot_type == 0) {
+            // ---------- Go2 ---------- //
+            // TODO: Consider putting back
+            // if (traj_start_time_ < 0) {
+            //     traj_start_time_ = this->get_clock()->now().seconds();
+            // }
+            obelisk_estimator_msgs::msg::EstimatedState msg;
+
+            vectorx_t q = vectorx_t::Zero(mpc_model_->GetConfigDim());
+            vectorx_t v = vectorx_t::Zero(mpc_model_->GetVelDim());
+            double time = this->get_clock()->now().seconds();
+            {
+                std::lock_guard<std::mutex> lock(traj_out_mut_);
+                double time_into_traj = time - traj_start_time_;
+
+                // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
+                q = vectorx_t::Zero(model_->GetConfigDim());
+                v = vectorx_t::Zero(model_->GetVelDim());
+                if (GetState() == Mpc) {
+                    traj_out_.GetConfigInterp(time_into_traj, q);
+                    traj_out_.GetVelocityInterp(time_into_traj, v);
+                } else {
+                    q = q_ic_;
+                    v = v_ic_;
+                }
+            }
+
+            // traj_out_.GetConfigInterp(0.01, q);
+            msg.base_link_name = "torso";
+            vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
+            vectorx_t q_tail = q.tail(model_->GetNumInputs());
+            msg.q_base = torc::utils::EigenToStdVector(q_head);
+            msg.q_joints.resize(model_->GetNumInputs());
+            msg.v_joints.resize(model_->GetNumInputs());
+
+            msg.joint_names.resize(q_tail.size());
+            msg.joint_names[0] = "FL_hip_joint";
+            msg.joint_names[1] = "FR_hip_joint";
+            msg.joint_names[2] = "RL_hip_joint";
+            msg.joint_names[3] = "RR_hip_joint";
+            msg.joint_names[4] = "FL_thigh_joint";
+            msg.joint_names[5] = "FR_thigh_joint";
+            msg.joint_names[6] = "RL_thigh_joint";
+            msg.joint_names[7] = "RR_thigh_joint";
+            msg.joint_names[8] = "FL_calf_joint";
+            msg.joint_names[9] = "FR_calf_joint";
+            msg.joint_names[10] = "RL_calf_joint";
+            msg.joint_names[11] = "RR_calf_joint";
+
+            for (int i = 0; i < msg.joint_names.size(); i++) {
+                const auto idx = model_->GetJointID(msg.joint_names[i]);
+                if (idx.has_value()) {
+                    msg.q_joints[i] = q(5 + idx.value());
+                    if (4 + idx.value() > v.size()) {
+                        RCLCPP_ERROR_STREAM(this->get_logger(), "v idx out of bounds!");
+                    } else {
+                        msg.v_joints[i] = v(4 + idx.value());
+                    }
+                } else {
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Joint index not found!");
+                }
+            }
+
+            // traj_out_.GetVelocityInterp(0.01, v);
+            vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
+
+            // vectorx_t temp = vectorx_t::Zero(6);
+            msg.v_base = torc::utils::EigenToStdVector(v_head);
+
+            msg.header.stamp = this->now();
+
+            // RCLCPP_ERROR_STREAM(this->get_logger(), "Publishing state viz");
+            // std::cerr << "Here " << std::endl;
+
+            // if (!sim_ready_) {
+            this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
+            // }
+        } else if (robot_type == 1) {
+        // ---------- G1 ---------- //
+        // static int msg_counter = 0;
+        // if (msg_counter < 10) {
         obelisk_estimator_msgs::msg::EstimatedState msg;
 
         vectorx_t q = vectorx_t::Zero(mpc_model_->GetConfigDim());
         vectorx_t v = vectorx_t::Zero(mpc_model_->GetVelDim());
+
         double time = this->get_clock()->now().seconds();
+        // TODO: Do I need to use nanoseconds?
+        // double time_into_traj = 0.75;
         {
             std::lock_guard<std::mutex> lock(traj_out_mut_);
             double time_into_traj = time - traj_start_time_;
+            // RCLCPP_INFO_STREAM(this->get_logger(), "Time: " << time);
+            // RCLCPP_INFO_STREAM(this->get_logger(), "Traj start time: " << traj_start_time_);
+            // double time_into_traj = 0;
 
-            // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
-            q = vectorx_t::Zero(model_->GetConfigDim());
-            v = vectorx_t::Zero(model_->GetVelDim());
+            // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj)
             if (GetState() == Mpc) {
+                // RCLCPP_WARN_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
+                // TODO: Put back
                 traj_out_.GetConfigInterp(time_into_traj, q);
                 traj_out_.GetVelocityInterp(time_into_traj, v);
+
+                q.segment<4>(3).normalize();
+                if (std::abs(q.segment<4>(3).norm() - 1) > 1e-8) {
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "q: " << q.transpose());
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Setting the quaternion because it has 0 norm!");
+                    // throw std::runtime_error("[debug viz] quat has zero norm!");
+                }
             } else {
                 q = q_ic_;
                 v = v_ic_;
@@ -1136,7 +1262,7 @@ namespace robot
         }
 
         // traj_out_.GetConfigInterp(0.01, q);
-        msg.base_link_name = "torso";
+        msg.base_link_name = "pelvis";
         vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
         vectorx_t q_tail = q.tail(model_->GetNumInputs());
         msg.q_base = torc::utils::EigenToStdVector(q_head);
@@ -1144,21 +1270,68 @@ namespace robot
         msg.v_joints.resize(model_->GetNumInputs());
 
         msg.joint_names.resize(q_tail.size());
-        msg.joint_names[0] = "FL_hip_joint";
-        msg.joint_names[1] = "FR_hip_joint";
-        msg.joint_names[2] = "RL_hip_joint";
-        msg.joint_names[3] = "RR_hip_joint";
-        msg.joint_names[4] = "FL_thigh_joint";
-        msg.joint_names[5] = "FR_thigh_joint";
-        msg.joint_names[6] = "RL_thigh_joint";
-        msg.joint_names[7] = "RR_thigh_joint";
-        msg.joint_names[8] = "FL_calf_joint";
-        msg.joint_names[9] = "FR_calf_joint";
-        msg.joint_names[10] = "RL_calf_joint";
-        msg.joint_names[11] = "RR_calf_joint";
+        // Left Leg
+        msg.joint_names[0] = "left_hip_pitch_joint";
+        msg.joint_names[1] = "left_hip_roll_joint";
+        msg.joint_names[2] = "left_hip_yaw_joint";
+        msg.joint_names[3] = "left_knee_joint";
+        msg.joint_names[4] = "left_ankle_pitch_joint";
+        msg.joint_names[5] = "left_ankle_roll_joint";
+
+        // Right Leg
+        msg.joint_names[6] = "right_hip_pitch_joint";
+        msg.joint_names[7] = "right_hip_roll_joint";
+        msg.joint_names[8] = "right_hip_yaw_joint";
+        msg.joint_names[9] = "right_knee_joint";
+        msg.joint_names[10] = "right_ankle_pitch_joint";
+        msg.joint_names[11] = "right_ankle_roll_joint";
+
+        // Torso
+        msg.joint_names[12] = "waist_yaw_joint";
+        msg.joint_names[13] = "waist_roll_joint";
+        msg.joint_names[14] = "waist_pitch_joint";
+
+        // Left Arm
+        msg.joint_names[15] = "left_shoulder_pitch_joint";
+        msg.joint_names[16] = "left_shoulder_roll_joint";
+        msg.joint_names[17] = "left_shoulder_yaw_joint";
+        msg.joint_names[18] = "left_elbow_joint";
+        msg.joint_names[19] = "left_wrist_roll_joint";
+        msg.joint_names[20] = "left_wrist_pitch_joint";
+        msg.joint_names[21] = "left_wrist_yaw_joint";
+
+        // Left Hand
+        msg.joint_names[22] = "left_hand_thumb_0_joint";
+        msg.joint_names[23] = "left_hand_thumb_1_joint";
+        msg.joint_names[24] = "left_hand_thumb_2_joint";
+        msg.joint_names[25] = "left_hand_middle_0_joint";
+        msg.joint_names[26] = "left_hand_middle_1_joint";
+        msg.joint_names[27] = "left_hand_index_0_joint";
+        msg.joint_names[28] = "left_hand_index_1_joint";
+
+        // Right Arm
+        msg.joint_names[29] = "right_shoulder_pitch_joint";
+        msg.joint_names[30] = "right_shoulder_roll_joint";
+        msg.joint_names[31] = "right_shoulder_yaw_joint";
+        msg.joint_names[32] = "right_elbow_joint";
+        msg.joint_names[33] = "right_wrist_roll_joint";
+        msg.joint_names[34] = "right_wrist_pitch_joint";
+        msg.joint_names[35] = "right_wrist_yaw_joint";
+
+        // Right Hand
+        msg.joint_names[36] = "right_hand_thumb_0_joint";
+        msg.joint_names[37] = "right_hand_thumb_1_joint";
+        msg.joint_names[38] = "right_hand_thumb_2_joint";
+        msg.joint_names[39] = "right_hand_middle_0_joint";
+        msg.joint_names[40] = "right_hand_middle_1_joint";
+        msg.joint_names[41] = "right_hand_index_0_joint";
+        msg.joint_names[42] = "right_hand_index_1_joint";
+
+        const auto joint_skip_names = mpc_settings_->joint_skip_names;
+        const auto joint_skip_values = mpc_settings_->joint_skip_values;
 
         for (int i = 0; i < msg.joint_names.size(); i++) {
-            const auto idx = model_->GetJointID(msg.joint_names[i]);
+            const auto idx = mpc_model_->GetJointID(msg.joint_names[i]);
             if (idx.has_value()) {
                 msg.q_joints[i] = q(5 + idx.value());
                 if (4 + idx.value() > v.size()) {
@@ -1166,6 +1339,14 @@ namespace robot
                 } else {
                     msg.v_joints[i] = v(4 + idx.value());
                 }
+            } else if (std::find(joint_skip_names.begin(), joint_skip_names.end(), msg.joint_names[i]) != joint_skip_names.end()) {     // Check if the joint is a skipped joint
+                // Find the index
+                for (int skip_idx = 0; skip_idx < joint_skip_names.size(); skip_idx++) {
+                    if (joint_skip_names[skip_idx] == msg.joint_names[i]) {
+                        msg.q_joints[i] = joint_skip_values[skip_idx];
+                        break;
+                    }
+                } 
             } else {
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Joint index not found!");
             }
@@ -1179,154 +1360,14 @@ namespace robot
 
         msg.header.stamp = this->now();
 
-        // RCLCPP_ERROR_STREAM(this->get_logger(), "Publishing state viz");
-        // std::cerr << "Here " << std::endl;
-
         // if (!sim_ready_) {
         this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
         // }
-
-        // // ---------- G1 ---------- //
-        // // static int msg_counter = 0;
-        // // if (msg_counter < 10) {
-        // obelisk_estimator_msgs::msg::EstimatedState msg;
-
-        // vectorx_t q = vectorx_t::Zero(mpc_model_->GetConfigDim());
-        // vectorx_t v = vectorx_t::Zero(mpc_model_->GetVelDim());
-
-        // double time = this->get_clock()->now().seconds();
-        // // TODO: Do I need to use nanoseconds?
-        // // double time_into_traj = 0.75;
-        // {
-        //     std::lock_guard<std::mutex> lock(traj_out_mut_);
-        //     double time_into_traj = time - traj_start_time_;
-        //     // RCLCPP_INFO_STREAM(this->get_logger(), "Time: " << time);
-        //     // RCLCPP_INFO_STREAM(this->get_logger(), "Traj start time: " << traj_start_time_);
-        //     // double time_into_traj = 0;
-
-        //     // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj)
-        //     if (GetState() == Mpc) {
-        //         // RCLCPP_WARN_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
-        //         // TODO: Put back
-        //         traj_out_.GetConfigInterp(time_into_traj, q);
-        //         traj_out_.GetVelocityInterp(time_into_traj, v);
-
-        //         q.segment<4>(3).normalize();
-        //         if (std::abs(q.segment<4>(3).norm() - 1) > 1e-8) {
-        //             RCLCPP_ERROR_STREAM(this->get_logger(), "q: " << q.transpose());
-        //             RCLCPP_ERROR_STREAM(this->get_logger(), "Setting the quaternion because it has 0 norm!");
-        //             // throw std::runtime_error("[debug viz] quat has zero norm!");
-        //         }
-        //     } else {
-        //         q = q_ic_;
-        //         v = v_ic_;
-        //     }
         // }
-
-        // // traj_out_.GetConfigInterp(0.01, q);
-        // msg.base_link_name = "pelvis";
-        // vectorx_t q_head = q.head<FLOATING_POS_SIZE>();
-        // vectorx_t q_tail = q.tail(model_->GetNumInputs());
-        // msg.q_base = torc::utils::EigenToStdVector(q_head);
-        // msg.q_joints.resize(model_->GetNumInputs());
-        // msg.v_joints.resize(model_->GetNumInputs());
-
-        // msg.joint_names.resize(q_tail.size());
-        // // Left Leg
-        // msg.joint_names[0] = "left_hip_pitch_joint";
-        // msg.joint_names[1] = "left_hip_roll_joint";
-        // msg.joint_names[2] = "left_hip_yaw_joint";
-        // msg.joint_names[3] = "left_knee_joint";
-        // msg.joint_names[4] = "left_ankle_pitch_joint";
-        // msg.joint_names[5] = "left_ankle_roll_joint";
-
-        // // Right Leg
-        // msg.joint_names[6] = "right_hip_pitch_joint";
-        // msg.joint_names[7] = "right_hip_roll_joint";
-        // msg.joint_names[8] = "right_hip_yaw_joint";
-        // msg.joint_names[9] = "right_knee_joint";
-        // msg.joint_names[10] = "right_ankle_pitch_joint";
-        // msg.joint_names[11] = "right_ankle_roll_joint";
-
-        // // Torso
-        // msg.joint_names[12] = "waist_yaw_joint";
-        // msg.joint_names[13] = "waist_roll_joint";
-        // msg.joint_names[14] = "waist_pitch_joint";
-
-        // // Left Arm
-        // msg.joint_names[15] = "left_shoulder_pitch_joint";
-        // msg.joint_names[16] = "left_shoulder_roll_joint";
-        // msg.joint_names[17] = "left_shoulder_yaw_joint";
-        // msg.joint_names[18] = "left_elbow_joint";
-        // msg.joint_names[19] = "left_wrist_roll_joint";
-        // msg.joint_names[20] = "left_wrist_pitch_joint";
-        // msg.joint_names[21] = "left_wrist_yaw_joint";
-
-        // // Left Hand
-        // msg.joint_names[22] = "left_hand_thumb_0_joint";
-        // msg.joint_names[23] = "left_hand_thumb_1_joint";
-        // msg.joint_names[24] = "left_hand_thumb_2_joint";
-        // msg.joint_names[25] = "left_hand_middle_0_joint";
-        // msg.joint_names[26] = "left_hand_middle_1_joint";
-        // msg.joint_names[27] = "left_hand_index_0_joint";
-        // msg.joint_names[28] = "left_hand_index_1_joint";
-
-        // // Right Arm
-        // msg.joint_names[29] = "right_shoulder_pitch_joint";
-        // msg.joint_names[30] = "right_shoulder_roll_joint";
-        // msg.joint_names[31] = "right_shoulder_yaw_joint";
-        // msg.joint_names[32] = "right_elbow_joint";
-        // msg.joint_names[33] = "right_wrist_roll_joint";
-        // msg.joint_names[34] = "right_wrist_pitch_joint";
-        // msg.joint_names[35] = "right_wrist_yaw_joint";
-
-        // // Right Hand
-        // msg.joint_names[36] = "right_hand_thumb_0_joint";
-        // msg.joint_names[37] = "right_hand_thumb_1_joint";
-        // msg.joint_names[38] = "right_hand_thumb_2_joint";
-        // msg.joint_names[39] = "right_hand_middle_0_joint";
-        // msg.joint_names[40] = "right_hand_middle_1_joint";
-        // msg.joint_names[41] = "right_hand_index_0_joint";
-        // msg.joint_names[42] = "right_hand_index_1_joint";
-
-        // const auto joint_skip_names = mpc_settings_->joint_skip_names;
-        // const auto joint_skip_values = mpc_settings_->joint_skip_values;
-
-        // for (int i = 0; i < msg.joint_names.size(); i++) {
-        //     const auto idx = mpc_model_->GetJointID(msg.joint_names[i]);
-        //     if (idx.has_value()) {
-        //         msg.q_joints[i] = q(5 + idx.value());
-        //         if (4 + idx.value() > v.size()) {
-        //             RCLCPP_ERROR_STREAM(this->get_logger(), "v idx out of bounds!");
-        //         } else {
-        //             msg.v_joints[i] = v(4 + idx.value());
-        //         }
-        //     } else if (std::find(joint_skip_names.begin(), joint_skip_names.end(), msg.joint_names[i]) != joint_skip_names.end()) {     // Check if the joint is a skipped joint
-        //         // Find the index
-        //         for (int skip_idx = 0; skip_idx < joint_skip_names.size(); skip_idx++) {
-        //             if (joint_skip_names[skip_idx] == msg.joint_names[i]) {
-        //                 msg.q_joints[i] = joint_skip_values[skip_idx];
-        //                 break;
-        //             }
-        //         } 
-        //     } else {
-        //         RCLCPP_ERROR_STREAM(this->get_logger(), "Joint index not found!");
-        //     }
-        // }
-
-        // // traj_out_.GetVelocityInterp(0.01, v);
-        // vectorx_t v_head = v.head<FLOATING_VEL_SIZE>();
-
-        // // vectorx_t temp = vectorx_t::Zero(6);
-        // msg.v_base = torc::utils::EigenToStdVector(v_head);
-
-        // msg.header.stamp = this->now();
-
-        // // if (!sim_ready_) {
-        // this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>("state_viz_pub")->publish(msg);
-        // // }
-        // // }
-        // // msg_counter++;
+        // msg_counter++;
+        } else {
+            throw std::runtime_error("Invalid robot type for PublishTrajStateViz!");
+        }
     }
 
     void MpcController::MakeTargetTorsoMocapTransform() {
@@ -1441,103 +1482,103 @@ namespace robot
     }
 
     void MpcController::ContactScheduleCallback(const sample_contact_msgs::msg::ContactSchedule& msg) {
-        RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Recieved first contact schedule.");
-        recieved_polytope_ = true;
-        std::lock_guard<std::mutex> lock(polytope_mutex_);
+        // RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Recieved first contact schedule.");
+        // recieved_polytope_ = true;
+        // std::lock_guard<std::mutex> lock(polytope_mutex_);
 
-        // // Grab the contact polytopes for the legs currently in swing (where they next land)
-        // std::map<std::string, torc::mpc::ContactInfo> swing_polys;
-        // for (const auto& [frame, swings] : contact_schedule_.GetScheduleMap()) {
-        //     for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-        //         if ((i > 0 && swings[i-1].first < 0 && swings[i-1].second > 0)) {
-        //             swing_polys.insert({frame, contact_schedule_.GetPolytopes(frame)[i]});
-        //         }
-        //     }
-        // }
+        // // // Grab the contact polytopes for the legs currently in swing (where they next land)
+        // // std::map<std::string, torc::mpc::ContactInfo> swing_polys;
+        // // for (const auto& [frame, swings] : contact_schedule_.GetScheduleMap()) {
+        // //     for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
+        // //         if ((i > 0 && swings[i-1].first < 0 && swings[i-1].second > 0)) {
+        // //             swing_polys.insert({frame, contact_schedule_.GetPolytopes(frame)[i]});
+        // //         }
+        // //     }
+        // // }
         
-        torc::mpc::ContactSchedule cs_temp = contact_schedule_; // Copy the contact schedule to hold onto the current polytopes
+        // torc::mpc::ContactSchedule cs_temp = contact_schedule_; // Copy the contact schedule to hold onto the current polytopes
 
-        // TODO: Consider removing if this doesn't work
-        contact_schedule_.CleanContacts(10);
+        // // TODO: Consider removing if this doesn't work
+        // contact_schedule_.CleanContacts(10);
 
-        for (const auto& contact_info : msg.contact_info) {
-            const std::string& frame = contact_info.robot_contact_frame;
+        // for (const auto& contact_info : msg.contact_info) {
+        //     const std::string& frame = contact_info.robot_contact_frame;
 
-            const auto& sched_map = contact_schedule_.GetScheduleMap();
-            if (sched_map.contains(frame)) {
-                // std::cout << "swing times size: " << contact_info.swing_times.size() << std::endl;
-                // TODO: Try Assigning the swing times from the command
-                for (int i = 0; i < contact_info.swing_times.size()/2; i++) {
-                    contact_schedule_.InsertSwing(frame, contact_info.swing_times.at(2*i), contact_info.swing_times.at(2*i + 1));
-                    // std::cout << "inserting a swing!" << std::endl;
-                }
+        //     const auto& sched_map = contact_schedule_.GetScheduleMap();
+        //     if (sched_map.contains(frame)) {
+        //         // std::cout << "swing times size: " << contact_info.swing_times.size() << std::endl;
+        //         // TODO: Try Assigning the swing times from the command
+        //         for (int i = 0; i < contact_info.swing_times.size()/2; i++) {
+        //             contact_schedule_.InsertSwing(frame, contact_info.swing_times.at(2*i), contact_info.swing_times.at(2*i + 1));
+        //             // std::cout << "inserting a swing!" << std::endl;
+        //         }
 
-                // std::cout << "Commanded swing times" << std::endl;
-                // for (int i = 0; i < contact_info.swing_times.size(); i++) {
-                //     std::cout << "i: " << i << ", swing times: " << contact_info.swing_times[i] << std::endl;
-                // }
-                // std::cout << "Current swing times" << std::endl;
-                // for (int i = 0; i < sched_map.at(frame).size(); i++) {
-                //     std::cout << "i: " << i << ", swing times: " << sched_map.at(frame)[i].first << ", " << sched_map.at(frame)[i].second << std::endl;
-                // }
+        //         // std::cout << "Commanded swing times" << std::endl;
+        //         // for (int i = 0; i < contact_info.swing_times.size(); i++) {
+        //         //     std::cout << "i: " << i << ", swing times: " << contact_info.swing_times[i] << std::endl;
+        //         // }
+        //         // std::cout << "Current swing times" << std::endl;
+        //         // for (int i = 0; i < sched_map.at(frame).size(); i++) {
+        //         //     std::cout << "i: " << i << ", swing times: " << sched_map.at(frame)[i].first << ", " << sched_map.at(frame)[i].second << std::endl;
+        //         // }
 
-                if (contact_schedule_.GetNumContacts(frame) != contact_info.swing_times.size()/2 + 1) {
-                    std::cerr << "cs contact num: " << contact_schedule_.GetNumContacts(frame) << std::endl;
-                    std::cerr << "ci contact num: " << contact_info.swing_times.size()/2 + 1 << std::endl;
-                    throw std::runtime_error("Contacts not moved correctly!");
-                }
+        //         if (contact_schedule_.GetNumContacts(frame) != contact_info.swing_times.size()/2 + 1) {
+        //             std::cerr << "cs contact num: " << contact_schedule_.GetNumContacts(frame) << std::endl;
+        //             std::cerr << "ci contact num: " << contact_info.swing_times.size()/2 + 1 << std::endl;
+        //             throw std::runtime_error("Contacts not moved correctly!");
+        //         }
 
-                // Extract contact polytopes
-                for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-                    // Only update the polytope if we haven't started the swing - may want to allow part of the swing
+        //         // Extract contact polytopes
+        //         for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
+        //             // Only update the polytope if we haven't started the swing - may want to allow part of the swing
 
-                    const auto& swings = contact_schedule_.GetScheduleMap().at(frame);
+        //             const auto& swings = contact_schedule_.GetScheduleMap().at(frame);
 
                    
-                    auto polytope = contact_info.polytopes.back();
-                    if (i < contact_info.polytopes.size()) {
-                        polytope = contact_info.polytopes[i];
-                    } 
+        //             auto polytope = contact_info.polytopes.back();
+        //             if (i < contact_info.polytopes.size()) {
+        //                 polytope = contact_info.polytopes[i];
+        //             } 
 
-                    std::vector<double> a_mat = polytope.a_mat;
+        //             std::vector<double> a_mat = polytope.a_mat;
 
-                    Eigen::Map<matrixx_t> A(a_mat.data(), 2, 2);
-                    Eigen::Vector4d b(polytope.b_vec.data());
-                    if (i < contact_schedule_.GetPolytopes(frame).size()) {
-                        contact_schedule_.SetPolytope(frame, i, A, b);
-                    }
-                }
+        //             Eigen::Map<matrixx_t> A(a_mat.data(), 2, 2);
+        //             Eigen::Vector4d b(polytope.b_vec.data());
+        //             if (i < contact_schedule_.GetPolytopes(frame).size()) {
+        //                 contact_schedule_.SetPolytope(frame, i, A, b);
+        //             }
+        //         }
 
-                // Reset any polytopes that were changed for the currently in swing feet
-                for (const auto& frame : mpc_settings_->contact_frames) {
-                    if (cs_temp.InSwing(frame, 0)) {
+        //         // Reset any polytopes that were changed for the currently in swing feet
+        //         for (const auto& frame : mpc_settings_->contact_frames) {
+        //             if (cs_temp.InSwing(frame, 0)) {
 
-                        double swing_dur = cs_temp.GetSwingDuration(frame, 0);
-                        double swing_start = cs_temp.GetSwingStartTime(frame, 0);
-                        int temp_idx = cs_temp.GetContactIndex(frame, swing_start + swing_dur + 0.01);
+        //                 double swing_dur = cs_temp.GetSwingDuration(frame, 0);
+        //                 double swing_start = cs_temp.GetSwingStartTime(frame, 0);
+        //                 int temp_idx = cs_temp.GetContactIndex(frame, swing_start + swing_dur + 0.01);
     
-                        double time = 0;
-                        if (contact_schedule_.InSwing(frame, 0)) {
-                            swing_dur = contact_schedule_.GetSwingDuration(frame, 0);
-                            swing_start = contact_schedule_.GetSwingStartTime(frame, 0);
-                            time = swing_start + swing_dur + 0.01;
-                        }
-                        int contact_idx = contact_schedule_.GetContactIndex(frame, time);
-                        contact_schedule_.SetPolytope(frame, contact_idx, cs_temp.GetPolytopes(frame)[temp_idx].A_, cs_temp.GetPolytopes(frame)[temp_idx].b_);
-                    } else if (contact_schedule_.InContact(frame, 0)) {
-                        // Don't change the polytope of the current contact
-                        int old_idx = cs_temp.GetContactIndex(frame, 0);
-                        int contact_idx = contact_schedule_.GetContactIndex(frame, 0);
-                        contact_schedule_.SetPolytope(frame, contact_idx, cs_temp.GetPolytopes(frame)[old_idx].A_,
-                            cs_temp.GetPolytopes(frame)[old_idx].b_);
+        //                 double time = 0;
+        //                 if (contact_schedule_.InSwing(frame, 0)) {
+        //                     swing_dur = contact_schedule_.GetSwingDuration(frame, 0);
+        //                     swing_start = contact_schedule_.GetSwingStartTime(frame, 0);
+        //                     time = swing_start + swing_dur + 0.01;
+        //                 }
+        //                 int contact_idx = contact_schedule_.GetContactIndex(frame, time);
+        //                 contact_schedule_.SetPolytope(frame, contact_idx, cs_temp.GetPolytopes(frame)[temp_idx].A_, cs_temp.GetPolytopes(frame)[temp_idx].b_);
+        //             } else if (contact_schedule_.InContact(frame, 0)) {
+        //                 // Don't change the polytope of the current contact
+        //                 int old_idx = cs_temp.GetContactIndex(frame, 0);
+        //                 int contact_idx = contact_schedule_.GetContactIndex(frame, 0);
+        //                 contact_schedule_.SetPolytope(frame, contact_idx, cs_temp.GetPolytopes(frame)[old_idx].A_,
+        //                     cs_temp.GetPolytopes(frame)[old_idx].b_);
 
-                    }
-                }
-                // std::cout << "done with " << frame << std::endl;
-            } else {
-                RCLCPP_ERROR_STREAM(this->get_logger(), frame << " is not a valid frame for the MPC contacts.");
-            }
-        }
+        //             }
+        //         }
+        //         // std::cout << "done with " << frame << std::endl;
+        //     } else {
+        //         RCLCPP_ERROR_STREAM(this->get_logger(), frame << " is not a valid frame for the MPC contacts.");
+        //     }
+        // }
     }
 
     void MpcController::JoystickCallback(const sensor_msgs::msg::Joy& msg) {
@@ -1625,7 +1666,7 @@ namespace robot
             for (int i = 0; i < v_target_.value().GetNumNodes(); i++) {
                 // TODO: Add some kind of "damping" so the target velocity doesnt change too much
                 v_target_.value()[i](0) = msg.axes[LEFT_JOY_VERT];
-                v_target_.value()[i](1) = msg.axes[LEFT_JOY_HORZ];
+                v_target_.value()[i](1) = msg.axes[LEFT_JOY_HORZ] * 0.1;
             }
             
             // TODO: Add a angular velocity target too using the right joystick

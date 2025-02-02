@@ -1,6 +1,6 @@
 general_settings:
   nodes: 32
-  verbose: False #True
+  verbose: True #True
   node_dt_type: two_groups # Even, two_groups, Adaptive
   node_group_1_n: 5
   node_group_2_n: 27
@@ -11,7 +11,7 @@ general_settings:
   scale_cost: False
   max_initial_solves: 20
   initial_constraint_tol: 5e-4
-  nodes_full_dynamics: 15 #15 #3 #4   # TODO: Why does it get worse with less full dynamics? Seems likea frame issue
+  nodes_full_dynamics: 10 #4 #15 #3 #4   # TODO: Why does it get worse with less full dynamics? Seems likea frame issue
   delay_prediction_dt: 0
   terminal_cost_weight: 20 #10 #2 #2 #10
 solver_settings:
@@ -21,10 +21,10 @@ solver_settings:
 # - For robust with lots of iterations I need pred_corr turned off, but when I have balance with even moderate iterations (15) it can (and should) be on
 # - mu0 around 1-5 seems best for the timing I'm looking at
 # - Even with balance, too many iterations causes issues
-  mode: Speed #Robust #Speed #Robust #Balance -- To get a success the best chance is with Robust and give more iterations
+  mode: Balance #Robust #Speed #Robust #Balance -- To get a success the best chance is with Robust and give more iterations
   alpha_min: 1e-8
   max_iter: 10 #8 #10 #7 #10 #30 #7 #8 # With 30 and robust I am having a ahrd time getting it to work
-  mu0: 1 #5 #1 #100
+  mu0: 10 #5 #1 #100
   tol_stat: 1e-8
   tol_eq: 1e-8
   tol_comp: 1e-8
@@ -34,6 +34,7 @@ solver_settings:
   pred_corr: 1 # I thought turning this off was critical, but maybe not (?)
   ric_alg: 1
   split_step: 0 #1 #0
+  # No Sim decent preformance: Speed, 10 iters, mu0: 1
 # OSQP
   # rel_tol: 1e-3
   # abs_tol: 1e-3
@@ -46,9 +47,9 @@ solver_settings:
   # max_iter: 20 #50 #50 #20 Increasing this definetly helps 40-60 seems like a good balance
   # scaling: 10 # Solve gets faster as scaling goes down, but also the quality gets worse. There is a balance
 constraints:
-  friction_coef: 0.6 #0.7  # TODO: Tune this
+  friction_coef: 0.5 #0.6 #0.7  # TODO: Tune this
   friction_margin: 2
-  max_grf: 500 #8000
+  max_grf: 800 #500 #8000
   collisions:
     - frame1: "left_toe"
       frame2: "right_toe"
@@ -74,17 +75,19 @@ constraints:
       frame2: "waist_support_link"
       radius1: 0.06
       radius2: 0.06
-  swing_start_node: 2
+  swing_start_node: 1 #2
   swing_end_node: 32
   holonomic_start_node: 1 
   holonomic_end_node: 31
   collision_start_node: 2
   collision_end_node: 32
+  polytope_start_node: 2
+  polytope_end_node: 32
 costs:
 # NOTE: The resulting behaviour is suprisingly sensitive
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    weight:  [3, 3, 10, #2, 2, 5,  #15, 
+    weight:  [3, 3, 100, #2, 2, 5,  #15, 
               # 4, 4, 4,
               2, 2, 2,
               0.05, 1, 2, 0.01, 1, #1,         # Left Leg
@@ -124,11 +127,12 @@ costs:
             0.01, 0.01, 0.01, 0.01,]                          # Right Arm
   - type: ForceRegularization
     name: "ForceReg"
-    # weight: [0.005, 0.005, 0.001]
-    # weight: [0.02, 0.02, 0.001]
-    weight: [0.01, 0.01, 0.001]
-    # weight: [0.02, 0.02, 0.0002]
-    # weight: [0.2, 0.2, 0.1]
+    # weight: [0.01, 0.01, 0.001]
+    weight: [0.001, 0.001, 0.0001]
+  - type: ForwardKinematics
+    name: "left_toe_fk"
+    frame: "left_toe"
+    weight: [2, 2, 1]
   # - type: FootPolytope
   #   name: "left_toe_polytope"
   #   weight: [1, 1, 1, 1]

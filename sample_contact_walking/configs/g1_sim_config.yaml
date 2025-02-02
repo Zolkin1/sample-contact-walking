@@ -6,6 +6,7 @@ onboard:
       params_path: /home/zolkin/sample-contact-walking/sample_contact_walking/configs/g1_mpc_config.yaml
       params:
         urdf_path: /home/zolkin/sample-contact-walking/g1_model/urdf/g1_hand.urdf
+        robot_type: 1
         robot_name: "g1"
 # ---------- Viz ---------- #
         viz_frames: ["pelvis", "left_toe", "left_heel", "right_toe", "right_heel"]
@@ -23,7 +24,7 @@ onboard:
         max_mpc_solves: -25 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.4 #0.4 #0.25
-        first_swing_time: 200. #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
+        first_swing_time: 2. #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -102,7 +103,7 @@ onboard:
       subscribers:
         # Estimated state subscriber
         - ros_parameter: sub_est_setting
-          topic: /obelisk/g1/est_state # est_state, target_state
+          topic: /obelisk/g1/target_state # est_state, target_state
           history_depth: 10
           callback_group: estimation_cbg
           non_obelisk: False
@@ -136,7 +137,7 @@ onboard:
         left_foot_frames: ["left_toe", "left_heel"]
         foot_offsets: [0.145, 0.1164, -0.025, 0.1164, 0.145, -0.1164, -0.025, -0.1164]
         num_nodes: 32   # Should match the MPC
-        node_group_1_n: 5
+        node_group_1_n: 5s
         node_group_2_n: 27
         node_dt_1: 0.015 #0.015
         node_dt_2: 0.025
@@ -151,7 +152,7 @@ onboard:
           callback_group: None
       subscribers:
         - ros_parameter: sub_est_setting
-          topic: /obelisk/g1/est_state # est_state, target_state
+          topic: /obelisk/g1/target_state # est_state, target_state
           msg_type: EstimatedState
           key: "est_state_sub"
           history_depth: 10
@@ -163,6 +164,11 @@ onboard:
           key: "joystick_sub"
           history_depth: 10
           callback_group: None
+        # Commanded Target
+        - ros_parameter: commanded_target_setting
+          topic: /obelisk/g1/commanded_target
+          msg_type: CommandedTarget
+          key: "command_sub"
       timers:
         # Contact planning timer
         - ros_parameter: timer_ctrl_setting
