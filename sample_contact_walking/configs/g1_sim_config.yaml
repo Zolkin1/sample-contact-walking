@@ -21,10 +21,10 @@ onboard:
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
         mpc_loop_period_sec: 0.01 #0.01 #0.013 #0.01 # Can run closer to 8-9 ms now
-        max_mpc_solves: -25 #125 
+        max_mpc_solves: 10000000 #40 #125 
 # ---------- Contact schedule ---------- #
-        swing_time: 0.4 #0.4 #0.25
-        first_swing_time: 2. #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
+        swing_time: 0.4 #0.25
+        first_swing_time: .5 #0.5 #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -49,11 +49,11 @@ onboard:
         #             0, 0, 0, 0,
         #             0, 0, 0, 0,]
         # TODO: Remove these
-        mpc_ic_config: [0, 0, 0.77, 
+        mpc_ic_config: [0, 0, 0.75, 
                         0, 0, 0, 1,
                         # 0, 0, 0.707106781, 0.707106781, # TODO: Fix the frame issue
-                        -0.3, 0, 0, 0.52, -0.23, #0,
-                        -0.3, 0, 0, 0.52, -0.23, #0,
+                        -0.34, 0, 0, 0.72, -0.4, #0,
+                        -0.34, 0, 0, 0.72, -0.4, #0,
                         # 0, 0, 0,
                         0, 0.27, 0, 0.9,
                         0, -0.27, 0, 0.9]
@@ -131,13 +131,13 @@ onboard:
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4"]
       # ----- Swing Timing Paramers ---- #
       # WARNING!! THESE MUST MATCH THE CORRESPONDING PARAMETERS ABOVE
-        first_step_time: 0.1 #2.
+        first_step_time: 2. #0.5
         swing_time: 0.4
         right_foot_frames: ["right_toe", "right_heel"]
         left_foot_frames: ["left_toe", "left_heel"]
         foot_offsets: [0.145, 0.1164, -0.025, 0.1164, 0.145, -0.1164, -0.025, -0.1164]
         num_nodes: 32   # Should match the MPC
-        node_group_1_n: 5s
+        node_group_1_n: 5
         node_group_2_n: 27
         node_dt_1: 0.015 #0.015
         node_dt_2: 0.025
@@ -189,7 +189,7 @@ onboard:
           non_obelisk: False
       timers:
         - ros_parameter: timer_est_setting
-          timer_period_sec: 0.002
+          timer_period_sec: 0.001
           callback_group: None
       subscribers:
       # ---------- Joint Encoders ---------- #
@@ -258,7 +258,7 @@ onboard:
           sensor_settings:
           # ---------- Joint Encoders ---------- #
           - topic: /obelisk/g1/joint_encoders
-            dt: 0.002
+            dt: 0.001
             msg_type: ObkJointEncoders
             sensor_names:
             # ---------- Joint Positions ---------- #
@@ -363,7 +363,7 @@ onboard:
               right_hand_index_1_joint_vel_sensor: jointvel
           # ---------- Base IMU ---------- #
           - topic: /obelisk/g1/torso_imu
-            dt: 0.002
+            dt: 0.001
             msg_type: ObkImu
             sensor_names:
               imu_acc_sensor: accelerometer
@@ -371,7 +371,7 @@ onboard:
               imu_quat_sensor: framequat
           # ---------- Mocap ---------- #
           - topic: /obelisk/g1/torso_pose
-            dt: 0.002
+            dt: 0.001
             msg_type: ObkFramePose
             sensor_names:
               base_mocap_pos_sensor: framepos

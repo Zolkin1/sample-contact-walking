@@ -11,6 +11,7 @@
 
 #include "full_order_mpc.h"
 #include "hpipm_mpc.h"
+#include "wbc_controller.h"
 // #include "cross_entropy.h"
 
 namespace robot {
@@ -60,6 +61,7 @@ namespace robot {
             // Helpers
             void ConvertEigenToStd(const vectorx_t& eig_vec, std::vector<double>& std_vec);
             vectorx_t ConvertControlToMujocoU(const vectorx_t& pos_target, const vectorx_t& vel_target, const vectorx_t& feed_forward);
+            // std::pair<vectorx_t, vectorx_t> ReduceState(const vectorx_t& q, const vectorx_t& v, torc::models::FullOrderRigidBody model);
 
             // Viz
             void PublishTrajViz(const torc::mpc::Trajectory& traj, const std::vector<std::string>& viz_frames);
@@ -145,16 +147,21 @@ namespace robot {
             // std::shared_ptr<torc::mpc::FullOrderMpc> mpc_;
             std::unique_ptr<torc::models::FullOrderRigidBody> model_;               // Full model
             std::unique_ptr<torc::models::FullOrderRigidBody> mpc_model_;           // Potentially reduced model for the MPC
+            std::unique_ptr<torc::models::FullOrderRigidBody> wbc_model_;           // Potentially reduced model for the MPC
             torc::mpc::ContactSchedule contact_schedule_;
+
+            std::unique_ptr<torc::controller::WbcController> wbc_controller_;
 
             std::unique_ptr<torc::mpc::ReferenceGenerator> ref_gen_;
 
             std::shared_ptr<torc::mpc::MpcSettings> mpc_settings_;
+            std::shared_ptr<torc::controller::WbcSettings> wbc_settings_;
             std::shared_ptr<torc::mpc::HpipmMpc> mpc_;
 
             // MPC Skipped joint indexes
             // TODO: Find a better way to do this
-            std::vector<long int> skipped_joint_indexes_;
+            std::vector<long int> mpc_skipped_joint_indexes_;
+            std::vector<long int> wbc_skipped_joint_indexes_;
 
             // Threads
             std::thread mpc_thread_;

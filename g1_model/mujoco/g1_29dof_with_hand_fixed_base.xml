@@ -15,54 +15,54 @@ Position and velocity actuators added. -->
     <!-- ############## -->
     <!-- Hip Pitch -->
     <default class="hip_pitch_pos">
-      <position kp="200" ctrllimited="false"/>
-      <!-- <position kp="0" ctrllimited="false"/> -->
+      <!-- <position kp="200" ctrllimited="false"/> -->
+      <position kp="0" ctrllimited="false"/>
     </default>
     <default class="hip_pitch_vel">
-      <position kv="6" ctrllimited="false"/>
-      <!-- <position kv="0" ctrllimited="false"/> -->
+      <!-- <position kv="4" ctrllimited="false"/> -->
+      <position kv="0" ctrllimited="false"/>
     </default>
 
     <!-- Hip Roll -->
     <default class="hip_roll_pos">
-      <position kp="100" ctrllimited="false"/>
-      <!-- <position kp="0" ctrllimited="false"/> -->
+      <!-- <position kp="120" ctrllimited="false"/> -->
+      <position kp="0" ctrllimited="false"/>
     </default>
     <default class="hip_roll_vel">
-      <position kv="3" ctrllimited="false"/>
-      <!-- <position kv="0" ctrllimited="false"/> -->
+      <!-- <position kv="2" ctrllimited="false"/> -->
+      <position kv="0" ctrllimited="false"/>
     </default>
 
     <!-- Hip Yaw -->
     <default class="hip_yaw_pos">
-      <position kp="100" ctrllimited="false"/>
-      <!-- <position kp="0" ctrllimited="false"/> -->
+      <!-- <position kp="120" ctrllimited="false"/> -->
+      <position kp="0" ctrllimited="false"/>
     </default>
     <default class="hip_yaw_vel">
-      <position kv="2" ctrllimited="false"/>
-      <!-- <position kv="0" ctrllimited="false"/> -->
+      <!-- <position kv="2" ctrllimited="false"/> -->
+      <position kv="0" ctrllimited="false"/>
     </default>
 
     <!-- Knee -->
     <default class="knee_pos">
-      <position kp="120" ctrllimited="false"/>
+      <!-- <position kp="200" ctrllimited="false"/> -->
       <!-- 270 -->
-      <!-- <position kp="0" ctrllimited="false"/> -->
+      <position kp="0" ctrllimited="false"/>
     </default>
     <default class="knee_vel">
-      <position kv="4" ctrllimited="false"/>
+      <!-- <position kv="4" ctrllimited="false"/> -->
       <!-- 4 -->
-      <!-- <position kv="0" ctrllimited="false"/> -->
+      <position kv="0" ctrllimited="false"/>
     </default>
 
     <!-- Ankle Pitch -->
     <default class="ankle_pitch_pos">
-      <position kp="50" ctrllimited="false"/>
-      <!-- <position kp="0" ctrllimited="false"/> -->
+      <!-- <position kp="80" ctrllimited="false"/> -->
+      <position kp="0" ctrllimited="false"/>
     </default>
     <default class="ankle_pitch_vel">
-      <position kv="2" ctrllimited="false"/>
-      <!-- <position kv="0" ctrllimited="false"/> -->
+      <!-- <position kv="2" ctrllimited="false"/> -->
+      <position kv="0" ctrllimited="false"/>
     </default>
 
     <!-- Ankle Roll -->
@@ -106,33 +106,41 @@ Position and velocity actuators added. -->
     <!-- Shoulder Pitch -->
     <default class="shoulder_pitch_pos">
       <position kp="100" ctrllimited="false"/>
+      <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="shoulder_pitch_vel">
       <position kv="2" ctrllimited="false"/>
+          <!-- <position kv="0" ctrllimited="false"/> -->
     </default>
 
     <!-- Shoulder Roll -->
     <default class="shoulder_roll_pos">
       <position kp="100" ctrllimited="false"/>
+      <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="shoulder_roll_vel">
       <position kv="2" ctrllimited="false"/>
+      <!-- <position kv="0" ctrllimited="false"/> -->
     </default>
 
     <!-- Shoulder Yaw -->
     <default class="shoulder_yaw_pos">
       <position kp="100" ctrllimited="false"/>
+      <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="shoulder_yaw_vel">
       <position kv="2" ctrllimited="false"/>
+      <!-- <position kv="0" ctrllimited="false"/> -->
     </default>
 
     <!-- Elbow -->
     <default class="elbow_pos">
       <position kp="100" ctrllimited="false"/>
+        <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="elbow_vel">
       <position kv="2" ctrllimited="false"/>
+          <!-- <position kv="0" ctrllimited="false"/> -->
     </default>
 
     <!-- Wrist Roll -->
@@ -285,7 +293,10 @@ Position and velocity actuators added. -->
     </asset>
 
   <worldbody>
-    <body name="pelvis" pos="0 0 0.74">
+    <light pos="1 0 3.5" dir="0 0 -1" directional="true"/>
+    <!-- <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/> -->
+
+    <body name="pelvis" pos="0 0 0.75">
         <inertial pos="0 0 -0.07605" quat="1 0 -0.000399148 0" mass="3.813" diaginertia="0.010549 0.0093089 0.0079184"/>
         <site name="torso_mocap_site" pos="0 0 0" euler="0 0 0"/>
         <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.2 0.2 0.2 1" mesh="pelvis"/>
@@ -942,15 +953,15 @@ Position and velocity actuators added. -->
             0 0 0 0 0 0 0
             0 0 0 0 0 0 0"/> -->
     <key name="standing" 
-      qpos="-0.5 0 0 0.72 -0.23 0
-            -0.5 0 0 0.72 -0.23 0
+      qpos="-0.34 0 0 0.72 -0.4 0
+            -0.34 0 0 0.72 -0.4 0
             0 0 0.03
             0 0.27 0 0.9 0 0 0
             0 0 0 0 0 0 0
             0 -0.27 0 0.9 0 0 0
             0 0 0 0 0 0 0"
-      ctrl="-0.5 0 0 0.72 -0.23 0
-            -0.5 0 0 0.72 -0.23 0
+      ctrl="-0.34 0 0 0.72 -0.4 0
+            -0.34 0 0 0.72 -0.4 0
             0 0 0
             0 0.27 0 0.9 0 0 0
             0 0 0 0 0 0 0
