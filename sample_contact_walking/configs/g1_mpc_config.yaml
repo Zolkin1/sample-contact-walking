@@ -1,11 +1,11 @@
 general_settings:
-  nodes: 20 #32
+  nodes: 25 #32
   verbose: False #True
   node_dt_type: two_groups # Even, two_groups, Adaptive
   node_group_1_n: 5
-  node_group_2_n: 15 #5 #27
+  node_group_2_n: 20 #5 #27
   node_dt_1: 0.015
-  node_dt_2: 0.03 #0.05 #0.03 #0.025
+  node_dt_2: 0.025 #0.05 #0.03 #0.025
   compile_derivatives: False #True
   base_frame: "pelvis"
   scale_cost: False
@@ -13,19 +13,13 @@ general_settings:
   initial_constraint_tol: 5e-4
   nodes_full_dynamics: 10 #19 #19 #10 #19 #25 #15 #10 #20 #4 #15 #3 #4   # TODO: Why does it get worse with less full dynamics? Seems likea frame issue
   delay_prediction_dt: 0
-  terminal_cost_weight: 40 #10 #2 #2 #10
+  terminal_cost_weight: 60 #10 #2 #2 #10
 solver_settings:
-# HPIPM:
-# Some note: 
-# - Having a lower barrier seems to help significantly
-# - For robust with lots of iterations I need pred_corr turned off, but when I have balance with even moderate iterations (15) it can (and should) be on
-# - mu0 around 1-5 seems best for the timing I'm looking at
-# - Even with balance, too many iterations causes issues
-  mode: Balance #Speed -- To get a success the best chance is with Robust and give more iterations
+  mode: Speed #Speed -- To get a success the best chance is with Robust and give more iterations
   alpha_min: 1e-8
   max_iter: 10 #15 #10 #20 #8 #10 #7 #10 #30 #7 #8 # With 30 and robust I am having a ahrd time getting it to work
-  mu0: .1 #0.5 #.1 #1
-  tol_stat: 1e-4 #1e-8
+  mu0: 1 #0.5 #.1 #1
+  tol_stat: 1e-8 #1e-4 #1e-8
   tol_eq: 1e-8
   tol_comp: 1e-8
   tol_ineq: 1e-8
@@ -34,18 +28,6 @@ solver_settings:
   pred_corr: 1 # I thought turning this off was critical, but maybe not (?)
   ric_alg: 1
   split_step: 0 #1 #0
-  # No Sim decent preformance: Speed, 10 iters, mu0: 1
-# OSQP
-  # rel_tol: 1e-3
-  # abs_tol: 1e-3
-  # verbose: False
-  # polish: False
-  # rho: 0.01
-  # alpha: 1.6 # 1.6, 1.1
-  # sigma: 1e-6
-  # adaptive_rho: False
-  # max_iter: 20 #50 #50 #20 Increasing this definetly helps 40-60 seems like a good balance
-  # scaling: 10 # Solve gets faster as scaling goes down, but also the quality gets worse. There is a balance
 constraints:
   friction_coef: 0.5 #0.6 #0.7  # TODO: Tune this
   friction_margin: 2
@@ -78,7 +60,7 @@ constraints:
   swing_start_node: 3 #4 #2  # Making this > 2 makes us less senitive to bad tracking # Make 1 for centroidal
   swing_end_node: 32
   holonomic_start_node: 1 # Make 0 for centroidal 
-  holonomic_end_node: 19 #31
+  holonomic_end_node: 24 #31
   collision_start_node: 2
   collision_end_node: 32
   polytope_start_node: 2
@@ -93,10 +75,10 @@ costs:
               # 40, 40, 40,
               200, 200, 25,
               # 20, 20, 10,
-              0.5, 1, 2, 0.01, 1, 1,         # Left Leg
-              0.5, 1, 2, 0.01, 1, 1,         # Right Leg
-              # 1.5, 2, 2, .1, 1, 1,         # Left Leg
-              # 1.5, 2, 2, .1, 1, 1,         # Right Leg
+              # 0.5, 1, 2, 0.01, 1, 1,         # Left Leg
+              # 0.5, 1, 2, 0.01, 1, 1,         # Right Leg
+              1.5, 2, 2, .1, 1, 1,         # Left Leg
+              1.5, 2, 2, .1, 1, 1,         # Right Leg
               # 0.5, 0.5, 0.5, 0.5,      # Left Arm
               # 0.5, 0.5, 0.5, 0.5]      # Right Arm
               1, 1, 1, 1,      # Left Arm
@@ -118,8 +100,8 @@ costs:
     weight: [7, 7, 7, #3, 3, 3, #5, 
             # 5, 5, 5,
             15, 15, 15,
-            0.5, 1, 1, 0.1, 0.1, 0.1,         # Left Leg
-            0.5, 1, 1, 0.1, 0.1, 0.1,         # Right Leg
+            1.5, 1, 1, 0.1, 0.1, 0.1,         # Left Leg
+            1.5, 1, 1, 0.1, 0.1, 0.1,         # Right Leg
             # 1.5, 1, 1, 0.01, 1, 1,         # Left Leg
             # 1.5, 1, 1, 0.01, 1, 1,         # Right Leg
             # .5, 5, 5, 0.5, 5, #0.001,         # Left Leg
@@ -148,7 +130,7 @@ costs:
   - type: ForwardKinematics
     name: "left_heel_fk"
     frame: "left_heel"
-    weight: [1,1,10] #[10,10,10] #[.1,.1,1] #[1, 1, 200]   # TODO: Play with these weights more
+    weight: [0,0,10] #[10,10,10] #[.1,.1,1] #[1, 1, 200]   # TODO: Play with these weights more
   # ------------------------------ #
   # ----- Centroidal Weights ----- #
   # ------------------------------ #
