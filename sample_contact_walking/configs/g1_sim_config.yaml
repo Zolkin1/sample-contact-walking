@@ -24,7 +24,7 @@ onboard:
         max_mpc_solves: 5000000 #5 #40 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.4 #0.25
-        first_swing_time: .5 #0.5 #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
+        first_swing_time: .2 #0.5 #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -52,8 +52,8 @@ onboard:
         mpc_ic_config: [0, 0, 0.75, 
                         0, 0, 0, 1,
                         # 0, 0, 0.707106781, 0.707106781, # TODO: Fix the frame issue
-                        -0.34, 0, 0, 0.72, -0.4, 0,
-                        -0.34, 0, 0, 0.72, -0.4, 0,
+                        -0.42, 0, 0, 0.81, -0.4, 0,
+                        -0.42, 0, 0, 0.81, -0.4, 0,
                         # 0, 0, 0,
                         0, 0.27, 0, 0.9,
                         0, -0.27, 0, 0.9]

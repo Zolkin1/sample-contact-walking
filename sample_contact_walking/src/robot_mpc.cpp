@@ -541,7 +541,7 @@ namespace robot
 
                     // TODO: Put back
                     // double time = this->now().seconds();
-                    for (int i = 0; i < 10; i++) {   // TODO: If i run too many iterations of this then sometimes I get a quat normilazation error in the next loop
+                    for (int i = 0; i < 2; i++) {   // TODO: If i run too many iterations of this then sometimes I get a quat normilazation error in the next loop
                         mpc_->Compute(q, v, traj_mpc_);
                     }
                     double time = this->now().seconds();
@@ -794,19 +794,19 @@ namespace robot
                 throw std::runtime_error("Not a valid state!");
             }
 
-            if (recieved_first_state_) {
-                // Use WBC
-                // Get current state
-                vectorx_t q_est, v_est;
-                {
-                    std::lock_guard<std::mutex> lock(est_state_mut_);
-                    q_est = q_;
-                    v_est = v_;
-                }
-                // RCLCPP_WARN_STREAM(this->get_logger(), "Before control");
-                tau = wbc_controller_->ComputeControl(q_est, v_est, q, v, tau, F, in_contact);     
-                // RCLCPP_WARN_STREAM(this->get_logger(), "After control");           
-            }
+            // if (recieved_first_state_) {
+            //     // Use WBC
+            //     // Get current state
+            //     vectorx_t q_est, v_est;
+            //     {
+            //         std::lock_guard<std::mutex> lock(est_state_mut_);
+            //         q_est = q_;
+            //         v_est = v_;
+            //     }
+            //     // RCLCPP_WARN_STREAM(this->get_logger(), "Before control");
+            //     tau = wbc_controller_->ComputeControl(q_est, v_est, q, v, tau, F, in_contact);     
+            //     // RCLCPP_WARN_STREAM(this->get_logger(), "After control");           
+            // }
 
             // TODO: Remove
             // q = q_ic_;

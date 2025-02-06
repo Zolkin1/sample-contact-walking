@@ -1,19 +1,19 @@
 general_settings:
-  nodes: 25 #20 #32
+  nodes: 20 #32
   verbose: False #True
   node_dt_type: two_groups # Even, two_groups, Adaptive
   node_group_1_n: 5
-  node_group_2_n: 20 #15 #27
+  node_group_2_n: 15 #5 #27
   node_dt_1: 0.015
-  node_dt_2: 0.025 #0.05 #0.03 #0.025
+  node_dt_2: 0.03 #0.05 #0.03 #0.025
   compile_derivatives: False #True
   base_frame: "pelvis"
   scale_cost: False
   max_initial_solves: 20
   initial_constraint_tol: 5e-4
-  nodes_full_dynamics: 19 #19 #19 #10 #19 #25 #15 #10 #20 #4 #15 #3 #4   # TODO: Why does it get worse with less full dynamics? Seems likea frame issue
+  nodes_full_dynamics: 10 #19 #19 #10 #19 #25 #15 #10 #20 #4 #15 #3 #4   # TODO: Why does it get worse with less full dynamics? Seems likea frame issue
   delay_prediction_dt: 0
-  terminal_cost_weight: 20 #10 #2 #2 #10
+  terminal_cost_weight: 40 #10 #2 #2 #10
 solver_settings:
 # HPIPM:
 # Some note: 
@@ -24,11 +24,11 @@ solver_settings:
   mode: Balance #Speed -- To get a success the best chance is with Robust and give more iterations
   alpha_min: 1e-8
   max_iter: 10 #15 #10 #20 #8 #10 #7 #10 #30 #7 #8 # With 30 and robust I am having a ahrd time getting it to work
-  mu0: 1 #0.5 #.1 #1
+  mu0: .1 #0.5 #.1 #1
   tol_stat: 1e-4 #1e-8
-  tol_eq: 1e-4 #1e-8
-  tol_comp: 1e-4 #1e-8
-  tol_ineq: 1e-4 #1e-8
+  tol_eq: 1e-8
+  tol_comp: 1e-8
+  tol_ineq: 1e-8
   reg_prim: 1e-12 #1e-12
   warm_start: 0 #0
   pred_corr: 1 # I thought turning this off was critical, but maybe not (?)
@@ -49,16 +49,16 @@ solver_settings:
 constraints:
   friction_coef: 0.5 #0.6 #0.7  # TODO: Tune this
   friction_margin: 2
-  max_grf: 500 #8000
+  max_grf: 800 #500 #8000
   collisions:
     - frame1: "left_toe"
       frame2: "right_toe"
-      radius1: 0.05 #0.1 #0.13
-      radius2: 0.05 #0.1 #0.13
+      radius1: 0.05 #0.13
+      radius2: 0.05 #0.13
     - frame1: "left_heel"
       frame2: "right_heel"
-      radius1: 0.05 #0.1 #0.13
-      radius2: 0.05 #0.1 #0.13
+      radius1: 0.05 #0.13
+      radius2: 0.05 #0.13
     - frame1: "left_toe"
       frame2: "right_heel"
       radius1: 0.07
@@ -75,10 +75,10 @@ constraints:
       frame2: "waist_support_link"
       radius1: 0.06
       radius2: 0.06
-  swing_start_node: 4 #2  # Making this > 2 makes us less senitive to bad tracking # Make 1 for centroidal
+  swing_start_node: 3 #4 #2  # Making this > 2 makes us less senitive to bad tracking # Make 1 for centroidal
   swing_end_node: 32
   holonomic_start_node: 1 # Make 0 for centroidal 
-  holonomic_end_node: 24 #31
+  holonomic_end_node: 19 #31
   collision_start_node: 2
   collision_end_node: 32
   polytope_start_node: 2
@@ -89,14 +89,14 @@ costs:
   # ------------------------------ #
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    weight:  [10, 10, 50, #2, 2, 5,  #15, 
+    weight:  [5, 5, 25, #10, 10, 50, #2, 2, 5,  #15, 
               # 40, 40, 40,
               200, 200, 25,
               # 20, 20, 10,
               0.5, 1, 2, 0.01, 1, 1,         # Left Leg
               0.5, 1, 2, 0.01, 1, 1,         # Right Leg
-              # 2.5, 2, 2, .01, 1, 1,         # Left Leg
-              # 2.5, 2, 2, .01, 1, 1,         # Right Leg
+              # 1.5, 2, 2, .1, 1, 1,         # Left Leg
+              # 1.5, 2, 2, .1, 1, 1,         # Right Leg
               # 0.5, 0.5, 0.5, 0.5,      # Left Arm
               # 0.5, 0.5, 0.5, 0.5]      # Right Arm
               1, 1, 1, 1,      # Left Arm
@@ -115,11 +115,11 @@ costs:
     #       0.5, 0.5, 0.5, 0.5]      # Right Arm
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [5, 5, 5, #2, 2, 2, #3, 3, 3, #5, 
+    weight: [7, 7, 7, #3, 3, 3, #5, 
             # 5, 5, 5,
             15, 15, 15,
-            0.05, 1, 1, 0.01, 0.1, 0.1,         # Left Leg
-            0.05, 1, 1, 0.01, 0.1, 0.1,         # Right Leg
+            0.5, 1, 1, 0.1, 0.1, 0.1,         # Left Leg
+            0.5, 1, 1, 0.1, 0.1, 0.1,         # Right Leg
             # 1.5, 1, 1, 0.01, 1, 1,         # Left Leg
             # 1.5, 1, 1, 0.01, 1, 1,         # Right Leg
             # .5, 5, 5, 0.5, 5, #0.001,         # Left Leg
@@ -140,15 +140,15 @@ costs:
     #       0.01, 0.01, 0.01, 0.01,]                          # Right Arm
   - type: ForceRegularization
     name: "ForceReg"
-    # weight: [0.01, 0.01, 0.001]
-    weight: [0.00001, 0.00001, 0.0001]
+    weight: [0.01, 0.01, 0.001]
+    # weight: [0.00001, 0.00001, 0.0001]
   # ---------------------------------- #
   # ----- Frame Tracking Weights ----- #
   # ---------------------------------- #
   - type: ForwardKinematics
     name: "left_heel_fk"
     frame: "left_heel"
-    weight: [0,0,0] #[10,10,10] #[.1,.1,1] #[1, 1, 200]   # TODO: Play with these weights more
+    weight: [1,1,10] #[10,10,10] #[.1,.1,1] #[1, 1, 200]   # TODO: Play with these weights more
   # ------------------------------ #
   # ----- Centroidal Weights ----- #
   # ------------------------------ #
@@ -217,7 +217,7 @@ contacts:
   hip_offsets: [0.145, 0.1164, -0.025, 0.1164, 0.145, -0.1164, -0.025, -0.1164]
   apex_height: 0.08
   apex_time: 0.75
-  default_ground_height: 0.005
+  default_ground_height: 0. #0.005
 joint_defaults:
   joints: [ #"left_ankle_roll_joint", "right_ankle_roll_joint",
            "waist_yaw_joint", "waist_roll_joint", "waist_pitch_joint", 
@@ -247,11 +247,11 @@ line_search:
   alpha_step: 0.5 # Since the line search is high variance, lowering this helps
   armijo_constant: 1e-4
 targets:
-  q_target: [0, 0, 0.72, #0.75, #0.73, #0.77, #0.793, if the height is too high we get some singularity issues
+  q_target: [0, 0, 0.75, #0.73, #0.77, #0.793, if the height is too high we get some singularity issues
               # 0, 0, 0.707106781, 0.707106781,
               0, 0, 0, 1,
-             -0.34, 0, 0, 0.72, -0.4, 0,
-             -0.34, 0, 0, 0.72, -0.4, 0,
+             -0.42, 0, 0, 0.81, -0.4, 0,
+             -0.42, 0, 0, 0.81, -0.4, 0,
              0, 0.27, 0, 0.9,
              0, -0.27, 0, 0.9]
   v_target: [0, 0, 0,
@@ -261,7 +261,7 @@ targets:
              0, 0, 0, 0,
              0, 0, 0, 0,]
 wbc:
-  base_weight: [50., 50, 50, 50, 50, 50]
+  base_weight: [20., 20, 20, 50, 50, 50]
   # [100., 100, 100, 100, 100, 100]
   # base_weight: [0., 0, 0, 0, 0, 0]
   # joint_weight: [.01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01]
@@ -273,7 +273,7 @@ wbc:
   force_weight: [0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001]
                 #  0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001]
   # kp: [750., 750, 750, 250, 250, 250, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1]
-  kp: [500., 500, 500, 1550, 1550, 1550, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15]
+  kp: [750., 750, 750, 1550, 1550, 1550, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15]
   kd: [15., 15, 15, 18, 18, 18, 2, 2, 2, 2, .2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, .2, 2, 2, 2]
     #[40., 40, 40, 4, 4, 4, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
   verbose: False
@@ -282,21 +282,25 @@ wbc:
       weight: [100, 100, 100]
       # weight: [0, 0, 0]
       kp: [1000, 1000, 1000]
+      # kp: [500, 500, 500]
       kd: [15, 15, 15]
     - frame: "left_heel"
       weight: [100, 100, 100]
       # weight: [0, 0, 0]
       kp: [1000, 1000, 1000]
+      # kp: [500, 500, 500]
       kd: [15, 15, 15]
     - frame: "right_toe"
       weight: [100, 100, 100]
       # weight: [0, 0, 0]
       kp: [1000, 1000, 1000]
+      # kp: [500, 500, 500]
       kd: [15, 15, 15]
     - frame: "right_heel"
       weight: [100, 100, 100]
       # weight: [0, 0, 0]
       kp: [1000, 1000, 1000]
+      # kp: [500, 500, 500]
       kd: [15, 15, 15]
   skip_joints: ["waist_yaw_joint", "waist_roll_joint", "waist_pitch_joint", 
            "left_wrist_roll_joint", "left_wrist_pitch_joint", "left_wrist_yaw_joint",
