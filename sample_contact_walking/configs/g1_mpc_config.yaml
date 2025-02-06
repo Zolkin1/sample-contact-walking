@@ -1,17 +1,17 @@
 general_settings:
-  nodes: 64 #32
+  nodes: 25 #20 #32
   verbose: False #True
   node_dt_type: two_groups # Even, two_groups, Adaptive
   node_group_1_n: 5
-  node_group_2_n: 59 #27
+  node_group_2_n: 20 #15 #27
   node_dt_1: 0.015
-  node_dt_2: 0.025
+  node_dt_2: 0.025 #0.05 #0.03 #0.025
   compile_derivatives: False #True
   base_frame: "pelvis"
   scale_cost: False
   max_initial_solves: 20
   initial_constraint_tol: 5e-4
-  nodes_full_dynamics: 5 #19 #19 #10 #19 #25 #15 #10 #20 #4 #15 #3 #4   # TODO: Why does it get worse with less full dynamics? Seems likea frame issue
+  nodes_full_dynamics: 19 #19 #19 #10 #19 #25 #15 #10 #20 #4 #15 #3 #4   # TODO: Why does it get worse with less full dynamics? Seems likea frame issue
   delay_prediction_dt: 0
   terminal_cost_weight: 20 #10 #2 #2 #10
 solver_settings:
@@ -21,14 +21,14 @@ solver_settings:
 # - For robust with lots of iterations I need pred_corr turned off, but when I have balance with even moderate iterations (15) it can (and should) be on
 # - mu0 around 1-5 seems best for the timing I'm looking at
 # - Even with balance, too many iterations causes issues
-  mode: Robust #Balance #Speed #Balance #Robust #Speed #Robust #Balance -- To get a success the best chance is with Robust and give more iterations
+  mode: Balance #Speed -- To get a success the best chance is with Robust and give more iterations
   alpha_min: 1e-8
-  max_iter: 40 #16 #15 #10 #20 #8 #10 #7 #10 #30 #7 #8 # With 30 and robust I am having a ahrd time getting it to work
-  mu0: 100 #.1 #0.5 #.1 #1
-  tol_stat: 1e-8
-  tol_eq: 1e-8
-  tol_comp: 1e-8
-  tol_ineq: 1e-8
+  max_iter: 10 #15 #10 #20 #8 #10 #7 #10 #30 #7 #8 # With 30 and robust I am having a ahrd time getting it to work
+  mu0: 1 #0.5 #.1 #1
+  tol_stat: 1e-4 #1e-8
+  tol_eq: 1e-4 #1e-8
+  tol_comp: 1e-4 #1e-8
+  tol_ineq: 1e-4 #1e-8
   reg_prim: 1e-12 #1e-12
   warm_start: 0 #0
   pred_corr: 1 # I thought turning this off was critical, but maybe not (?)
@@ -53,12 +53,12 @@ constraints:
   collisions:
     - frame1: "left_toe"
       frame2: "right_toe"
-      radius1: 0.1 #0.13
-      radius2: 0.1 #0.13
+      radius1: 0.05 #0.1 #0.13
+      radius2: 0.05 #0.1 #0.13
     - frame1: "left_heel"
       frame2: "right_heel"
-      radius1: 0.1 #0.13
-      radius2: 0.1 #0.13
+      radius1: 0.05 #0.1 #0.13
+      radius2: 0.05 #0.1 #0.13
     - frame1: "left_toe"
       frame2: "right_heel"
       radius1: 0.07
@@ -75,14 +75,14 @@ constraints:
       frame2: "waist_support_link"
       radius1: 0.06
       radius2: 0.06
-  swing_start_node: 2  # Making this > 2 makes us less senitive to bad tracking # Make 1 for centroidal
-  swing_end_node: 64 #32
+  swing_start_node: 4 #2  # Making this > 2 makes us less senitive to bad tracking # Make 1 for centroidal
+  swing_end_node: 32
   holonomic_start_node: 1 # Make 0 for centroidal 
-  holonomic_end_node: 63 #31
+  holonomic_end_node: 24 #31
   collision_start_node: 2
-  collision_end_node: 64 #32
+  collision_end_node: 32
   polytope_start_node: 2
-  polytope_end_node: 64 #32
+  polytope_end_node: 32
 costs:
   # ------------------------------ #
   # ----- Full Order Weights ----- #
@@ -93,10 +93,10 @@ costs:
               # 40, 40, 40,
               200, 200, 25,
               # 20, 20, 10,
-              # 0.05, 1, 2, 0.01, 1, #1,         # Left Leg
-              # 0.05, 1, 2, 0.01, 1, #1,         # Right Leg
-              1., 2, 2, .01, 1, 1,         # Left Leg
-              1., 2, 2, .01, 1, 1,         # Right Leg
+              0.5, 1, 2, 0.01, 1, 1,         # Left Leg
+              0.5, 1, 2, 0.01, 1, 1,         # Right Leg
+              # 2.5, 2, 2, .01, 1, 1,         # Left Leg
+              # 2.5, 2, 2, .01, 1, 1,         # Right Leg
               # 0.5, 0.5, 0.5, 0.5,      # Left Arm
               # 0.5, 0.5, 0.5, 0.5]      # Right Arm
               1, 1, 1, 1,      # Left Arm
@@ -115,47 +115,48 @@ costs:
     #       0.5, 0.5, 0.5, 0.5]      # Right Arm
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [2, 2, 5, #2, 2, 2, #3, 3, 3, #5, 
+    weight: [5, 5, 5, #2, 2, 2, #3, 3, 3, #5, 
             # 5, 5, 5,
             15, 15, 15,
-            # 0.05, 1, 1, 0.01, 0.1, #0.001,         # Left Leg
-            # 0.05, 1, 1, 0.01, 0.1, #0.001,         # Right Leg
-            .1, 1, 1, 0.01, 1, 1,         # Left Leg
-            .1, 1, 1, 0.01, 1, 1,         # Right Leg
+            0.05, 1, 1, 0.01, 0.1, 0.1,         # Left Leg
+            0.05, 1, 1, 0.01, 0.1, 0.1,         # Right Leg
+            # 1.5, 1, 1, 0.01, 1, 1,         # Left Leg
+            # 1.5, 1, 1, 0.01, 1, 1,         # Right Leg
             # .5, 5, 5, 0.5, 5, #0.001,         # Left Leg
             # .5, 5, 5, 0.5, 5, #0.001,         # Right Leg
-            1.7, 1.7, 1.7, 1.7,
-            1.7, 1.7, 1.7, 1.7,]
+            0.7, 0.7, 0.7, 0.7,
+            0.7, 0.7, 0.7, 0.7,]
             # 0.3, 0.3, 0.3, 0.3,      # Left Arm
             # 0.3, 0.3, 0.3, 0.3]      # Right Arm
   - type: TorqueRegularization
     name: "TorqueReg"
-    # weight: [0.0001, 0.0001, 0.0001, 0.00001, 0.0001, #0.001,            # Left Leg
-    #         0.0001, 0.0001, 0.0001, 0.00001, 0.0001, #0.001,             # Right Leg
-    #         0.01, 0.01, 0.01, 0.01,                           # Left Arm
-    #         0.01, 0.01, 0.01, 0.01,]                          # Right Arm
-    weight: [0.001, 0.001, 0.001, 0.001, 0.001, 0.001,            # Left Leg
-          0.001, 0.001, 0.001, 0.001, 0.001, 0.001,             # Right Leg
-          0.01, 0.01, 0.01, 0.01,                           # Left Arm
-          0.01, 0.01, 0.01, 0.01,]                          # Right Arm
+    weight: [0.0001, 0.0001, 0.0001, 0.00001, 0.0001, 0.001,            # Left Leg
+            0.0001, 0.0001, 0.0001, 0.00001, 0.0001, 0.001,             # Right Leg
+            0.01, 0.01, 0.01, 0.01,                           # Left Arm
+            0.01, 0.01, 0.01, 0.01,]                          # Right Arm
+    # weight: [0.001, 0.001, 0.001, 0.001, 0.001, 0.001,            # Left Leg
+    #       0.001, 0.001, 0.001, 0.001, 0.001, 0.001,             # Right Leg
+    #       0.01, 0.01, 0.01, 0.01,                           # Left Arm
+    #       0.01, 0.01, 0.01, 0.01,]                          # Right Arm
   - type: ForceRegularization
     name: "ForceReg"
     # weight: [0.01, 0.01, 0.001]
-    weight: [0.001, 0.001, 0.001]
+    weight: [0.00001, 0.00001, 0.0001]
   # ---------------------------------- #
   # ----- Frame Tracking Weights ----- #
   # ---------------------------------- #
   - type: ForwardKinematics
     name: "left_heel_fk"
     frame: "left_heel"
-    weight: [1,1,1] #[10,10,10] #[.1,.1,1] #[1, 1, 200]   # TODO: Play with these weights more
+    weight: [0,0,0] #[10,10,10] #[.1,.1,1] #[1, 1, 200]   # TODO: Play with these weights more
   # ------------------------------ #
   # ----- Centroidal Weights ----- #
   # ------------------------------ #
   - type: CentroidalConfiguration
     name: "CentroidalConfig"
     weight:  [10, 10, 50, 
-              20, 20, 25,
+              # 20, 20, 25,
+              200, 200, 25,
               1, 2, 2, .1, 1, 1,         # Left Leg
               1, 2, 2, .1, 1, 1,         # Right Leg
               # 8, 20, 20, 1, 1, #1,         # Left Leg
@@ -246,7 +247,7 @@ line_search:
   alpha_step: 0.5 # Since the line search is high variance, lowering this helps
   armijo_constant: 1e-4
 targets:
-  q_target: [0, 0, 0.75, #0.73, #0.77, #0.793, if the height is too high we get some singularity issues
+  q_target: [0, 0, 0.72, #0.75, #0.73, #0.77, #0.793, if the height is too high we get some singularity issues
               # 0, 0, 0.707106781, 0.707106781,
               0, 0, 0, 1,
              -0.34, 0, 0, 0.72, -0.4, 0,
@@ -260,40 +261,40 @@ targets:
              0, 0, 0, 0,
              0, 0, 0, 0,]
 wbc:
-  base_weight: [50., 50, 50, 25, 25, 25]
+  base_weight: [50., 50, 50, 50, 50, 50]
   # [100., 100, 100, 100, 100, 100]
   # base_weight: [0., 0, 0, 0, 0, 0]
   # joint_weight: [.01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01]
   joint_weight: [.1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1]
   # joint_weight: [.0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0]
-  # [10., 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
+  # joint_weight: [10., 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
   tau_weight: [.01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01]
   # tau_weight: [.0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0]
   force_weight: [0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001]
                 #  0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001]
-  kp: [200., 200, 200, 250, 250, 250, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1]
-    #[25., 25, 25, 25, 25, 25, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 45, 45, 45, 45, 45, 45, 45, 45]
-  kd: [5., 5, 5, 8, 8, 8, .05, .05, .05, .05, .05, .05, .05, .05, .05, .05, .05, .05, .05, .05, .05, .05, .05, .05, .05, .05]
+  # kp: [750., 750, 750, 250, 250, 250, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1]
+  kp: [500., 500, 500, 1550, 1550, 1550, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15]
+  kd: [15., 15, 15, 18, 18, 18, 2, 2, 2, 2, .2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, .2, 2, 2, 2]
     #[40., 40, 40, 4, 4, 4, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
   verbose: False
   frame_tracking:
     - frame: "left_toe"
-      weight: [100, 100, 200]
+      weight: [100, 100, 100]
       # weight: [0, 0, 0]
       kp: [1000, 1000, 1000]
       kd: [15, 15, 15]
     - frame: "left_heel"
-      weight: [100, 100, 200]
+      weight: [100, 100, 100]
       # weight: [0, 0, 0]
       kp: [1000, 1000, 1000]
       kd: [15, 15, 15]
     - frame: "right_toe"
-      weight: [100, 100, 200]
+      weight: [100, 100, 100]
       # weight: [0, 0, 0]
       kp: [1000, 1000, 1000]
       kd: [15, 15, 15]
     - frame: "right_heel"
-      weight: [100, 100, 200]
+      weight: [100, 100, 100]
       # weight: [0, 0, 0]
       kp: [1000, 1000, 1000]
       kd: [15, 15, 15]

@@ -12,6 +12,8 @@ Position and velocity actuators added. -->
   <default>
     <default class="g1">
       <joint damping="2" armature="0.01" frictionloss="0.2"/>
+      <!-- <joint damping="1" armature="0.01" frictionloss="0.1"/> -->
+      <!-- <joint damping="0" armature="0.01" frictionloss="0.0"/> -->
     </default>
     <!-- ############## -->
     <!--   Leg Gains    -->
