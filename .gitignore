@@ -49,3 +49,4 @@ adcg_sources/
 contact_planning/contact_planning/__pycache__/
 
 trajectory_output.csv
+wbc_log_file.csv

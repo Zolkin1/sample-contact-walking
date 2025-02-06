@@ -96,11 +96,11 @@ namespace robot
         // Dynamics //
         // ---------- Full Order Dynamics ---------- //
         torc::mpc::DynamicsConstraint dynamics_constraint(mpc_model_temp, mpc_settings_->contact_frames, model_name + "_robot_full_order",
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, true, 0 - 100, mpc_settings_->nodes_full_dynamics - 100);
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, true, 0, mpc_settings_->nodes_full_dynamics + 100);
 
         // ---------- Centroidal Dynamics ---------- //
         torc::mpc::CentroidalDynamicsConstraint centroidal_dynamics(mpc_model_temp, mpc_settings_->contact_frames, model_name + "_robot_centroidal",
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->nodes_full_dynamics - 100, mpc_settings_->nodes); // 0, mpc_settings_->nodes
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->nodes_full_dynamics - 100, mpc_settings_->nodes - 100); // 0, mpc_settings_->nodes
         // ---------- SRB Dynamics ---------- //
         torc::mpc::SRBConstraint srb_dynamics(mpc_settings_->nodes_full_dynamics - 100, mpc_settings_->nodes - 100, // 0 - 100, mpc_settings_->nodes - 100,
              model_name + "_robot_srb",
@@ -390,6 +390,10 @@ namespace robot
         q_.resize(mpc_model_->GetConfigDim());
         v_.resize(mpc_model_->GetVelDim());
 
+        if (msg.joint_names.size() != msg.q_joints.size()) {
+            throw std::runtime_error("[UpdateXHat] msg is not self consistent!");
+        }
+
 
         // Configuration
         for (size_t i = 0; i < msg.q_base.size(); i++) {
@@ -401,9 +405,9 @@ namespace robot
             throw std::runtime_error("recieved q is not normalized!");
         }
 
-        for (size_t i = 0; i < msg.q_joints.size(); i++) {
-            q_(i + 7) = msg.q_joints[i];
-        }
+        // for (size_t i = 0; i < msg.q_joints.size(); i++) {
+        //     q_(i + 7) = msg.q_joints[i];
+        // }
 
         // Only receive the joints that we use in the MPC
         for (size_t i = 0; i < msg.q_joints.size(); i++) {
@@ -415,6 +419,7 @@ namespace robot
                 q_(joint_idx.value() - 2 + msg.q_base.size()) = msg.q_joints.at(i);     // Offset for the root and base joints
             } else if (!model_->GetJointID(msg.joint_names[i]).has_value()) {
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Joint " << msg.joint_names[i] << " not found in the full robot model!");
+                throw std::runtime_error("[UpdateXHat] Joint name not found!");
             }
         }
 
@@ -436,6 +441,7 @@ namespace robot
                 v_(joint_idx.value() - 2 + msg.v_base.size()) = msg.v_joints.at(i);     // Offset for the root and base joints
             } else if (!model_->GetJointID(msg.joint_names[i]).has_value()) {
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Joint " << msg.joint_names[i] << " not found in the full robot model!");
+                throw std::runtime_error("[UpdateXHat] Joint name not found!");
             }
         }
 
@@ -524,19 +530,21 @@ namespace robot
                         v = v_;
                     }
 
-                    // TODO: Remove
-                    q = q_ic_;
-                    v = v_ic_;
+                    // // TODO: Remove
+                    // q = q_ic_;
+                    // v = v_ic_;
                     // TODO: Fix the state for when we re-enter this loop
                     {
                         std::lock_guard<std::mutex> lock(polytope_mutex_);
                         mpc_->UpdateContactSchedule(contact_schedule_);  // TODO: There is an issue with polytopes here
                     }
 
-                    double time = this->now().seconds();
-                    for (int i = 0; i < 2; i++) {   // TODO: If i run too many iterations of this then sometimes I get a quat normilazation error in the next loop
+                    // TODO: Put back
+                    // double time = this->now().seconds();
+                    for (int i = 0; i < 10; i++) {   // TODO: If i run too many iterations of this then sometimes I get a quat normilazation error in the next loop
                         mpc_->Compute(q, v, traj_mpc_);
                     }
+                    double time = this->now().seconds();
                     {
                         // Get the traj mutex to protect it
                         std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -615,7 +623,6 @@ namespace robot
                 //     mpc_->GenerateCostReference(q, v, q_target_.value(), v_target_.value(), contact_schedule_);
                 // }
 
-                RCLCPP_WARN_STREAM(this->get_logger(), "HERE 4.");
                 // Reference generation
                 {
                     std::lock_guard<std::mutex> lock(polytope_mutex_);
@@ -737,8 +744,9 @@ namespace robot
                         vector3_t f_temp;
                         traj_out_.GetForceInterp(time_into_traj, mpc_settings_->contact_frames[i], f_temp);
                         F.segment<3>(3*i) = f_temp;
-                    }
 
+                        in_contact[i] = traj_out_.GetInContactInterp(time_into_traj, mpc_settings_->contact_frames[i]);
+                    }
                     
                     // This is a safety in case the interpolation time is too large
                     if (q.size() == 0) {
@@ -762,15 +770,13 @@ namespace robot
                     }
                 }
 
-
-                // Get contact status
-                {
-                    std::lock_guard<std::mutex> lock(polytope_mutex_);
-                    for (int i = 0; i < mpc_settings_->num_contact_locations; i++) {
-                        in_contact[i] = contact_schedule_.InContact(mpc_settings_->contact_frames[i], time_into_traj);
-                    }
-                }
-
+                // // Get contact status
+                // {
+                //     std::lock_guard<std::mutex> lock(polytope_mutex_);
+                //     for (int i = 0; i < mpc_settings_->num_contact_locations; i++) {
+                //         in_contact[i] = contact_schedule_.InContact(mpc_settings_->contact_frames[i], time_into_traj);
+                //     }
+                // }
             } else if (ctrl_state_ == SeekInitialCond) {
                 q = q_ic_;
                 v = v_ic_;
@@ -784,6 +790,8 @@ namespace robot
                 for (int i = 0; i < in_contact.size(); i++) {
                     in_contact[i] = true;
                 }
+            } else {
+                throw std::runtime_error("Not a valid state!");
             }
 
             if (recieved_first_state_) {
@@ -795,8 +803,9 @@ namespace robot
                     q_est = q_;
                     v_est = v_;
                 }
-
-                tau = wbc_controller_->ComputeControl(q_est, v_est, q, v, tau, F, in_contact);                
+                // RCLCPP_WARN_STREAM(this->get_logger(), "Before control");
+                tau = wbc_controller_->ComputeControl(q_est, v_est, q, v, tau, F, in_contact);     
+                // RCLCPP_WARN_STREAM(this->get_logger(), "After control");           
             }
 
             // TODO: Remove
@@ -805,28 +814,27 @@ namespace robot
             // tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
 
             // Check if we need to insert other elements into the targets
-            if (q.size() != model_->GetConfigDim()) {
-                const auto& joint_skip_values = mpc_settings_->joint_skip_values;
-                // TODO: Make this work for both MPC and WBC sizes!
-                std::vector<double> q_vec(q.data(), q.data() + q.size());
-                std::vector<double> v_vec(v.data(), v.data() + v.size());
-                std::vector<double> tau_vec(tau.data(), tau.data() + tau.size());
+            const auto& joint_skip_values = mpc_settings_->joint_skip_values;
+            // TODO: Make this work for both MPC and WBC sizes!
+            std::vector<double> q_vec(q.data(), q.data() + q.size());
+            std::vector<double> v_vec(v.data(), v.data() + v.size());
+            std::vector<double> tau_vec(tau.data(), tau.data() + tau.size());
 
-                for (int i = 0; i < mpc_skipped_joint_indexes_.size(); i++) {
-                    // TODO: Compute angle so that ankle is parallel to the ground
-                    q_vec.insert(q_vec.begin() + FLOATING_POS_SIZE + mpc_skipped_joint_indexes_[i], joint_skip_values[i]);
-                    v_vec.insert(v_vec.begin() + FLOATING_VEL_SIZE + mpc_skipped_joint_indexes_[i], 0);
-                    tau_vec.insert(tau_vec.begin() + mpc_skipped_joint_indexes_[i], 0);
-                }
-
-                Eigen::Map<Eigen::VectorXd> q_map(q_vec.data(), q_vec.size());
-                Eigen::Map<Eigen::VectorXd> v_map(v_vec.data(), v_vec.size());
-                Eigen::Map<Eigen::VectorXd> tau_map(tau_vec.data(), tau_vec.size());
-
-                q = q_map;
-                v = v_map;
-                tau = tau_map;
+            for (int i = 0; i < mpc_skipped_joint_indexes_.size(); i++) {
+                // TODO: Compute angle so that ankle is parallel to the ground
+                q_vec.insert(q_vec.begin() + FLOATING_POS_SIZE + mpc_skipped_joint_indexes_[i], joint_skip_values[i]);
+                v_vec.insert(v_vec.begin() + FLOATING_VEL_SIZE + mpc_skipped_joint_indexes_[i], 0);
+                tau_vec.insert(tau_vec.begin() + mpc_skipped_joint_indexes_[i], 0);
             }
+
+            Eigen::Map<Eigen::VectorXd> q_map(q_vec.data(), q_vec.size());
+            Eigen::Map<Eigen::VectorXd> v_map(v_vec.data(), v_vec.size());
+            Eigen::Map<Eigen::VectorXd> tau_map(tau_vec.data(), tau_vec.size());
+
+            q = q_map;
+            v = v_map;
+            tau = tau_map;
+            
 
             // Make the message
             vectorx_t u_mujoco = ConvertControlToMujocoU(q.tail(model_->GetNumInputs()),

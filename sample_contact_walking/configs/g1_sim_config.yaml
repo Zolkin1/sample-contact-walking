@@ -21,7 +21,7 @@ onboard:
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
         mpc_loop_period_sec: 0.01 #0.01 #0.013 #0.01 # Can run closer to 8-9 ms now
-        max_mpc_solves: 10000000 #40 #125 
+        max_mpc_solves: 5 #40 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.4 #0.25
         first_swing_time: .5 #0.5 #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
@@ -52,15 +52,15 @@ onboard:
         mpc_ic_config: [0, 0, 0.75, 
                         0, 0, 0, 1,
                         # 0, 0, 0.707106781, 0.707106781, # TODO: Fix the frame issue
-                        -0.34, 0, 0, 0.72, -0.4, #0,
-                        -0.34, 0, 0, 0.72, -0.4, #0,
+                        -0.34, 0, 0, 0.72, -0.4, 0,
+                        -0.34, 0, 0, 0.72, -0.4, 0,
                         # 0, 0, 0,
                         0, 0.27, 0, 0.9,
                         0, -0.27, 0, 0.9]
         mpc_ic_vel: [0., 0, 0, 
                     0, 0, 0,
-                    0, 0, 0, 0, 0, #0,
-                    0, 0, 0, 0, 0, #0,
+                    0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0,
                     # 0, 0, 0,
                     0, 0, 0, 0,
                     0, 0, 0, 0]
@@ -68,7 +68,7 @@ onboard:
         controller_target: True #True
 # ---------- Skip Indexes ---------- #
 # TODO: Find a better way to do this
-        skip_indexes: [5, 11,
+        skip_indexes: [ #5, 11,
                        12, 13, 14,
                        19, 20, 21,
                        22, 23, 24, 25, 26, 27, 28,
@@ -103,7 +103,7 @@ onboard:
       subscribers:
         # Estimated state subscriber
         - ros_parameter: sub_est_setting
-          topic: /obelisk/g1/target_state # est_state, target_state
+          topic: /obelisk/g1/est_state # est_state, target_state
           history_depth: 10
           callback_group: estimation_cbg
           non_obelisk: False
@@ -152,7 +152,7 @@ onboard:
           callback_group: None
       subscribers:
         - ros_parameter: sub_est_setting
-          topic: /obelisk/g1/target_state # est_state, target_state
+          topic: /obelisk/g1/est_state # est_state, target_state
           msg_type: EstimatedState
           key: "est_state_sub"
           history_depth: 10
