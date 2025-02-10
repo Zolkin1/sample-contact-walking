@@ -24,6 +24,7 @@ namespace robot {
     class MpcController : public obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState> {
         public:
             MpcController(const std::string& name);
+            ~MpcController();
 
             // ------ Mujoco Debug ----- //
             static MpcController* mujoco_sim_instance_;
@@ -62,6 +63,8 @@ namespace robot {
             void ConvertEigenToStd(const vectorx_t& eig_vec, std::vector<double>& std_vec);
             vectorx_t ConvertControlToMujocoU(const vectorx_t& pos_target, const vectorx_t& vel_target, const vectorx_t& feed_forward);
             // std::pair<vectorx_t, vectorx_t> ReduceState(const vectorx_t& q, const vectorx_t& v, torc::models::FullOrderRigidBody model);
+            void LogCurrentControl(const vectorx_t& q_control, const vectorx_t& v_control, const vectorx_t& tau, const vectorx_t& force);
+            void LogEigenVec(const vectorx_t& x);
 
             // Viz
             void PublishTrajViz(const torc::mpc::Trajectory& traj, const std::vector<std::string>& viz_frames);
@@ -169,6 +172,9 @@ namespace robot {
 
             // broadcasters
             std::shared_ptr<tf2_ros::StaticTransformBroadcaster> torso_mocap_broadcaster_;
+
+            double time_offset_;
+            std::ofstream log_file_;
     };
 
     MpcController* MpcController::mujoco_sim_instance_ = nullptr;
