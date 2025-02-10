@@ -20,19 +20,19 @@ general_settings:
 # ----------------------------- #
 # ------- Testing Params ------ #
 # ----------------------------- #
-  nodes: 25 #32
+  nodes: 32 #25 #32
   verbose: False 
   node_dt_type: two_groups # Even, two_groups, Adaptive
   node_group_1_n: 5
-  node_group_2_n: 20 #27
+  node_group_2_n: 27 #20 #27
   node_dt_1: 0.015 #0.005 #0.015
-  node_dt_2: 0.025 #0.05 #0.03 #0.025
+  node_dt_2: 0.03 #0.025 #0.05 #0.03 #0.025
   compile_derivatives: False
   base_frame: "pelvis"
   scale_cost: False
   max_initial_solves: 10
   initial_constraint_tol: 5e-4
-  nodes_full_dynamics: 20 #24 #15 #24 
+  nodes_full_dynamics: 25 #24 #15 #24 
   delay_prediction_dt: 0
   terminal_cost_weight: 60 
 solver_settings:
@@ -57,8 +57,8 @@ solver_settings:
 # ----------------------------- #
   mode: Speed
   alpha_min: 1e-8
-  max_iter: 15 #15
-  mu0: 10 #1 #100 #.1
+  max_iter: 10 #15 #15
+  mu0: 1 #10 #1 #100 #.1
   tol_stat: 1e-8
   tol_eq: 1e-8
   tol_comp: 1e-8
@@ -199,16 +199,16 @@ costs:
               # 20, 20, 10,
               # 0.5, 1, 2, 0.01, 1, 1,         # Left Leg
               # 0.5, 1, 2, 0.01, 1, 1,         # Right Leg
-              .5, 3, 3, .1, 2, #1,         # Left Leg
-              .5, 3, 3, .1, 2, #1,         # Right Leg
+              .1, 4, 3, .1, 2, #1,         # Left Leg
+              .1, 4, 3, .1, 2, #1,         # Right Leg
               1, 1, 1, 1,      # Left Arm
               1, 1, 1, 1]      # Right Arm
   - type: VelocityTracking
     name: "VelocityTracking"
     weight: [10, 10, 10, #3, 3, 3, #5, 
             15, 15, 15,
-            .1, 2, 2, 0.01, 0.5, #0.1,         # Left Leg
-            .1, 2, 2, 0.01, 0.5, #0.1,         # Right Leg
+            .01, 2, 2, 0.01, 0.5, #0.1,         # Left Leg
+            .01, 2, 2, 0.01, 0.5, #0.1,         # Right Leg
             # 1.5, 1, 1, 0.01, 1, 1,         # Left Leg
             # 1.5, 1, 1, 0.01, 1, 1,         # Right Leg
             0.7, 0.7, 0.7, 0.7,
@@ -225,15 +225,15 @@ costs:
     #       0.01, 0.01, 0.01, 0.01,]                          # Right Arm
   - type: ForceRegularization
     name: "ForceReg"
-    weight: [0.01, 0.01, 0.001]
-    # weight: [0.00001, 0.00001, 0.0001]
+    # weight: [0.01, 0.01, 0.001]
+    weight: [0.001, 0.001, 0.001]
   # ---------------------------------- #
   # ----- Frame Tracking Weights ----- #
   # ---------------------------------- #
   - type: ForwardKinematics
     name: "left_heel_fk"
     frame: "left_heel"
-    weight: [0,0,0] #[10,10,10] #[.1,.1,1] #[1, 1, 200]   # TODO: Play with these weights more
+    weight: [0,0,0] #[.1,.1,1] #[1, 1, 200]   # TODO: Play with these weights more
   # ------------------------------ #
   # ----- Centroidal Weights ----- #
   # ------------------------------ #

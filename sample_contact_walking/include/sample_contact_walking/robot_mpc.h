@@ -71,6 +71,9 @@ namespace robot {
             void PublishTrajStateViz();
             void MakeTargetTorsoMocapTransform();
 
+            void PreperationPhase();
+            void FeedbackPhase();
+
             // States
             enum ControllerState {
                 SeekInitialCond,

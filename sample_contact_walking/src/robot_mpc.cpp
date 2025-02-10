@@ -413,10 +413,6 @@ namespace robot
             throw std::runtime_error("recieved q is not normalized!");
         }
 
-        // for (size_t i = 0; i < msg.q_joints.size(); i++) {
-        //     q_(i + 7) = msg.q_joints[i];
-        // }
-
         // Only receive the joints that we use in the MPC
         for (size_t i = 0; i < msg.q_joints.size(); i++) {
             const auto joint_idx = mpc_model_->GetJointID(msg.joint_names[i]);
@@ -435,10 +431,6 @@ namespace robot
         for (size_t i = 0; i < msg.v_base.size(); i++) {
             v_(i) = msg.v_base.at(i);
         }
-
-        // for (size_t i = 0; i < msg.q_joints.size(); i++) {
-        //     v_(i + 6) = msg.v_joints[i];
-        // }
 
         for (size_t i = 0; i < msg.v_joints.size(); i++) {
             const auto joint_idx = mpc_model_->GetJointID(msg.joint_names[i]);
@@ -459,64 +451,14 @@ namespace robot
         }
     }
 
-    // std::pair<vectorx_t, vectorx_t> MpcController::ReduceState(const vectorx_t& q, const vectorx_t& v, torc::models::FullOrderRigidBody model) {
-    //     vectorx_t q_red;
-    //     vectorx_t v_red;
-
-    //     q_red.resize(model.GetConfigDim());
-    //     v_red.resize(model.GetVelDim());
-
-    //     q_red.head<7>() = q.head<7>();
-    //     v_red.head<6>() = v.head<6>(); 
-
-    //     const int num_joints = model_->GetVelDim() - 6;
-
-    //     // Configuration
-    //     for (size_t i = 0; i < num_joints; i++) {
-    //         const auto joint_idx = model.GetJointID(model_->GetModel().names[i + 2]);
-    //         if (joint_idx.has_value()) {
-    //             if (joint_idx.value() < 2) {
-    //                 RCLCPP_ERROR_STREAM(this->get_logger(), "Invalid joint name!");
-    //             }
-    //             q_red(joint_idx.value() - 2 + 7) = q(i + 7);     // Offset for the root and base joints
-    //         }
-    //     }
-
-    //     // Velocity
-    //     for (size_t i = 0; i < num_joints; i++) {
-    //         const auto joint_idx = model.GetJointID(model_->GetModel().names[i + 2]);
-    //         if (joint_idx.has_value()) {
-    //             if (joint_idx.value() < 2) {
-    //                 RCLCPP_ERROR_STREAM(this->get_logger(), "Invalid joint name!");
-    //             }
-    //             v_red(joint_idx.value() - 2 + 6) = v(i + 6);     // Offset for the root and base joints
-    //         }
-    //     }
-
-    //     return {q_red, v_red};
-    // }
-
     // Running the MPC in its own the thread seems to make the timing more consistent and overall faster
     // If I still need more, I can try to adjust the thread prio
     // Experimentally, note that the faster I run it, the more consistent (and faster, up to a limit) it is
     void MpcController::MpcThread() {
         const long mpc_loop_rate_ns = this->get_parameter("mpc_loop_period_sec").as_double()*1e9;
         RCLCPP_INFO_STREAM(this->get_logger(), "MPC loop period set to: " << mpc_loop_rate_ns << "ns.");
-
-        const long max_mpc_solves = this->get_parameter("max_mpc_solves").as_int();
         
-        // std::vector<double> stance_height(mpc_settings_->num_contact_locations);
-        // int frame_idx = 0;
-        // for (const auto& frame : mpc_settings_->contact_frames) {
-        //     stance_height[frame_idx] = this->get_parameter("default_stand_foot_height").as_double();
-        //     frame_idx++;
-        // }
-
         static bool first_loop = true;
-        auto prev_time = this->now();
-
-        torc::utils::TORCTimer setup_timer;
-        torc::utils::TORCTimer mpc_timer;
 
         while (true) {
             // Start the timer
@@ -547,8 +489,7 @@ namespace robot
                         mpc_->UpdateContactSchedule(contact_schedule_);  // TODO: There is an issue with polytopes here
                     }
 
-                    // TODO: Put back
-                    // double time = this->now().seconds();
+
                     for (int i = 0; i < 2; i++) {   // TODO: If i run too many iterations of this then sometimes I get a quat normilazation error in the next loop
                         mpc_->Compute(this->now().seconds() - time_offset_, q, v, traj_mpc_);
                     }
@@ -562,148 +503,21 @@ namespace robot
                         traj_start_time_ = time;
                     }
 
-                    prev_time = this->now();
-                }
-                setup_timer.Tic();
-                // Shift the contact schedule
-                {
-                    std::lock_guard<std::mutex> lock(polytope_mutex_);
-                    auto current_time = this->now();
-                    double time_shift_sec = (current_time - prev_time).nanoseconds()/1e9;
-                    // time_shift_sec = mpc_settings_->dt[0]; // TODO: Put back after debugging
-                    contact_schedule_.ShiftSwings(-time_shift_sec);    // TODO: Do I need a mutex on this later?
-                    next_left_insertion_time_ -= time_shift_sec;
-                    next_right_insertion_time_ -= time_shift_sec;
-                }
-                prev_time = this->now();
+                    // prev_time = this->now();
 
-                if (!recieved_polytope_) {
-                    UpdateContactPolytopes();
-                } 
-                
-                // ----- No Reference ----- //
-                {
-                    std::lock_guard<std::mutex> lock(polytope_mutex_);
-                    mpc_->UpdateContactSchedule(contact_schedule_); // TODO: Need to do this at the same time as the reference generation
-                }
-                AddPeriodicContacts();   // Don't use when getting CS from the other node
-                
-                
-                // ----- Read in state ----- //
-                // TODO: If statement is only here for when we remove sim
-                if (first_loop) {
                     first_loop = false;
-                } else {
-                    {
-                        // Get the mutex to protect the states
-                        std::lock_guard<std::mutex> lock(est_state_mut_);
-
-                        // Create current state
-                        q = q_;
-                        v = v_;
-                    }
-
-                    // TODO: Remove
-                    // TODO: Put back normal states
-                    // q = traj_mpc_.GetConfiguration(1);
-                    // v = traj_mpc_.GetVelocity(1);
-                }
-                q.segment<4>(3).normalize();
-                if (std::abs(q.segment<4>(3).norm() - 1) > 1e-8) {
-                    RCLCPP_ERROR_STREAM(this->get_logger(), "q: " << q.transpose());
-                    throw std::runtime_error("quat has zero norm!");
                 }
 
-                // ----- No Reference ----- //
-                if (!fixed_target_ || controller_target_) {
-                    UpdateMpcTargets(q);
-                    mpc_->SetConfigTarget(q_target_.value());
-                    mpc_->SetVelTarget(v_target_.value());
-                }
 
-                // // ----- Reference Generation ----- //
-                // // TODO: Unclear if this really provides a performance improvement as the stack works without it.
-                // UpdateMpcTargets(q);
-                // vectorx_t q_ref = q;
-                // q_ref(2) = z_target_;
-                // {
-                //     std::lock_guard<std::mutex> lock(polytope_mutex_);
-                //     mpc_->UpdateContactScheduleAndSwingTraj(contact_schedule_,
-                //         this->get_parameter("default_swing_height").as_double(),
-                //         stance_height,
-                //         this->get_parameter("apex_time").as_double());
-                //     // AddPeriodicContacts();   // Don't use when getting CS from the other node
-
-                //     mpc_->GenerateCostReference(q, v, q_target_.value(), v_target_.value(), contact_schedule_);
-                // }
-
-                // // Reference generation
-                // {
-                //     std::lock_guard<std::mutex> lock(polytope_mutex_);
-                //     mpc_->UpdateContactSchedule(contact_schedule_);
-                //     std::map<std::string, std::vector<torc::mpc::vector3_t>> contact_foot_pos;
-                //     const auto [q_ref, v_ref] = ref_gen_->GenerateReference(q, v, q_target_.value(), v_target_.value(), mpc_->GetSwingTrajectory(),
-                //         mpc_settings_->hip_offsets, contact_schedule_, contact_foot_pos);
-                //     // // TODO: Consider removing again
-                //     // mpc_->SetConfigTarget(q_ref);
-                //     // mpc_->SetVelTarget(v_ref);
-
-                //     mpc_->SetForwardKinematicsTarget(contact_foot_pos);
-                // }
-                setup_timer.Toc();
-
-                mpc_timer.Tic();
-
-                if (mpc_->GetSolveCounter() < max_mpc_solves) {
-                    // double time = this->now().seconds(); // TODO: Put back
-                    // ---- Solve MPC ----- //
-                    // double time = this->now().seconds();
-                    mpc_->Compute(this->now().seconds() - time_offset_, q, v, traj_mpc_);
-                    double time = this->now().seconds();    // TODO: Why is this better here???
-                    {
-                        // Get the traj mutex to protect it
-                        std::lock_guard<std::mutex> lock(traj_out_mut_);
-                        traj_out_ = traj_mpc_;
-
-                        // Assign start time too
-                        traj_start_time_ = time;
-                    }
-                }
-                mpc_timer.Toc();
-
-                // Verify trajectory
-                // Verify forces
-                // double check_time = 0;
-                // bool bad_force = false;
-                // for (int i = 0; i < mpc_settings_->nodes; i++) {
-                //     for (int j = 0; j < mpc_settings_->contact_frames.size(); j++) {
-                //         RCLCPP_INFO_STREAM(this->get_logger(), "[" << i << "], [" << mpc_settings_->contact_frames[j] << "], contact: " 
-                //         << contact_schedule_.InContact(mpc_settings_->contact_frames[j], check_time) << " Time: " << check_time << 
-                //             "Force: " << traj_mpc_.GetForce(i, mpc_settings_->contact_frames[j]).transpose());
-                //         // if (!contact_schedule_.InContact(mpc_settings_->contact_frames[j], check_time)) {
-                //         //     if (traj_mpc_.GetForce(i, mpc_settings_->contact_frames[j]).norm() > 5 &&  i != mpc_settings_->nodes - 1) {
-                //         //         RCLCPP_ERROR_STREAM(this->get_logger(), "Node: " << i << ", Time: " << check_time << 
-                //         //             ", Force: " << traj_mpc_.GetForce(i, mpc_settings_->contact_frames[j]).transpose());
-                //         //         bad_force = true;
-                //         //     }
-                //         // }
-                //     }
-                //     check_time += mpc_settings_->dt[i];
-                // }
-
-                // if (bad_force) {
-                //     throw std::runtime_error("Bad force!");
-                // }
-
-                // Every tenth solve check to see if the user wants to print stats
-                if (mpc_->GetSolveCounter() % 10 == 0 && print_timings_) {
-                    // TODO: re-implement
-                    // mpc_->PrintAggregateStats();
-                    print_timings_ = false;
-                }
+                PreperationPhase();
+                FeedbackPhase();
 
                 // TODO: If this is slow, then I need to move it
+                torc::utils::TORCTimer viz_timer;
+                viz_timer.Tic();
                 PublishTrajViz(traj_mpc_, viz_frames_);
+                viz_timer.Toc();
+                std::cout << "viz publish took " << viz_timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
             } else {
                 first_loop = true;
             }
@@ -726,6 +540,114 @@ namespace robot
                 // RCLCPP_WARN_STREAM(this->get_logger(), "MPC computation took longer than loop rate allowed for. " << std::abs(time_left)*1e-6 << "ms over time.");
             }
         }
+    }
+
+    void MpcController::PreperationPhase() {
+        torc::utils::TORCTimer timer;
+        timer.Tic();
+
+        static auto prev_time = this->now();
+
+        // Update contact schedule and polytopes
+        // Shift the contact schedule
+        {
+            std::lock_guard<std::mutex> lock(polytope_mutex_);
+            auto current_time = this->now();
+            double time_shift_sec = (current_time - prev_time).nanoseconds()/1e9;
+            contact_schedule_.ShiftSwings(-time_shift_sec);    // TODO: Do I need a mutex on this later?
+            next_left_insertion_time_ -= time_shift_sec;
+            next_right_insertion_time_ -= time_shift_sec;
+        }
+        prev_time = this->now();
+
+        if (!recieved_polytope_) {
+            UpdateContactPolytopes();
+        } 
+        
+        // ----- No Reference ----- //
+        {
+            std::lock_guard<std::mutex> lock(polytope_mutex_);
+            mpc_->UpdateContactSchedule(contact_schedule_); // TODO: Need to do this at the same time as the reference generation
+        }
+        AddPeriodicContacts();   // Don't use when getting CS from the other node
+                
+        timer.Toc();
+        std::cout << "Preperation took: " << timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
+    }
+
+    void MpcController::FeedbackPhase() {
+        torc::utils::TORCTimer timer;
+        timer.Tic();
+
+        vectorx_t q, v;
+
+        static bool first_loop = true;
+        const long max_mpc_solves = this->get_parameter("max_mpc_solves").as_int();
+
+
+        // ----- Read in state ----- //
+        // TODO: If statement is only here for when we remove sim
+        // if (first_loop) {
+        //     // TODO: Remove
+        //     q = q_ic_;
+        //     v = v_ic_;
+        //     first_loop = false;
+        // } else {
+            {
+                // Get the mutex to protect the states
+                std::lock_guard<std::mutex> lock(est_state_mut_);
+
+                // Create current state
+                q = q_;
+                v = v_;
+            }
+        // }
+        q.segment<4>(3).normalize();
+        if (std::abs(q.segment<4>(3).norm() - 1) > 1e-8) {
+            RCLCPP_ERROR_STREAM(this->get_logger(), "q: " << q.transpose());
+            throw std::runtime_error("quat has zero norm!");
+        }
+
+        // ----- No Reference ----- //
+        if (!fixed_target_ || controller_target_) {
+            UpdateMpcTargets(q);
+            mpc_->SetConfigTarget(q_target_.value());
+            mpc_->SetVelTarget(v_target_.value());
+        }
+
+        // Reference generation
+        // {
+        //     std::lock_guard<std::mutex> lock(polytope_mutex_);
+        //     mpc_->UpdateContactSchedule(contact_schedule_);
+        //     std::map<std::string, std::vector<torc::mpc::vector3_t>> contact_foot_pos;
+        //     const auto [q_ref, v_ref] = ref_gen_->GenerateReference(q, v, q_target_.value(), v_target_.value(), mpc_->GetSwingTrajectory(),
+        //         mpc_settings_->hip_offsets, contact_schedule_, contact_foot_pos);
+        //     // // TODO: Consider removing again
+        //     // mpc_->SetConfigTarget(q_ref);
+        //     // mpc_->SetVelTarget(v_ref);
+
+        //     mpc_->SetForwardKinematicsTarget(contact_foot_pos);
+        // }
+
+        if (mpc_->GetSolveCounter() < max_mpc_solves) {
+            // double time = this->now().seconds(); // TODO: Put back
+            // ---- Solve MPC ----- //
+            // double time = this->now().seconds();
+            mpc_->Compute(this->now().seconds() - time_offset_, q, v, traj_mpc_);
+            double time = this->now().seconds();    // TODO: Why is this better here???
+            {
+                // Get the traj mutex to protect it
+                std::lock_guard<std::mutex> lock(traj_out_mut_);
+                traj_out_ = traj_mpc_;
+
+                // Assign start time too
+                traj_start_time_ = time;
+            }
+        }
+
+
+        timer.Toc();
+        std::cout << "Feedback took: " << timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
     }
 
     obelisk_control_msgs::msg::PDFeedForward MpcController::ComputeControl() {
@@ -810,6 +732,7 @@ namespace robot
                 throw std::runtime_error("Not a valid state!");
             }
 
+            // TODO: Move the log to after the publish call
             // Log
             static unsigned long log_counter = 0;
             if (log_counter % 5 == 0) {

@@ -28,7 +28,8 @@ Position and velocity actuators added. -->
     <default class="hip_pitch_vel">
       <!-- <position kv="6" ctrllimited="false"/> -->
       <!-- <position kv="0" ctrllimited="false"/> -->
-      <position kv="2" ctrllimited="false"/>
+      <!-- <position kv="2" ctrllimited="false"/> -->
+      <position kv="4" ctrllimited="false"/>
     </default>
 
     <!-- Hip Roll -->
@@ -40,7 +41,8 @@ Position and velocity actuators added. -->
     <default class="hip_roll_vel">
       <!-- <position kv="6" ctrllimited="false"/> -->
       <!-- <position kv="0" ctrllimited="false"/> -->
-      <position kv="2" ctrllimited="false"/>
+      <!-- <position kv="2" ctrllimited="false"/> -->
+        <position kv="4" ctrllimited="false"/>
     </default>
 
     <!-- Hip Yaw -->
@@ -52,7 +54,8 @@ Position and velocity actuators added. -->
     <default class="hip_yaw_vel">
       <!-- <position kv="6" ctrllimited="false"/> -->
       <!-- <position kv="0" ctrllimited="false"/> -->
-      <position kv="2" ctrllimited="false"/>
+      <!-- <position kv="2" ctrllimited="false"/> -->
+      <position kv="4" ctrllimited="false"/>
     </default>
 
     <!-- Knee -->
@@ -67,7 +70,8 @@ Position and velocity actuators added. -->
       <!-- <position kv="6" ctrllimited="false"/> -->
       <!-- 4 -->
       <!-- <position kv="0" ctrllimited="false"/> -->
-      <position kv="2" ctrllimited="false"/>
+      <!-- <position kv="2" ctrllimited="false"/> -->
+      <position kv="4" ctrllimited="false"/>
       <!-- <position kv="6" ctrllimited="false"/> -->
     </default>
 
@@ -78,9 +82,9 @@ Position and velocity actuators added. -->
       <!-- <position kp="40" ctrllimited="false"/> -->
     </default>
     <default class="ankle_pitch_vel">
-      <position kv="2" ctrllimited="false"/>
-      <!-- <position kv="0" ctrllimited="false"/> -->
       <!-- <position kv="2" ctrllimited="false"/> -->
+      <!-- <position kv="0" ctrllimited="false"/> -->
+      <position kv="4" ctrllimited="false"/>
     </default>
 
     <!-- ############## -->
