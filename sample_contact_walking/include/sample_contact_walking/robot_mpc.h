@@ -71,8 +71,8 @@ namespace robot {
             void PublishTrajStateViz();
             void MakeTargetTorsoMocapTransform();
 
-            void PreperationPhase();
-            void FeedbackPhase();
+            double PreperationPhase();
+            std::pair<double, double> FeedbackPhase();
 
             // States
             enum ControllerState {
@@ -178,6 +178,7 @@ namespace robot {
 
             double time_offset_;
             std::ofstream log_file_;
+            std::ofstream timing_log_file_;
     };
 
     MpcController* MpcController::mujoco_sim_instance_ = nullptr;

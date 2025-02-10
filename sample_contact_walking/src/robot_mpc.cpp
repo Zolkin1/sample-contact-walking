@@ -378,6 +378,7 @@ namespace robot
 
         time_offset_ = this->now().seconds();
         log_file_.open("mpc_loop_log.csv");
+        timing_log_file_.open("mpc_timing_log.csv");
 
         // Spin up MPC thread
         mpc_thread_ = std::thread(&MpcController::MpcThread, this);
@@ -389,6 +390,7 @@ namespace robot
 
     MpcController::~MpcController() {
         log_file_.close();
+        timing_log_file_.close();
     }
 
     void MpcController::UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) {
@@ -508,9 +510,18 @@ namespace robot
                     first_loop = false;
                 }
 
+                // ------------------------------------ //
+                // ---------- MPC Computation --------- //
+                // ------------------------------------ //
+                double prep_time = PreperationPhase();
+                // mpc_->CreateQPData();
+                const auto [fb_time, fb_prep_time] = FeedbackPhase();
 
-                PreperationPhase();
-                FeedbackPhase();
+                // Log timing
+                timing_log_file_ << this->now().seconds() - time_offset_ << "," << prep_time + fb_prep_time << "," << fb_time << std::endl;
+
+                std::cout << "Prep time took " << prep_time + fb_prep_time << " ms" << std::endl;
+                std::cout << "Feedback time took " << fb_time << " ms" << std::endl;
 
                 // TODO: If this is slow, then I need to move it
                 torc::utils::TORCTimer viz_timer;
@@ -542,7 +553,7 @@ namespace robot
         }
     }
 
-    void MpcController::PreperationPhase() {
+    double MpcController::PreperationPhase() {
         torc::utils::TORCTimer timer;
         timer.Tic();
 
@@ -571,11 +582,17 @@ namespace robot
         }
         AddPeriodicContacts();   // Don't use when getting CS from the other node
                 
+
+        // Linearize around current trajectory
+        // TODO: Put back
+        mpc_->CreateQPData();
+
         timer.Toc();
-        std::cout << "Preperation took: " << timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
+
+        return timer.Duration<std::chrono::microseconds>().count()/1000.0;
     }
 
-    void MpcController::FeedbackPhase() {
+    std::pair<double, double> MpcController::FeedbackPhase() {
         torc::utils::TORCTimer timer;
         timer.Tic();
 
@@ -584,6 +601,7 @@ namespace robot
         static bool first_loop = true;
         const long max_mpc_solves = this->get_parameter("max_mpc_solves").as_int();
 
+        // mpc_->CreateQPData();
 
         // ----- Read in state ----- //
         // TODO: If statement is only here for when we remove sim
@@ -629,11 +647,12 @@ namespace robot
         //     mpc_->SetForwardKinematicsTarget(contact_foot_pos);
         // }
 
+        double mpc_start_time = this->now().seconds();
         if (mpc_->GetSolveCounter() < max_mpc_solves) {
             // double time = this->now().seconds(); // TODO: Put back
             // ---- Solve MPC ----- //
             // double time = this->now().seconds();
-            mpc_->Compute(this->now().seconds() - time_offset_, q, v, traj_mpc_);
+            mpc_->Compute(mpc_start_time - time_offset_, q, v, traj_mpc_);
             double time = this->now().seconds();    // TODO: Why is this better here???
             {
                 // Get the traj mutex to protect it
@@ -644,10 +663,15 @@ namespace robot
                 traj_start_time_ = time;
             }
         }
-
-
         timer.Toc();
-        std::cout << "Feedback took: " << timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
+
+        torc::utils::TORCTimer prep_timer;
+        prep_timer.Tic();
+        // Part of the preperation phase
+        mpc_->LogMPCCompute(mpc_start_time - time_offset_, q, v);
+        prep_timer.Toc();
+
+        return {timer.Duration<std::chrono::microseconds>().count()/1000.0, prep_timer.Duration<std::chrono::microseconds>().count()/1000.0};
     }
 
     obelisk_control_msgs::msg::PDFeedForward MpcController::ComputeControl() {
