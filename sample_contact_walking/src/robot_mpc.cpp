@@ -457,6 +457,16 @@ namespace robot
     // If I still need more, I can try to adjust the thread prio
     // Experimentally, note that the faster I run it, the more consistent (and faster, up to a limit) it is
     void MpcController::MpcThread() {
+        // Prevents uncessary cache misses by pinning to a CPU
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(2, &cpuset);  // Pin to CPU 2
+
+        pthread_t thread = pthread_self();
+        if (pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset) != 0) {
+            perror("pthread_setaffinity_np");
+        }
+
         // struct sched_param param;
         // param.sched_priority = 99;
         // pthread_setschedparam(pthread_self(), SCHED_RR, &param);
@@ -637,7 +647,7 @@ namespace robot
             mpc_->SetVelTarget(v_target_.value());
         }
 
-        // Reference generation
+        // // Reference generation
         // {
         //     std::lock_guard<std::mutex> lock(polytope_mutex_);
         //     mpc_->UpdateContactSchedule(contact_schedule_);
