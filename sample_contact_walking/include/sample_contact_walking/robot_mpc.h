@@ -9,9 +9,10 @@
 
 #include "sample_contact_msgs/msg/contact_schedule.hpp"
 
-#include "full_order_mpc.h"
+// #include "full_order_mpc.h"
 #include "hpipm_mpc.h"
-#include "wbc_controller.h"
+#include "reference_generator.h"
+// #include "wbc_controller.h"
 // #include "cross_entropy.h"
 
 namespace robot {
@@ -156,12 +157,12 @@ namespace robot {
             std::unique_ptr<torc::models::FullOrderRigidBody> wbc_model_;           // Potentially reduced model for the MPC
             torc::mpc::ContactSchedule contact_schedule_;
 
-            std::unique_ptr<torc::controller::WbcController> wbc_controller_;
+            // std::unique_ptr<torc::controller::WbcController> wbc_controller_;
 
             std::unique_ptr<torc::mpc::ReferenceGenerator> ref_gen_;
 
             std::shared_ptr<torc::mpc::MpcSettings> mpc_settings_;
-            std::shared_ptr<torc::controller::WbcSettings> wbc_settings_;
+            // std::shared_ptr<torc::controller::WbcSettings> wbc_settings_;
             std::shared_ptr<torc::mpc::HpipmMpc> mpc_;
 
             // MPC Skipped joint indexes

@@ -457,6 +457,10 @@ namespace robot
     // If I still need more, I can try to adjust the thread prio
     // Experimentally, note that the faster I run it, the more consistent (and faster, up to a limit) it is
     void MpcController::MpcThread() {
+        // struct sched_param param;
+        // param.sched_priority = 99;
+        // pthread_setschedparam(pthread_self(), SCHED_RR, &param);
+
         const long mpc_loop_rate_ns = this->get_parameter("mpc_loop_period_sec").as_double()*1e9;
         RCLCPP_INFO_STREAM(this->get_logger(), "MPC loop period set to: " << mpc_loop_rate_ns << "ns.");
         
