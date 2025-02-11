@@ -904,10 +904,8 @@ namespace robot
 
         static torc::mpc::vector3_t q_base_target = q.head<3>();
 
-        if (v_target_.value()[0].head<2>().norm() > 0.05) {
-            q_base_target(0) = q(0);
-            q_base_target(1) = q(1);
-        }
+        q_base_target(0) = q(0);
+        q_base_target(1) = q(1);
 
         q_base_target(2) = z_target_;
 
