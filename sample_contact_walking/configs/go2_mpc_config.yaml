@@ -6,17 +6,17 @@ general_settings:
   node_group_2_n: 27
   node_dt_1: 0.015 #0.015 #0.015 
   node_dt_2: 0.025 #0.025 #0.015 #0.015 #0.025
-  compile_derivatives: False #True
+  compile_derivatives: False
   base_frame: "torso"
   scale_cost: False
   max_initial_solves: 20
   initial_constraint_tol: 5e-4
-  nodes_full_dynamics: 4 #10 #30 #10 #3 #4   # Also determines how many nodes have torque constraints
+  nodes_full_dynamics: 25 #4 #10 #30 #10 #3 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0
   terminal_cost_weight: 40 #2 #10
 solver_settings:
 # HPIPM:
-  mode: Balance #Balance #Balance #Speed #Robust #Balance -- To get a success the best chance is with Robust and give more iterations
+  mode: Speed #Balance #Balance #Balance #Speed #Robust #Balance -- To get a success the best chance is with Robust and give more iterations
   alpha_min: 1e-8
   max_iter: 10 #15 #20 #20 #14 #10 #15 #15 #10
   mu0: 1 #1 #20 #10 #100
@@ -29,21 +29,11 @@ solver_settings:
   pred_corr: 1 #1 #1 -- Setting this one seems to hurt the constraint violation across solves
   ric_alg: 1
   split_step: 0
-# OSQP
-  # rel_tol: 1e-6 #1e-3
-  # abs_tol: 1e-6 #1e-3
-  # verbose: False
-  # polish: False
-  # rho: 0.01
-  # alpha: 1.6 # 1.6, 1.1
-  # sigma: 1e-6
-  # adaptive_rho: False
-  # max_iter: 20 #50 #20
-  # scaling: 10
 constraints:
   friction_coef: 0.7 #0.5  # TODO: Tune this
   friction_margin: 2
   max_grf: 800
+  min_grf: 5
   collisions:
     - frame1: "FR_foot"
       frame2: "FL_foot"
@@ -95,10 +85,10 @@ costs:
       # .7, .7, .001,          # RL
       # .7, .7, .001,]          # RR
       # # W/o ref
-      2, 1, .001,          # FL
-      2, 1, .001,          # FR
-      2, 1, .001,          # RL
-      2, 1, .001,]          # RR
+      .1, .1, .001,          # FL
+      .1, .1, .001,          # FR
+      .1, .1, .001,          # RL
+      .1, .1, .001,]          # RR
   - type: VelocityTracking
     name: "VelocityTracking"
     weight: [2, 2, 5, #2, 2, 3,
@@ -130,7 +120,7 @@ costs:
   - type: ForwardKinematics
     name: "FL_foot_fk"
     frame: "FL_foot"
-    weight: [1, 1, 1] #TODO: Adding this has a minimal effect
+    weight: [10,10,1] #[1, 1, 1] #TODO: Adding this has a minimal effect
   - type: ForwardKinematics
     name: "FR_foot_fk"
     frame: "FR_foot"
@@ -143,6 +133,38 @@ costs:
     name: "RR_foot_fk"
     frame: "RR_foot"
     weight: [2, 2, 3]
+  # ------------------------------ #
+  # ----- Centroidal Weights ----- #
+  # ------------------------------ #
+  - type: CentroidalConfiguration
+    name: "CentroidalConfig"
+    weight:  [10.0, 10.0, 200, #20, #2, 2, 150, or 2,2,30
+              # 2, 2, 2,
+              # 5, 5, 5,
+              # 10, 10, 10,
+              350.5, 350.5, 25.5, # 5.5, 5.5, 5.5
+              # W/ ref:
+              # .7, .7, .001,          # FL
+              # .7, .7, .001,          # FR
+              # .7, .7, .001,          # RL
+              # .7, .7, .001,]          # RR
+              # # W/o ref
+              .1, .1, .001,          # FL
+              .1, .1, .001,          # FR
+              .1, .1, .001,          # RL
+              .1, .1, .001,]
+  - type: CentroidalVelocity
+    name: "CentroidalVel"
+    weight:  [2, 2, 5, #2, 2, 3,
+        # 5, 5, 5,
+        15, 15, 15,
+        0.1, 0.1, 0.0001,         # FL
+        0.1, 0.1, 0.0001,         # FR
+        0.1, 0.1, 0.0001,         # RL
+        0.1, 0.1, 0.0001]         # RR
+  - type: CentroidalForce
+    name: "CentroidalForce"
+    weight:  [0.0001, 0.0001, 0.0001]
     # TODO: Investigate this w/ no constraints. Weird stuff happening
   # - type: FootPolytope
   #   name: "FR_foot_polytope"

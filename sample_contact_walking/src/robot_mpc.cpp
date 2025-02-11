@@ -687,9 +687,9 @@ namespace robot
         if (mpc_->GetSolveCounter() < max_mpc_solves) {
             // double time = this->now().seconds(); // TODO: Put back
             // ---- Solve MPC ----- //
-            // double time = this->now().seconds();
+            // double time = this->now().seconds();        // NOTE: The quad uses the time here
             mpc_->Compute(mpc_start_time - time_offset_, q, v, traj_mpc_);
-            double time = this->now().seconds();    // TODO: Why is this better here???
+            double time = this->now().seconds();    // NOTE: The humanoid uses the time here
             {
                 // Get the traj mutex to protect it
                 std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -720,7 +720,7 @@ namespace robot
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Publishing first control.");
             
             vectorx_t q, v, tau, F(3*mpc_settings_->num_contact_locations);
-            std::vector<bool> in_contact(mpc_settings_->num_contact_locations);
+            // std::vector<bool> in_contact(mpc_settings_->num_contact_locations);
 
             if (GetState() == Mpc) {
                 double time_into_traj = 0;
@@ -743,12 +743,12 @@ namespace robot
                         traj_out_.GetForceInterp(time_into_traj, mpc_settings_->contact_frames[i], f_temp);
                         F.segment<3>(3*i) = f_temp;
 
-                        in_contact[i] = traj_out_.GetInContactInterp(time_into_traj, mpc_settings_->contact_frames[i]);
+                        // in_contact[i] = traj_out_.GetInContactInterp(time_into_traj, mpc_settings_->contact_frames[i]);
                     }
                     
                     // This is a safety in case the interpolation time is too large
                     if (q.size() == 0) {
-                        throw std::runtime_error("After traj!"); // TODO: remove
+                        // throw std::runtime_error("After traj!"); // TODO: remove
                         RCLCPP_WARN_STREAM(this->get_logger(), "Trajectory interpolation time is after the trajectory ends!");
                         q = traj_out_.GetConfiguration(traj_out_.GetNumNodes()-1);
                         RCLCPP_WARN_STREAM(this->get_logger(), "q is: " << q.transpose());
@@ -785,9 +785,9 @@ namespace robot
                 F(8) = 80;
                 F(11) = 80;
 
-                for (int i = 0; i < in_contact.size(); i++) {
-                    in_contact[i] = true;
-                }
+                // for (int i = 0; i < in_contact.size(); i++) {
+                //     in_contact[i] = true;
+                // }
             } else {
                 throw std::runtime_error("Not a valid state!");
             }
