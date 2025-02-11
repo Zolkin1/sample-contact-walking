@@ -467,9 +467,9 @@ namespace robot
             perror("pthread_setaffinity_np");
         }
 
-        // struct sched_param param;
-        // param.sched_priority = 99;
-        // pthread_setschedparam(pthread_self(), SCHED_RR, &param);
+        struct sched_param param;
+        param.sched_priority = 99;
+        pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
 
         const long mpc_loop_rate_ns = this->get_parameter("mpc_loop_period_sec").as_double()*1e9;
         RCLCPP_INFO_STREAM(this->get_logger(), "MPC loop period set to: " << mpc_loop_rate_ns << "ns.");
@@ -647,19 +647,19 @@ namespace robot
             mpc_->SetVelTarget(v_target_.value());
         }
 
-        // // Reference generation
-        // {
-        //     std::lock_guard<std::mutex> lock(polytope_mutex_);
-        //     mpc_->UpdateContactSchedule(contact_schedule_);
-        //     std::map<std::string, std::vector<torc::mpc::vector3_t>> contact_foot_pos;
-        //     const auto [q_ref, v_ref] = ref_gen_->GenerateReference(q, v, q_target_.value(), v_target_.value(), mpc_->GetSwingTrajectory(),
-        //         mpc_settings_->hip_offsets, contact_schedule_, contact_foot_pos);
-        //     // // TODO: Consider removing again
-        //     // mpc_->SetConfigTarget(q_ref);
-        //     // mpc_->SetVelTarget(v_ref);
+        // Reference generation
+        {
+            std::lock_guard<std::mutex> lock(polytope_mutex_);
+            mpc_->UpdateContactSchedule(contact_schedule_);
+            std::map<std::string, std::vector<torc::mpc::vector3_t>> contact_foot_pos;
+            const auto [q_ref, v_ref] = ref_gen_->GenerateReference(q, v, q_target_.value(), v_target_.value(), mpc_->GetSwingTrajectory(),
+                mpc_settings_->hip_offsets, contact_schedule_, contact_foot_pos);
+            // // TODO: Consider removing again
+            // mpc_->SetConfigTarget(q_ref);
+            // mpc_->SetVelTarget(v_ref);
 
-        //     mpc_->SetForwardKinematicsTarget(contact_foot_pos);
-        // }
+            mpc_->SetForwardKinematicsTarget(contact_foot_pos);
+        }
 
         double mpc_start_time = this->now().seconds();
         if (mpc_->GetSolveCounter() < max_mpc_solves) {

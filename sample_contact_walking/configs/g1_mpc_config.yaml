@@ -58,7 +58,7 @@ solver_settings:
 # ----------------------------- #
   mode: Speed
   alpha_min: 1e-8
-  max_iter: 10 #10 #10 #15 #15
+  max_iter: 10 #10 #10 #10 #15 #15
   mu0: 1 #10 #1 #100 #.1
   tol_stat: 1e-8
   tol_eq: 1e-8
@@ -237,7 +237,7 @@ costs:
   - type: ForwardKinematics
     name: "left_heel_fk"
     frame: "left_heel"
-    weight: [0,0,0] #[.1,.1,1] #[1, 1, 200]   # TODO: Play with these weights more
+    weight: [10,1,1] #[.1,.1,1] #[1, 1, 200]   # TODO: Play with these weights more
   # ------------------------------ #
   # ----- Centroidal Weights ----- #
   # ------------------------------ #
@@ -283,7 +283,7 @@ joint_defaults:
            "right_hand_middle_0_joint", "right_hand_middle_1_joint",
            "right_hand_index_0_joint", "right_hand_index_1_joint",]
   values: [ 0, 0,
-           0, 0, 0.03,
+           0, 0, 0.0,
            0, 0, 0,
            0, 0, 1.57,
            -1.57, -1.57,
