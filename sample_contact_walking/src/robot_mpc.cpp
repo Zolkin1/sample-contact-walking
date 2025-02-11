@@ -137,6 +137,27 @@ namespace robot
             mpc_model_->GetTorqueJointLimits().tail(mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL),
             tau_lims_idxs);
 
+        // Force
+        std::vector<int> force_lim_idxs;
+        for (int i = 0; i < 3; i++) {
+            force_lim_idxs.push_back(i);
+        }
+        vectorx_t stance_lb(3), stance_ub(3);
+        stance_lb << -1000, -1000, mpc_settings_->min_grf;
+        stance_ub << 1000, 1000, mpc_settings_->max_grf;
+        torc::mpc::BoxConstraint stance_force_box(0, mpc_settings_->nodes, "stance_force_box",
+            stance_lb, // Minimum force on the ground
+            stance_ub,
+            force_lim_idxs);
+
+        vectorx_t swing_lb(3), swing_ub(3);
+        swing_lb << 0, 0, 0;
+        swing_ub << 0, 0, 0;
+        torc::mpc::BoxConstraint swing_force_box(0, mpc_settings_->nodes, "swing_force_box",
+            swing_lb, // Minimum force on the ground
+            swing_ub,
+            force_lim_idxs);
+
         // ---------- Friction Cone Constraints ---------- //
         torc::mpc::FrictionConeConstraint friction_cone_constraint(0, mpc_settings_->nodes - 1, model_name + "friction_cone_cone",
             mpc_settings_->friction_coef, mpc_settings_->friction_margin, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);
@@ -204,6 +225,7 @@ namespace robot
         mpc_->SetConfigBox(config_box);
         mpc_->SetVelBox(vel_box);
         mpc_->SetTauBox(tau_box);
+        mpc_->SetForceBox(stance_force_box, swing_force_box);
         mpc_->SetFrictionCone(std::move(friction_cone_constraint));
         mpc_->SetSwingConstraint(std::move(swing_constraint));
         mpc_->SetHolonomicConstraint(std::move(holonomic_constraint));
