@@ -30,6 +30,7 @@ RUN apt-get update && apt-get install -y \
     libeigen3-dev \
     x11-apps \
     locales \
+    evtest \
     sudo && \
     rm -rf /var/lib/apt/lists/* && \
     locale-gen en_US.UTF-8
@@ -61,10 +62,10 @@ ENV PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/opt/openrobots/lib/pkgconfig"
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/opt/openrobots/lib"
 ENV CMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}:/opt/openrobots"
 
-RUN echo "About to pull obelisk."
+RUN echo "Pulling Obelisk..."
 
 # clone Obelisk into this docker image at the $OBELISK_ROOT path
-RUN git clone -b main https://github.com/Caltech-AMBER/obelisk.git /home/${USER}/obelisk
+RUN git clone -b v0.1.0-alpha https://github.com/Caltech-AMBER/obelisk.git /home/${USER}/obelisk
 ENV OBELISK_ROOT=/home/${USER}/obelisk
 
 # CppAD and CppAD Codegen
@@ -77,9 +78,23 @@ RUN cd /home/${USER} && git clone https://github.com/coin-or/CppAD.git /home/${U
     cmake .. && \
     sudo make install -j8
 
+# HPIPM, BLASFEO, HPIPM_CPP
+RUN cd /home/${USER} && git clone https://github.com/giaf/blasfeo && git clone https://github.com/giaf/hpipm && \
+    cd /home/${USER}/blasfeo && mkdir build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBLASFEO_EXAMPLES=OFF && \
+    make -j8 && sudo make install -j && cd /home/${USER}/hpipm && mkdir build && \
+    cd build && cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DHPIPM_TESTING=OFF && \
+    make -j8 && sudo make install -j && cd /home/${USER} && \
+    git clone https://github.com/Zolkin1/hpipm-cpp.git && cd /home/${USER}/hpipm-cpp && mkdir build && \
+    cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j8 && sudo make install -j 
+
 # you must run the setup script from a directory where the user has permissions
 # run docker setup script in Dockerfile
 WORKDIR /home/${USER}
 RUN source /home/${USER}/obelisk/setup.sh --install-sys-deps --cyclone-perf --obk-aliases --basic
 
 WORKDIR /home/${USER}
+
+# Python Packages
+RUN pip install scipy && \
+    pip install osqp

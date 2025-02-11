@@ -6,40 +6,42 @@ onboard:
       params_path: /home/zolkin/sample-contact-walking/sample_contact_walking/configs/go2_mpc_config.yaml
       params:
         urdf_path: /home/zolkin/sample-contact-walking/go2_model/urdf/go2_description.urdf
+        robot_type: 0
         robot_name: "go2"
 # ---------- Viz ---------- #
         viz_frames: ["torso", "FR_foot", "FL_foot", "RR_foot", "RL_foot"]
         viz_forces: True
         viz_force_scale: 0.01
         force_frames: ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
+        polytope_frames: ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
 # ---------- Swing trajectory ---------- #
         default_swing_height: 0.08 # 0.1
         default_stand_foot_height: 0.01 #0.01
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.01 #0.01
-        max_mpc_solves: -37 #125 
+        mpc_loop_period_sec: 0.008 #0.01 #0.008 #0.01 #0.01
+        max_mpc_solves: 1000000 #-37 #125 
 # ---------- Contact schedule ---------- #
-        swing_time: 0.2 #0.25
-        first_swing_time: 2.
+        swing_time: 0.3 #0.2 #0.25
+        first_swing_time: 0.1 #0.1 #2.
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
         right_frames: ["RL_foot", "FR_foot"]
         left_frames: ["FL_foot", "RR_foot"]
 # ---------- Targets ---------- #
-        target_config: [0, 0, 0.28,
-                    0, 0, 0, 1,
-                    0, 0.9, -1.8,
-                    0, 0.9, -1.8,
-                    0, 0.9, -1.8,
-                    0, 0.9, -1.8]
-        target_vel: [0., 0.0, 0.,
-                    0, 0, 0,
-                    0, 0.0, 0.,
-                    0, 0.0, 0.,
-                    0, 0.0, 0.,
-                    0, 0.0, 0.]
+        # target_config: [0, 0, 0.28,
+        #             0, 0, 0, 1,
+        #             0, 0.9, -1.8,
+        #             0, 0.9, -1.8,
+        #             0, 0.9, -1.8,
+        #             0, 0.9, -1.8]
+        # target_vel: [0., 0.0, 0.,
+        #             0, 0, 0,
+        #             0, 0.0, 0.,
+        #             0, 0.0, 0.,
+        #             0, 0.0, 0.,
+        #             0, 0.0, 0.]
         mpc_ic_config: [0, 0, 0.28,
                     0, 0, 0, 1,         # Why is the quaternion flipped here?
                     0, 0.9, -1.8,
@@ -77,6 +79,9 @@ onboard:
         # ----- Joystick publisher ----- #
         - ros_parameter: joystick_feedback_setting
           topic: /obelisk/go2/joy_feedback
+        # ----- Target publisher ----- #
+        - ros_parameter: target_pub_setting
+          topic: /obelisk/go2/commanded_target
       subscribers:
         # Estimated state subscriber
         - ros_parameter: sub_est_setting
@@ -87,7 +92,9 @@ onboard:
         # ----- Joystick subscriber ----- #
         - ros_parameter: joystick_sub_setting
           topic: /obelisk/go2/joy
-
+        # ----- Contact Schedule subscriber ----- #
+        - ros_parameter: contact_schedule_sub_setting
+          topic: /obelisk/go2/contact_schedule
       timers:
         # Low level control timer
         - ros_parameter: timer_ctrl_setting
@@ -97,6 +104,59 @@ onboard:
         - ros_parameter: state_viz_timer_setting
           timer_period_sec: 0.002
           callback_group: None
+    - pkg: contact_planning
+      executable: contact_planner
+      params:
+        default_polytope_size: 0.4 #0.6
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile_scene.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile2_scene.xml
+        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
+      # ----- Tile Scene ---- #
+        foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9"]
+      # ----- Swing Timing Paramers ---- #
+      # WARNING!! THESE MUST MATCH THE CORRESPONDING PARAMETERS ABOVE
+        swing_time: 0.3 #0.2 #0.25
+        first_swing_time: 0.1
+        right_foot_frames: ["RL_foot", "FR_foot"]
+        left_foot_frames: ["FL_foot", "RR_foot"]
+        # foot_offsets: [-0.2234, 0.142, 0.1934, -0.142, 0.1934, 0.142, -0.2234, -0.142]
+        foot_offsets: [-0.3234, 0.142, 0.03, -0.142, 0.03, 0.142, -0.3234, -0.142]
+        num_nodes: 32   # Should match the MPC
+        node_group_1_n: 5
+        node_group_2_n: 27
+        node_dt_1: 0.015 #0.015
+        node_dt_2: 0.025
+        polytope_margin: 0.01   # Should match polytope_delta
+      publishers:
+        # Contact schedule publisher
+        - ros_parameter: pub_ctrl_setting
+          topic: /obelisk/go2/contact_schedule
+          msg_type: ContactSchedule
+          key: "contact_schedule_pub"
+          history_depth: 10
+      subscribers:
+        - ros_parameter: sub_est_setting
+          topic: /obelisk/go2/est_state # est_state, target_state
+          msg_type: EstimatedState
+          history_depth: 10
+          callback_group: estimation_cbg
+          key: "est_state_sub"
+        # Joystick Sub
+        - ros_parameter: joystick_sub_setting
+          topic: /obelisk/go2/joy
+          msg_type: Joy
+          key: "joystick_sub"
+          history_depth: 10
+          callback_group: None
+        - ros_parameter: commanded_target_setting
+          topic: /obelisk/go2/commanded_target
+          msg_type: CommandedTarget
+          key: "command_sub"
+      timers:
+        # Contact planning timer
+        - ros_parameter: timer_ctrl_setting
+          timer_period_sec: 0.01 #0.1
+          callback_group: control_cbg
   estimation:
     - pkg: sample_contact_walking
       executable: state_estimator
@@ -171,6 +231,8 @@ onboard:
         - ros_parameter: mujoco_setting
           robot_pkg: go2_model
           model_xml_path: go2_scene.xml
+          # model_xml_path: go2_tile_scene.xml
+          # model_xml_path: go2_tile2_scene.xml
           n_u: 36
           time_step: 0.001
           num_steps_per_viz: 16 # No longer used
@@ -234,6 +296,18 @@ onboard:
           #     FR_force_sensor: force
           #     RL_force_sensor: force
           #     RR_force_sensor: force
+          viz_geoms:
+            dt: 1
+            # ----- Tile scene ----- #
+            tile1: box
+            tile2: box
+            tile3: box
+            tile4: box
+            tile5: box
+            tile6: box
+            tile7: box
+            tile8: box
+            tile9: box
   viz:
     on: True
     viz_tool: foxglove

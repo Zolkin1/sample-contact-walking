@@ -81,6 +81,11 @@
         "typeindex": "cpp",
         "*.inc": "cpp",
         "*.ipp": "cpp",
-        "ranges": "cpp"
-    }
+        "ranges": "cpp",
+        "executor": "cpp",
+        "io_context": "cpp",
+        "netfwd": "cpp",
+        "timer": "cpp"
+    },
+    "cmake.sourceDirectory": "/home/zolkin/AmberLab/Project-Sample-Walking/sample-contact-walking/achilles_model_custom"
 }

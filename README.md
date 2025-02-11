@@ -11,9 +11,19 @@ Enter the docker container:
 docker compose -f docker/docker-compose.yml run --build sample-walking
 ```
 
+Update library path for hpipm:
+```
+export LD_LIBRARY_PATH=/opt/blasfeo/lib:/opt/hpipm/lib:$LD_LIBRARY_PATH
+```
+
 Build and activate Obelisk:
 ```
 obk
+```
+
+Build the messages pacakge first:
+```
+colcon build --symlink-install --packages-select sample_contact_msgs
 ```
 
 Build all the packages:
@@ -88,12 +98,24 @@ sudo chmod 666 /dev/input/eventX
 ```
 event24 seems to be consistent for the xbox remote for my machine.
 
-Can run `ros2 run joy joy_enumerate_devices` to see what devices are found.
+Can run 
+```
+ros2 run joy joy_enumerate_devices
+``` 
+to see what devices are found.
 
 
 ## Random notes
-- As of 10/14/2024 I need to work on the obelisk joystick branch, and until the docker container is re-build with these updates I will need to re-install `ros-humble-joy` from apt-get:
+<!-- - As of 10/14/2024 I need to work on the obelisk joystick branch, and until the docker container is re-build with these updates I will need to re-install `ros-humble-joy` from apt-get:
 ```
 sudo apt-get install ros-humble-joy
-```
+``` -->
 - As of 11/11/2024 I need to be om the obelisk branch with simulation geom viz
+
+
+<!-- ## Python deps (not yet added to the docker)
+- Scipy (pip)
+- Mujoco -> Comes with obelisk
+- OSQP (pip) -->
+
+- Remember that the topics in the contact planner need to updated in the source code until Obelisk is updated

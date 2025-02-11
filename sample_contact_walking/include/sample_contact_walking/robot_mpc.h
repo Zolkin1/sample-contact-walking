@@ -1,3 +1,5 @@
+#include <atomic>
+
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include "rclcpp/rclcpp.hpp"
@@ -5,7 +7,12 @@
 
 #include "sensor_msgs/msg/joy.hpp"
 
-#include "full_order_mpc.h"
+#include "sample_contact_msgs/msg/contact_schedule.hpp"
+
+// #include "full_order_mpc.h"
+#include "hpipm_mpc.h"
+#include "reference_generator.h"
+// #include "wbc_controller.h"
 // #include "cross_entropy.h"
 
 namespace robot {
@@ -13,10 +20,12 @@ namespace robot {
     using torc::mpc::vector3_t;
     using torc::mpc::quat_t;
     using torc::mpc::matrix3_t;
+    using torc::mpc::matrixx_t;
 
     class MpcController : public obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState> {
         public:
             MpcController(const std::string& name);
+            ~MpcController();
 
             // ------ Mujoco Debug ----- //
             static MpcController* mujoco_sim_instance_;
@@ -35,10 +44,14 @@ namespace robot {
             // TODO: Update when I have joystick access
             void UpdateMpcTargets(const vectorx_t& q);
 
+            // Updating contact info
+            void UpdateContactPolytopes();
+
             // Joystick interface
             void JoystickCallback(const sensor_msgs::msg::Joy& msg);
 
             // Contact schedule
+            void ContactScheduleCallback(const sample_contact_msgs::msg::ContactSchedule& msg);
             void AddPeriodicContacts();
 
             // Parse contact into
@@ -50,11 +63,17 @@ namespace robot {
             // Helpers
             void ConvertEigenToStd(const vectorx_t& eig_vec, std::vector<double>& std_vec);
             vectorx_t ConvertControlToMujocoU(const vectorx_t& pos_target, const vectorx_t& vel_target, const vectorx_t& feed_forward);
+            // std::pair<vectorx_t, vectorx_t> ReduceState(const vectorx_t& q, const vectorx_t& v, torc::models::FullOrderRigidBody model);
+            void LogCurrentControl(const vectorx_t& q_control, const vectorx_t& v_control, const vectorx_t& tau, const vectorx_t& force);
+            void LogEigenVec(const vectorx_t& x);
 
             // Viz
             void PublishTrajViz(const torc::mpc::Trajectory& traj, const std::vector<std::string>& viz_frames);
             void PublishTrajStateViz();
             void MakeTargetTorsoMocapTransform();
+
+            double PreperationPhase();
+            std::pair<double, double> FeedbackPhase();
 
             // States
             enum ControllerState {
@@ -75,6 +94,7 @@ namespace robot {
 
             // Viz information
             std::vector<std::string> viz_frames_;
+            std::vector<std::string> viz_polytope_frames_;
 
             // State flags
             bool recieved_first_state_;
@@ -85,6 +105,8 @@ namespace robot {
             std::vector<std::string> force_frames_;
 
             ControllerState ctrl_state_;
+
+            std::atomic<bool> print_timings_;
 
             // Mutexes
             std::mutex est_state_mut_;
@@ -105,6 +127,11 @@ namespace robot {
             bool fixed_target_;
             bool controller_target_;
 
+            // Foot step polytopes
+            std::mutex polytope_mutex_;
+            // std::map<std::string, std::vector<torc::mpc::ContactInfo>> contact_polytopes_;
+            bool recieved_polytope_;
+
             vectorx_t q_ic_;
             vectorx_t v_ic_;
 
@@ -124,14 +151,24 @@ namespace robot {
             double next_right_insertion_time_;
             double next_left_insertion_time_;
 
-            std::shared_ptr<torc::mpc::FullOrderMpc> mpc_;
+            // std::shared_ptr<torc::mpc::FullOrderMpc> mpc_;
             std::unique_ptr<torc::models::FullOrderRigidBody> model_;               // Full model
             std::unique_ptr<torc::models::FullOrderRigidBody> mpc_model_;           // Potentially reduced model for the MPC
+            std::unique_ptr<torc::models::FullOrderRigidBody> wbc_model_;           // Potentially reduced model for the MPC
             torc::mpc::ContactSchedule contact_schedule_;
+
+            // std::unique_ptr<torc::controller::WbcController> wbc_controller_;
+
+            std::unique_ptr<torc::mpc::ReferenceGenerator> ref_gen_;
+
+            std::shared_ptr<torc::mpc::MpcSettings> mpc_settings_;
+            // std::shared_ptr<torc::controller::WbcSettings> wbc_settings_;
+            std::shared_ptr<torc::mpc::HpipmMpc> mpc_;
 
             // MPC Skipped joint indexes
             // TODO: Find a better way to do this
-            std::vector<long int> skipped_joint_indexes_;
+            std::vector<long int> mpc_skipped_joint_indexes_;
+            std::vector<long int> wbc_skipped_joint_indexes_;
 
             // Threads
             std::thread mpc_thread_;
@@ -140,32 +177,9 @@ namespace robot {
             // broadcasters
             std::shared_ptr<tf2_ros::StaticTransformBroadcaster> torso_mocap_broadcaster_;
 
-            // TODO: Remove
-            // ------ Mujoco Debug ----- //
-            // mjModel* mj_model_;
-            // mjData* data_;
-            // mjvCamera cam;          // abstract camera
-            // mjvOption opt;          // visualization options
-            // mjvScene scn;           // abstract scene
-            // mjrContext con;         // custom GPU context
-
-            // std::atomic<bool> sim_ready_;
-            // std::mutex mj_data_mut_;
-
-            // GLFWwindow* window;
-
-            // // mouse interaction
-            // bool button_left   = false;
-            // bool button_middle = false;
-            // bool button_right  = false;
-            // double lastx       = 0;
-            // double lasty       = 0;
-
-            // bool pause = false;
-
-            // static constexpr int WINDOW_WIDTH_DEFAULT  = 1200;
-            // static constexpr int WINDOW_LENGTH_DEFAULT = 900;
-            // ------ Mujoco Debug ----- //
+            double time_offset_;
+            std::ofstream log_file_;
+            std::ofstream timing_log_file_;
     };
 
     MpcController* MpcController::mujoco_sim_instance_ = nullptr;

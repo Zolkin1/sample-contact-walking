@@ -16,6 +16,7 @@ find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(sample_contact_msgs REQUIRED)
 # find_package(obelisk_estimator_msgs REQUIRED)
 
 # ------- Fetch the Obelisk library ------- #
@@ -29,11 +30,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Obelisk)
 
 # ------- Fetch TORC ------- #
-set(BUILD_WITH_PINOCCHIO ON CACHE BOOL "t")
-set(BUILD_WITH_IPOPT OFF CACHE BOOL "t")
-set(BUILD_WITH_OSQP OFF CACHE BOOL "t")
-set(BUILD_WITH_CLARABEL OFF CACHE BOOL "t")
-
 FetchContent_Declare(
     TORC
     SOURCE_DIR $ENV{HOME}/torc
@@ -52,13 +48,14 @@ ament_export_include_directories(include)
 
 # ------- Controller ------- #
 add_executable(ll_controller src/robot_mpc.cpp)
-target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo Mpc)
+target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo Mpc) # Wbc
 
 ament_target_dependencies(ll_controller
     PUBLIC
     visualization_msgs
     tf2_ros
     tf2
+    sample_contact_msgs
     sensor_msgs)
 
 # ------- Estimator ------- #
