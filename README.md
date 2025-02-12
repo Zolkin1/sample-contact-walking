@@ -1,5 +1,8 @@
 # sample-contact-walking
 
+## TODO:
+- Add Proxqp to the docker
+
 ## Useful commands
 Setup:
 ```

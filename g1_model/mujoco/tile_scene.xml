@@ -1,5 +1,6 @@
 <mujoco model="g1_basic_scene">
-    <include file="g1_29dof_with_hand.xml"/>
+    <!-- <include file="g1_29dof_with_hand.xml"/> -->
+    <include file="g1_18dof.xml"/>
 
     <statistic center="1.0 0.7 1.0" extent="0.8"/>
 
@@ -20,10 +21,17 @@
         <light pos="1 0 3.5" dir="0 0 -1" directional="true"/>
         <!-- <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/> -->
         <body>
-            <geom name="tile1" pos="0.25 0 -0.095" type="box" contype="4" conaffinity="1" size="1 1 0.095" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
-            <geom name="tile2" pos="4.0 0 -0.095" type="box" contype="4" conaffinity="1" size="2 1 0.095" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
-            <geom name="tile3" pos="1.0 2.2 -0.095" type="box" contype="4" conaffinity="1" size="2 1 0.095" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
-            <geom name="tile4" pos="1.0 -2.2 -0.095" type="box" contype="4" conaffinity="1" size="2 1 0.095" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <geom name="tile1" pos="0.25 0 -0.095" type="box"  size="1 1 0.095" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <geom name="tile2" pos="4.0 0 -0.095" type="box" size="2 1 0.095" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <!-- 2.1 -->
+        <!-- 1.5 -->
+        <geom name="tile3" pos="1.0 2.1 -0.095" type="box" size="2 1 0.095"  material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <geom name="tile4" pos="1.0 -2.2 -0.095" type="box" size="2 1 0.095"  material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <geom name="tile5" pos="-1.0 0 -0.095" type="box" size="0.2 0.75 0.095" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <geom name="tile6" pos="-1.5 0 -0.095" type="box" size="0.2 0.75 0.095" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <geom name="tile7" pos="-2.1 0 -0.095" type="box" size="0.2 0.75 0.095" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <geom name="tile8" pos="-2.6 0 -0.095" type="box" size="0.2 0.75 0.095" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <geom name="tile9" pos="-4.05 0 -0.095" type="box" size="1 1 0.095" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
         </body>
     </worldbody>
 </mujoco>

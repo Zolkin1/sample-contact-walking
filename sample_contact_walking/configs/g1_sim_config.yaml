@@ -124,22 +124,24 @@ onboard:
       executable: contact_planner
       params:
         default_polytope_size: 0.4 #0.6
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/basic_scene.xml
         mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
       # ----- Tile Scene ---- #
-        foothold_geoms: ["tile1", "tile2", "tile3", "tile4"]
+        foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9"]
       # ----- Swing Timing Paramers ---- #
       # WARNING!! THESE MUST MATCH THE CORRESPONDING PARAMETERS ABOVE
-        first_step_time: 2. #0.5
+        first_step_time: 0.5
         swing_time: 0.4
         right_foot_frames: ["right_toe", "right_heel"]
         left_foot_frames: ["left_toe", "left_heel"]
-        foot_offsets: [0.145, 0.1164, -0.025, 0.1164, 0.145, -0.1164, -0.025, -0.1164]
-        num_nodes: 32   # Should match the MPC
+        # foot_offsets: [0.145, 0.1164, -0.025, 0.1164, 0.145, -0.1164, -0.025, -0.1164]
+        foot_offsets: [-0.125, 0.1164, -0.125, 0.1164, -0.125, -0.1164, -0.125, -0.1164]  # Making the offsets the same so the feet are always projected to the same place
+        num_nodes: 25   # Should match the MPC
         node_group_1_n: 5
-        node_group_2_n: 27
-        node_dt_1: 0.015 #0.015
-        node_dt_2: 0.025
-        polytope_margin: 0.06   # Should match polytope_delta
+        node_group_2_n: 20
+        node_dt_1: 0.015
+        node_dt_2: 0.05
+        polytope_margin: 0.12 #0.08 #0.04   # Should match polytope_delta
       publishers:
         # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting
@@ -246,8 +248,8 @@ onboard:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model
           # model_xml_path: g1_29dof_with_hand_fixed_base.xml
-          # model_xml_path: tile_scene.xml
-          model_xml_path: basic_scene.xml
+          model_xml_path: tile_scene.xml
+          # model_xml_path: basic_scene.xml
           # model_xml_path: stairs_scene.xml
           # model_xml_path: g1_29dof_with_hand.xml
           # n_u: 129

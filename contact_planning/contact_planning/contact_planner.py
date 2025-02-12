@@ -284,6 +284,8 @@ class ContactPlanner(ObeliskController):
             # Check type
             geom_type = self.mujoco_model.geom_type[geom_id]
             if geom_type != mujoco.mjtGeom.mjGEOM_BOX:
+                print(geom_type)
+                print(geom_name)
                 raise ValueError("The specified geom is not a box.")
 
             # For now this will just be considering the "top" surface

@@ -20,10 +20,10 @@ Position and velocity actuators added. -->
     <!-- ############## -->
     <!-- Hip Pitch -->
     <default class="hip_pitch_pos">
-      <position kp="240" ctrllimited="false"/>
+      <!-- <position kp="240" ctrllimited="false"/> -->
       <!-- <position kp="0" ctrllimited="false"/> -->
       <!-- <position kp="50" ctrllimited="false"/> -->
-      <!-- <position kp="440" ctrllimited="false"/> -->
+      <position kp="440" ctrllimited="false"/>
     </default>
     <default class="hip_pitch_vel">
       <!-- <position kv="6" ctrllimited="false"/> -->
@@ -60,10 +60,10 @@ Position and velocity actuators added. -->
 
     <!-- Knee -->
     <default class="knee_pos">
-      <position kp="270" ctrllimited="false"/>
+      <!-- <position kp="270" ctrllimited="false"/> -->
       <!-- 270 -->
       <!-- <position kp="0" ctrllimited="false"/> -->
-      <!-- <position kp="470" ctrllimited="false"/> -->
+      <position kp="470" ctrllimited="false"/>
       <!-- <position kp="50" ctrllimited="false"/> -->
     </default>
     <default class="knee_vel">
@@ -237,8 +237,13 @@ Position and velocity actuators added. -->
                   <geom size="0.005" pos="-0.05 -0.025 -0.03" rgba="0.2 0.2 0.2 1"/>
                   <geom size="0.005" pos="0.12 0.03 -0.03" rgba="0.2 0.2 0.2 1"/>
                   <geom size="0.005" pos="0.12 -0.03 -0.03" rgba="0.2 0.2 0.2 1"/> -->
+
+                  <!-- Match the URDF -->
                   <geom pos="-0.05 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/>
                   <geom pos="0.12 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/>
+
+                  <!-- Extra contacts for stepping stones -->
+                  <geom pos="0.035 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/>
                 </body>
               </body>
             </body>
@@ -284,8 +289,16 @@ Position and velocity actuators added. -->
                   <geom size="0.005" pos="-0.05 -0.025 -0.03" rgba="0.2 0.2 0.2 1"/>
                   <geom size="0.005" pos="0.12 0.03 -0.03" rgba="0.2 0.2 0.2 1"/>
                   <geom size="0.005" pos="0.12 -0.03 -0.03" rgba="0.2 0.2 0.2 1"/> -->
+
+                  <!-- Match the URDF -->
                   <geom pos="-0.05 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/>
                   <geom pos="0.12 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/>
+
+                  <!-- Extra contacts for stepping stones -->
+                  <geom pos="0.035 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/>
+
+                  <!-- Polytope Frame position -->
+                  <!-- <geom pos="0.035 0 -0.03" rgba="0.2 0.2 0.2 1" size="0.01"/> -->
                 </body>
               </body>
             </body>

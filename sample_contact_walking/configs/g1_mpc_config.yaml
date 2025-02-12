@@ -58,8 +58,8 @@ solver_settings:
 # ----------------------------- #
   mode: Speed
   alpha_min: 1e-8
-  max_iter: 10 #10 #10 #10 #15 #15
-  mu0: 1 #10 #1 #100 #.1
+  max_iter: 10 #20 #10 #10 #10 #10 #15 #15
+  mu0: 1 #10 #10 #1 #100 #.1
   tol_stat: 1e-8
   tol_eq: 1e-8
   tol_comp: 1e-8
@@ -103,7 +103,7 @@ constraints:
     #   frame2: "right_knee_link"
     #   radius1: 0.05
     #   radius2: 0.05
-  swing_start_node: 3 #2 #2  # Making this > 2 makes us less senitive to bad tracking # Make 1 for centroidal
+  swing_start_node: 2 #3 #2 #2  # Making this > 2 makes us less senitive to bad tracking # Make 1 for centroidal
   swing_end_node: 32
   holonomic_start_node: 1 # Make 0 for centroidal 
   holonomic_end_node: 27 #31  # Keeping this lower might seem to help??, it was 24
@@ -111,7 +111,9 @@ constraints:
   collision_end_node: 32
   polytope_start_node: 2
   polytope_end_node: 32
-  # swing_kp: 0 #950.
+  polytope_delta: 0.12 #0.08 #0.04 #0.06
+  polytope_shrinking_rad: 0.5 #0.2
+  polytope_frames: ["left_foot_middle", "right_foot_middle"]
 costs:
 # --------------------------------------------------------------- #
 # ---------------------- Simulation Params ---------------------- #
@@ -238,7 +240,7 @@ costs:
   - type: ForwardKinematics
     name: "left_heel_fk"
     frame: "left_heel"
-    weight: [10,1,1] #[.1,.1,1] #[1, 1, 200]   # TODO: Play with these weights more
+    weight: [10,0,0] #[1,1,1] #[.1,.1,1] #[1, 1, 200]   # TODO: Play with these weights more
   # ------------------------------ #
   # ----- Centroidal Weights ----- #
   # ------------------------------ #
@@ -269,6 +271,7 @@ contacts:
   contact_frames: ["left_toe", "left_heel", "right_toe", "right_heel"]
   # hip_offsets: [-0.025, 0.1164, -0.025, -0.1164]
   hip_offsets: [0.145, 0.1164, -0.025, 0.1164, 0.145, -0.1164, -0.025, -0.1164]
+  # hip_offsets: [0.145, 0.1164, -0.225, 0.1164, 0.145, -0.1164, -0.225, -0.1164]
   apex_height: 0.08
   apex_time: 0.75
   default_ground_height: 0.005
