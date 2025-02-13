@@ -333,7 +333,7 @@ namespace robot
         this->declare_parameter<std::vector<double>>("foot_offsets", {-1});
         std::vector<double> contact_offsets = this->get_parameter("foot_offsets").as_double_array();
         step_planner_ = std::make_unique<torc::step_planning::StepPlanner>(contact_polytopes, mpc_settings_->contact_frames, contact_offsets,
-            0.1, mpc_settings_->polytope_delta);
+            0.4, mpc_settings_->polytope_delta);
 
         
 
@@ -659,7 +659,6 @@ namespace robot
                 
 
         // Linearize around current trajectory
-        // TODO: Put back
         mpc_->CreateQPData();
 
         timer.Toc();
@@ -1838,6 +1837,8 @@ namespace robot
 
         std::lock_guard<std::mutex> lock(polytope_mutex_);
         step_planner_->UpdateContactPolytopes(polytopes);
+
+        recieved_polytope_ = true;
      }
 
     void MpcController::JoystickCallback(const sensor_msgs::msg::Joy& msg) {

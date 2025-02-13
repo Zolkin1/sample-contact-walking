@@ -13,7 +13,7 @@ onboard:
         viz_forces: True
         viz_force_scale: 0.01
         force_frames: ["left_toe", "left_heel", "right_toe", "right_heel"]
-        polytope_frames: ["left_toe", "right_toe", "left_heel", "right_heel"]
+        polytope_frames: ["left_toe"] #["left_toe", "right_toe", "left_heel", "right_heel"]
         # polytope_frames: ["left_heel", "right_heel"]
 # ---------- Swing trajectory ---------- #
         default_swing_height: 0.08 # 0.1
@@ -73,7 +73,7 @@ onboard:
         #                33, 34, 35,
         #                36, 37, 38, 39, 40, 41, 42]
 # ---------- Step Planner ---------- #
-        foot_offsets: [-0.125, 0.1164, -0.125, 0.1164, -0.125, -0.1164, -0.125, -0.1164]  # Making the offsets the same so the feet are always projected to the same place
+        foot_offsets: [0.025, 0.1164, 0.025, 0.1164, 0.025, -0.1164, 0.025, -0.1164]  # Making the offsets the same so the feet are always projected to the same place
       callback_groups: 
         control_cbg: MutuallyExclusiveCallbackGroup
         estimation_cbg: MutuallyExclusiveCallbackGroup
@@ -128,7 +128,6 @@ onboard:
     - pkg: contact_planning
       executable: mujoco_geom_reader
       params:
-        default_polytope_size: 0.4 #0.6
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/basic_scene.xml
         mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
       # ----- Tile Scene ---- #
@@ -280,8 +279,8 @@ onboard:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model
           # model_xml_path: g1_29dof_with_hand_fixed_base.xml
-          # model_xml_path: tile_scene.xml
-          model_xml_path: basic_scene.xml
+          model_xml_path: tile_scene.xml
+          # model_xml_path: basic_scene.xml
           # model_xml_path: stairs_scene.xml
           # model_xml_path: g1_29dof_with_hand.xml
           # n_u: 129
