@@ -72,6 +72,8 @@ onboard:
         #                22, 23, 24, 25, 26, 27, 28,
         #                33, 34, 35,
         #                36, 37, 38, 39, 40, 41, 42]
+# ---------- Step Planner ---------- #
+        foot_offsets: [-0.125, 0.1164, -0.125, 0.1164, -0.125, -0.1164, -0.125, -0.1164]  # Making the offsets the same so the feet are always projected to the same place
       callback_groups: 
         control_cbg: MutuallyExclusiveCallbackGroup
         estimation_cbg: MutuallyExclusiveCallbackGroup
@@ -109,8 +111,11 @@ onboard:
         - ros_parameter: joystick_sub_setting
           topic: /obelisk/g1/joy
         # ----- Contact Schedule subscriber ----- #
-        - ros_parameter: contact_schedule_sub_setting
-          topic: /obelisk/g1/contact_schedule
+        # - ros_parameter: contact_schedule_sub_setting
+        #   topic: /obelisk/g1/contact_schedule
+        # ----- Polytope subscriber ----- #
+        - ros_parameter: polytope_sub_setting
+          topic: /obelisk/g1/contact_polytopes
       timers:
         # Low level control timer
         - ros_parameter: timer_ctrl_setting
@@ -121,32 +126,18 @@ onboard:
           timer_period_sec: 0.002
           callback_group: None
     - pkg: contact_planning
-      executable: contact_planner
+      executable: mujoco_geom_reader
       params:
         default_polytope_size: 0.4 #0.6
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/basic_scene.xml
         mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
       # ----- Tile Scene ---- #
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9"]
-      # ----- Swing Timing Paramers ---- #
-      # WARNING!! THESE MUST MATCH THE CORRESPONDING PARAMETERS ABOVE
-        first_step_time: 0.5
-        swing_time: 0.4
-        right_foot_frames: ["right_toe", "right_heel"]
-        left_foot_frames: ["left_toe", "left_heel"]
-        # foot_offsets: [0.145, 0.1164, -0.025, 0.1164, 0.145, -0.1164, -0.025, -0.1164]
-        foot_offsets: [-0.125, 0.1164, -0.125, 0.1164, -0.125, -0.1164, -0.125, -0.1164]  # Making the offsets the same so the feet are always projected to the same place
-        num_nodes: 25   # Should match the MPC
-        node_group_1_n: 5
-        node_group_2_n: 20
-        node_dt_1: 0.015
-        node_dt_2: 0.05
-        polytope_margin: 0.12 #0.08 #0.04   # Should match polytope_delta
       publishers:
         # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting
-          topic: /obelisk/g1/contact_schedule
-          msg_type: ContactSchedule
+          topic: /obelisk/g1/contact_polytopes
+          msg_type: ContactPolytopeArray
           key: "contact_schedule_pub"
           history_depth: 10
           callback_group: None
@@ -157,23 +148,64 @@ onboard:
           key: "est_state_sub"
           history_depth: 10
           callback_group: estimation_cbg
-        # Joystick Sub
-        - ros_parameter: joystick_sub_setting
-          topic: /obelisk/g1/joy
-          msg_type: Joy
-          key: "joystick_sub"
-          history_depth: 10
-          callback_group: None
-        # Commanded Target
-        - ros_parameter: commanded_target_setting
-          topic: /obelisk/g1/commanded_target
-          msg_type: CommandedTarget
-          key: "command_sub"
       timers:
         # Contact planning timer
         - ros_parameter: timer_ctrl_setting
           timer_period_sec: 0.05 #0.1
           callback_group: control_cbg
+      # executable: contact_planner
+      # params:
+      #   default_polytope_size: 0.4 #0.6
+      #   mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/basic_scene.xml
+      #   # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
+      # # ----- Tile Scene ---- #
+      #   foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9"]
+      # # ----- Swing Timing Paramers ---- #
+      # # WARNING!! THESE MUST MATCH THE CORRESPONDING PARAMETERS ABOVE
+      #   first_step_time: 0.5
+      #   swing_time: 0.4
+      #   right_foot_frames: ["right_toe", "right_heel"]
+      #   left_foot_frames: ["left_toe", "left_heel"]
+      #   # foot_offsets: [0.145, 0.1164, -0.025, 0.1164, 0.145, -0.1164, -0.025, -0.1164]
+      #   foot_offsets: [-0.125, 0.1164, -0.125, 0.1164, -0.125, -0.1164, -0.125, -0.1164]  # Making the offsets the same so the feet are always projected to the same place
+      #   num_nodes: 25   # Should match the MPC
+      #   node_group_1_n: 5
+      #   node_group_2_n: 20
+      #   node_dt_1: 0.015
+      #   node_dt_2: 0.05
+      #   polytope_margin: 0.12 #0.08 #0.04   # Should match polytope_delta
+      # publishers:
+      #   # Contact schedule publisher
+      #   - ros_parameter: pub_ctrl_setting
+      #     topic: /obelisk/g1/contact_schedule
+      #     msg_type: ContactSchedule
+      #     key: "contact_schedule_pub"
+      #     history_depth: 10
+      #     callback_group: None
+      # subscribers:
+      #   - ros_parameter: sub_est_setting
+      #     topic: /obelisk/g1/est_state # est_state, target_state
+      #     msg_type: EstimatedState
+      #     key: "est_state_sub"
+      #     history_depth: 10
+      #     callback_group: estimation_cbg
+      #   # Joystick Sub
+      #   - ros_parameter: joystick_sub_setting
+      #     topic: /obelisk/g1/joy
+      #     msg_type: Joy
+      #     key: "joystick_sub"
+      #     history_depth: 10
+      #     callback_group: None
+      #   # Commanded Target
+      #   - ros_parameter: commanded_target_setting
+      #     topic: /obelisk/g1/commanded_target
+      #     msg_type: CommandedTarget
+      #     key: "command_sub"
+      # timers:
+      #   # Contact planning timer
+      #   - ros_parameter: timer_ctrl_setting
+      #     timer_period_sec: 0.05 #0.1
+      #     callback_group: control_cbg
   estimation:
     - pkg: sample_contact_walking
       executable: state_estimator
@@ -248,8 +280,8 @@ onboard:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model
           # model_xml_path: g1_29dof_with_hand_fixed_base.xml
-          model_xml_path: tile_scene.xml
-          # model_xml_path: basic_scene.xml
+          # model_xml_path: tile_scene.xml
+          model_xml_path: basic_scene.xml
           # model_xml_path: stairs_scene.xml
           # model_xml_path: g1_29dof_with_hand.xml
           # n_u: 129

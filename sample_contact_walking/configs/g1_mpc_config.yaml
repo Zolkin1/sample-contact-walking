@@ -27,7 +27,7 @@ general_settings:
   node_group_1_n: 5
   node_group_2_n: 20 #27 #20 #27
   node_dt_1: 0.015 #0.005 #0.015
-  node_dt_2: 0.05 #0.025 #0.05 #0.03 #0.025
+  node_dt_2: 0.04 #0.025 #0.05 #0.03 #0.025
   compile_derivatives: False
   base_frame: "pelvis"
   scale_cost: False
@@ -103,7 +103,7 @@ constraints:
     #   frame2: "right_knee_link"
     #   radius1: 0.05
     #   radius2: 0.05
-  swing_start_node: 2 #3 #2 #2  # Making this > 2 makes us less senitive to bad tracking # Make 1 for centroidal
+  swing_start_node: 3 #2 #2  # Making this > 2 makes us less senitive to bad tracking # Make 1 for centroidal
   swing_end_node: 32
   holonomic_start_node: 1 # Make 0 for centroidal 
   holonomic_end_node: 27 #31  # Keeping this lower might seem to help??, it was 24
@@ -240,7 +240,7 @@ costs:
   - type: ForwardKinematics
     name: "left_heel_fk"
     frame: "left_heel"
-    weight: [10,0,0] #[1,1,1] #[.1,.1,1] #[1, 1, 200]   # TODO: Play with these weights more
+    weight: [10,1,1] #[1,1,1] #[.1,.1,1] #[1, 1, 200]   # TODO: Play with these weights more
   # ------------------------------ #
   # ----- Centroidal Weights ----- #
   # ------------------------------ #

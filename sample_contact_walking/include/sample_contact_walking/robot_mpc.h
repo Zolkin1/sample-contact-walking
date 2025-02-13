@@ -7,11 +7,13 @@
 
 #include "sensor_msgs/msg/joy.hpp"
 
-#include "sample_contact_msgs/msg/contact_schedule.hpp"
+// #include "sample_contact_msgs/msg/contact_schedule.hpp"
+#include "sample_contact_msgs/msg/contact_polytope_array.hpp"
 
 // #include "full_order_mpc.h"
 #include "hpipm_mpc.h"
 #include "reference_generator.h"
+#include "step_planner.h"
 // #include "wbc_controller.h"
 // #include "cross_entropy.h"
 
@@ -51,8 +53,9 @@ namespace robot {
             void JoystickCallback(const sensor_msgs::msg::Joy& msg);
 
             // Contact schedule
-            void ContactScheduleCallback(const sample_contact_msgs::msg::ContactSchedule& msg);
+            // void ContactScheduleCallback(const sample_contact_msgs::msg::ContactSchedule& msg);
             void AddPeriodicContacts();
+            void ContactPolytopeCallback(const sample_contact_msgs::msg::ContactPolytopeArray& msg);
 
             // Parse contact into
             void ParseContactParameters();
@@ -159,7 +162,12 @@ namespace robot {
 
             // std::unique_ptr<torc::controller::WbcController> wbc_controller_;
 
+            // Reference Generator
             std::unique_ptr<torc::mpc::ReferenceGenerator> ref_gen_;
+
+            // Step Planner
+            std::unique_ptr<torc::step_planning::StepPlanner> step_planner_;
+            std::map<std::string, std::vector<torc::step_planning::vector2_t>> nom_footholds_, projected_footholds_;   // For visualization
 
             std::shared_ptr<torc::mpc::MpcSettings> mpc_settings_;
             // std::shared_ptr<torc::controller::WbcSettings> wbc_settings_;
