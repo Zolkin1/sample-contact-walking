@@ -176,6 +176,7 @@ namespace robot {
             // MPC Skipped joint indexes
             // TODO: Find a better way to do this
             std::vector<long int> mpc_skipped_joint_indexes_;
+            std::vector<double> mpc_skipped_joint_vals_;
             std::vector<long int> wbc_skipped_joint_indexes_;
 
             // Threads

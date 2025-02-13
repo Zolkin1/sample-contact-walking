@@ -224,7 +224,7 @@ namespace robot
         // ---------- Forward Kinematics Tracking ---------- //
         // For now they all need the same weight
         // Need to read the contact frames from the settings (TODO, later)
-        RCLCPP_ERROR_STREAM(this->get_logger(), "weight: " << mpc_settings_->cost_data.at(4).weight.transpose());
+        RCLCPP_INFO_STREAM(this->get_logger(), "FK weight: " << mpc_settings_->cost_data.at(4).weight.transpose());
         torc::mpc::ForwardKinematicsCost fk_cost(0, mpc_settings_->nodes, model_name + "fk_cost", mpc_settings_->cost_data.at(4).weight.size(),
             mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_model_temp, mpc_settings_->contact_frames);
 
@@ -317,6 +317,13 @@ namespace robot
             RCLCPP_ERROR_STREAM(this->get_logger(), "Provided skip indexes don't match the model differences! Got size: " << mpc_skipped_joint_indexes_.size() << ", expected: " 
                 << model_->GetConfigDim() - mpc_model_->GetConfigDim());
         }
+        this->declare_parameter<std::vector<double>>("skip_joint_vals", {-1});
+        mpc_skipped_joint_vals_ = this->get_parameter("skip_joint_vals").as_double_array();
+
+        if (mpc_skipped_joint_vals_.size() != mpc_skipped_joint_indexes_.size()) {
+            throw std::runtime_error("MPC skip joint indexes size does not match the corresponding value array!");
+        }
+
 
         // this->declare_parameter<std::vector<long int>>("wbc_skip_indexes", {-1});
         // wbc_skipped_joint_indexes_ = this->get_parameter("wbc_skip_indexes").as_integer_array();
@@ -676,8 +683,6 @@ namespace robot
         static bool first_loop = true;
         const long max_mpc_solves = this->get_parameter("max_mpc_solves").as_int();
 
-        // mpc_->CreateQPData();
-
         // ----- Read in state ----- //
         // // TODO: If statement is only here for when we remove sim
         // if (first_loop) {   // TODO: Remove when I go back to sim
@@ -847,47 +852,46 @@ namespace robot
             //     tau = wbc_controller_->ComputeControl(q_est, v_est, q, v, tau, F, in_contact);     
             //     // RCLCPP_WARN_STREAM(this->get_logger(), "After control");           
             // }
-
+            
             // TODO: Remove
             // q = q_ic_;
             // v = v_ic_;
             // tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
 
             // TODO: Only use this when the mujoco model does not match!
-            // // Check if we need to insert other elements into the targets
-            // const auto& joint_skip_values = mpc_settings_->joint_skip_values;
-            // // TODO: Make this work for both MPC and WBC sizes!
-            // std::vector<double> q_vec(q.data(), q.data() + q.size());
-            // std::vector<double> v_vec(v.data(), v.data() + v.size());
-            // std::vector<double> tau_vec(tau.data(), tau.data() + tau.size());
+            // Check if we need to insert other elements into the targets
+            // TODO: Make this work for both MPC and WBC sizes!
+            std::vector<double> q_vec(q.data(), q.data() + q.size());
+            std::vector<double> v_vec(v.data(), v.data() + v.size());
+            std::vector<double> tau_vec(tau.data(), tau.data() + tau.size());
 
-            // for (int i = 0; i < mpc_skipped_joint_indexes_.size(); i++) {
-            //     // TODO: Compute angle so that ankle is parallel to the ground
-            //     q_vec.insert(q_vec.begin() + FLOATING_POS_SIZE + mpc_skipped_joint_indexes_[i], joint_skip_values[i]);
-            //     v_vec.insert(v_vec.begin() + FLOATING_VEL_SIZE + mpc_skipped_joint_indexes_[i], 0);
-            //     tau_vec.insert(tau_vec.begin() + mpc_skipped_joint_indexes_[i], 0);
-            // }
+            for (int i = 0; i < mpc_skipped_joint_indexes_.size(); i++) {
+                // TODO: Compute angle so that ankle is parallel to the ground
+                q_vec.insert(q_vec.begin() + FLOATING_POS_SIZE + mpc_skipped_joint_indexes_[i], mpc_skipped_joint_vals_[i]);
+                v_vec.insert(v_vec.begin() + FLOATING_VEL_SIZE + mpc_skipped_joint_indexes_[i], 0);
+                tau_vec.insert(tau_vec.begin() + mpc_skipped_joint_indexes_[i], 0);
+            }
 
-            // Eigen::Map<Eigen::VectorXd> q_map(q_vec.data(), q_vec.size());
-            // Eigen::Map<Eigen::VectorXd> v_map(v_vec.data(), v_vec.size());
-            // Eigen::Map<Eigen::VectorXd> tau_map(tau_vec.data(), tau_vec.size());
+            Eigen::Map<Eigen::VectorXd> q_map(q_vec.data(), q_vec.size());
+            Eigen::Map<Eigen::VectorXd> v_map(v_vec.data(), v_vec.size());
+            Eigen::Map<Eigen::VectorXd> tau_map(tau_vec.data(), tau_vec.size());
 
-            // q = q_map;
-            // v = v_map;
-            // tau = tau_map;
+            q = q_map;
+            v = v_map;
+            tau = tau_map;
             
-
             // Make the message
-            vectorx_t u_mujoco = ConvertControlToMujocoU(q.tail(mpc_model_->GetNumInputs()),
-                v.tail(mpc_model_->GetNumInputs()), tau);
+            vectorx_t u_mujoco = ConvertControlToMujocoU(q.tail(mpc_model_->GetNumInputs() + mpc_skipped_joint_indexes_.size()),
+                v.tail(mpc_model_->GetNumInputs() + mpc_skipped_joint_indexes_.size()), tau);
 
             ConvertEigenToStd(u_mujoco, msg.u_mujoco);
-            ConvertEigenToStd(q.tail(mpc_model_->GetNumInputs()), msg.pos_target);
-            ConvertEigenToStd(v.tail(mpc_model_->GetNumInputs()), msg.vel_target);
+            ConvertEigenToStd(q.tail(mpc_model_->GetNumInputs() + mpc_skipped_joint_indexes_.size()), msg.pos_target);
+            ConvertEigenToStd(v.tail(mpc_model_->GetNumInputs() + mpc_skipped_joint_indexes_.size()), msg.vel_target);
             ConvertEigenToStd(tau, msg.feed_forward);
             
-            if (msg.u_mujoco.size() != 3*mpc_model_->GetNumInputs()) {
+            if (msg.u_mujoco.size() != 3*(mpc_model_->GetNumInputs() + mpc_skipped_joint_indexes_.size())) {
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Message's u_mujoco is incorrectly sized. Size: " << msg.u_mujoco.size());
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Expected size: " << 3*(mpc_model_->GetNumInputs() + mpc_skipped_joint_indexes_.size()));
             }
 
             // TODO: Use only when the mujoco model doesn't match the MPC

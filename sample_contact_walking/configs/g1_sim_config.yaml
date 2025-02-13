@@ -13,7 +13,7 @@ onboard:
         viz_forces: True
         viz_force_scale: 0.01
         force_frames: ["left_toe", "left_heel", "right_toe", "right_heel"]
-        polytope_frames: ["left_toe"] #["left_toe", "right_toe", "left_heel", "right_heel"]
+        polytope_frames: ["left_toe", "right_toe", "left_heel", "right_heel"]
         # polytope_frames: ["left_heel", "right_heel"]
 # ---------- Swing trajectory ---------- #
         default_swing_height: 0.08 # 0.1
@@ -31,23 +31,6 @@ onboard:
         right_frames: ["right_toe", "right_heel"]
         left_frames: ["left_toe", "left_heel"]
 # ---------- Targets ---------- #
-        # target_config: [0, 0, 0.72, #0.73, #0.77, #0.793, if the height is too high we get some singularity issues
-        #                 0, 0, 0, 1,
-        #                 # 0, 0, 0.7, 0.7,
-        #                 -0.2, 0, 0, 0.4, -0.216,
-        #                 -0.2, 0, 0, 0.4, -0.216,
-        #                 # -0.3, 0, 0, 0.52, -0.23, #0,
-        #                 # -0.3, 0, 0, 0.52, -0.23, #0,
-        #                 # 0, 0, 0,  # Removing the waist joints for now
-        #                 0, 0, 0, 0.2,
-        #                 0, 0, 0, 0.2]
-        # target_vel: [0., 0, 0, 
-        #             0, 0, 0,
-        #             0, 0, 0, 0, 0, #0,
-        #             0, 0, 0, 0, 0, #0,
-        #             # 0, 0, 0,
-        #             0, 0, 0, 0,
-        #             0, 0, 0, 0,]
         # TODO: Remove these
         mpc_ic_config: [0, 0, 0.75, 
                         0, 0, 0, 1,
@@ -65,13 +48,26 @@ onboard:
         fixed_target: True #True
         controller_target: True #True
 # ---------- Skip Indexes ---------- #
-# TODO: Find a better way to do this
-        # skip_indexes: [ 5, 11,
-        #                12, 13, 14,
-        #                19, 20, 21,
-        #                22, 23, 24, 25, 26, 27, 28,
-        #                33, 34, 35,
-        #                36, 37, 38, 39, 40, 41, 42]
+        # Corresponds to Mujoco/hardware, NOT the urdf.
+        # TODO: Check values
+        skip_indexes: [5,   # Left ankle roll
+                       11,  # Right ankle roll
+                       12,  # Waist yaw
+                       17,  # Left wrist roll
+                       18,  # Left wrist pitch
+                       19,  # Left wrist yaw
+                       24,  # Right wrist roll
+                       25,  # Right wrist pitch
+                       26,] # Right wrist yaw
+        skip_joint_vals: [0.,  # Left ankle roll
+                          0,  # Right ankle roll
+                          0,  # Waist yaw
+                          0,  # Left wrist roll
+                          0,  # Left wrist pitch
+                          0,  # Left wrist yaw
+                          0,  # Right wrist roll
+                          0,  # Right wrist pitch
+                          0,] # Right wrist yaw
 # ---------- Step Planner ---------- #
         foot_offsets: [0.025, 0.1164, 0.025, 0.1164, 0.025, -0.1164, 0.025, -0.1164]  # Making the offsets the same so the feet are always projected to the same place
       callback_groups: 
@@ -128,8 +124,8 @@ onboard:
     - pkg: contact_planning
       executable: mujoco_geom_reader
       params:
-        # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/basic_scene.xml
-        mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
+        mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/basic_scene.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
       # ----- Tile Scene ---- #
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9"]
       publishers:
@@ -279,12 +275,10 @@ onboard:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model
           # model_xml_path: g1_29dof_with_hand_fixed_base.xml
-          model_xml_path: tile_scene.xml
-          # model_xml_path: basic_scene.xml
+          # model_xml_path: tile_scene.xml
+          model_xml_path: basic_scene.xml
           # model_xml_path: stairs_scene.xml
           # model_xml_path: g1_29dof_with_hand.xml
-          # n_u: 129
-          # time_step: 0.0005
           num_steps_per_viz: 32 #16 # No longer used
           sensor_settings:
           # ---------- Joint Encoders ---------- #
@@ -298,16 +292,16 @@ onboard:
               left_hip_yaw_joint_pos_sensor: jointpos
               left_knee_joint_pos_sensor: jointpos
               left_ankle_pitch_joint_pos_sensor: jointpos
-              # left_ankle_roll_joint_pos_sensor: jointpos
+              left_ankle_roll_joint_pos_sensor: jointpos
 
               right_hip_pitch_joint_pos_sensor: jointpos
               right_hip_roll_joint_pos_sensor: jointpos
               right_hip_yaw_joint_pos_sensor: jointpos
               right_knee_joint_pos_sensor: jointpos
               right_ankle_pitch_joint_pos_sensor: jointpos
-              # right_ankle_roll_joint_pos_sensor: jointpos
+              right_ankle_roll_joint_pos_sensor: jointpos
 
-              # waist_yaw_joint_pos_sensor: jointpos
+              waist_yaw_joint_pos_sensor: jointpos
               # waist_roll_joint_pos_sensor: jointpos
               # waist_pitch_joint_pos_sensor: jointpos
 
@@ -315,9 +309,9 @@ onboard:
               left_shoulder_roll_joint_pos_sensor: jointpos
               left_shoulder_yaw_joint_pos_sensor: jointpos
               left_elbow_joint_pos_sensor: jointpos
-              # left_wrist_roll_joint_pos_sensor: jointpos
-              # left_wrist_pitch_joint_pos_sensor: jointpos
-              # left_wrist_yaw_joint_pos_sensor: jointpos
+              left_wrist_roll_joint_pos_sensor: jointpos
+              left_wrist_pitch_joint_pos_sensor: jointpos
+              left_wrist_yaw_joint_pos_sensor: jointpos
 
               # left_hand_thumb_0_joint_pos_sensor: jointpos
               # left_hand_thumb_1_joint_pos_sensor: jointpos
@@ -331,9 +325,9 @@ onboard:
               right_shoulder_roll_joint_pos_sensor: jointpos
               right_shoulder_yaw_joint_pos_sensor: jointpos
               right_elbow_joint_pos_sensor: jointpos
-              # right_wrist_roll_joint_pos_sensor: jointpos
-              # right_wrist_pitch_joint_pos_sensor: jointpos
-              # right_wrist_yaw_joint_pos_sensor: jointpos
+              right_wrist_roll_joint_pos_sensor: jointpos
+              right_wrist_pitch_joint_pos_sensor: jointpos
+              right_wrist_yaw_joint_pos_sensor: jointpos
 
               # right_hand_thumb_0_joint_pos_sensor: jointpos
               # right_hand_thumb_1_joint_pos_sensor: jointpos
@@ -348,16 +342,16 @@ onboard:
               left_hip_yaw_joint_vel_sensor: jointvel
               left_knee_joint_vel_sensor: jointvel
               left_ankle_pitch_joint_vel_sensor: jointvel
-              # left_ankle_roll_joint_vel_sensor: jointvel
+              left_ankle_roll_joint_vel_sensor: jointvel
 
               right_hip_pitch_joint_vel_sensor: jointvel
               right_hip_roll_joint_vel_sensor: jointvel
               right_hip_yaw_joint_vel_sensor: jointvel
               right_knee_joint_vel_sensor: jointvel
               right_ankle_pitch_joint_vel_sensor: jointvel
-              # right_ankle_roll_joint_vel_sensor: jointvel
+              right_ankle_roll_joint_vel_sensor: jointvel
 
-              # waist_yaw_joint_vel_sensor: jointvel
+              waist_yaw_joint_vel_sensor: jointvel
               # waist_roll_joint_vel_sensor: jointvel
               # waist_pitch_joint_vel_sensor: jointvel
 
@@ -365,9 +359,9 @@ onboard:
               left_shoulder_roll_joint_vel_sensor: jointvel
               left_shoulder_yaw_joint_vel_sensor: jointvel
               left_elbow_joint_vel_sensor: jointvel
-              # left_wrist_roll_joint_vel_sensor: jointvel
-              # left_wrist_pitch_joint_vel_sensor: jointvel
-              # left_wrist_yaw_joint_vel_sensor: jointvel
+              left_wrist_roll_joint_vel_sensor: jointvel
+              left_wrist_pitch_joint_vel_sensor: jointvel
+              left_wrist_yaw_joint_vel_sensor: jointvel
 
               # left_hand_thumb_0_joint_vel_sensor: jointvel
               # left_hand_thumb_1_joint_vel_sensor: jointvel
@@ -381,9 +375,9 @@ onboard:
               right_shoulder_roll_joint_vel_sensor: jointvel
               right_shoulder_yaw_joint_vel_sensor: jointvel
               right_elbow_joint_vel_sensor: jointvel
-              # right_wrist_roll_joint_vel_sensor: jointvel
-              # right_wrist_pitch_joint_vel_sensor: jointvel
-              # right_wrist_yaw_joint_vel_sensor: jointvel
+              right_wrist_roll_joint_vel_sensor: jointvel
+              right_wrist_pitch_joint_vel_sensor: jointvel
+              right_wrist_yaw_joint_vel_sensor: jointvel
 
               # right_hand_thumb_0_joint_vel_sensor: jointvel
               # right_hand_thumb_1_joint_vel_sensor: jointvel
