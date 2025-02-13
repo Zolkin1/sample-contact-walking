@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'contact_planner = contact_planning.contact_planner:main'
+            'contact_planner = contact_planning.contact_planner:main',
+            'mujoco_geom_reader = contact_planning.mujoco_geom_reader:main'
         ],
     },
 )

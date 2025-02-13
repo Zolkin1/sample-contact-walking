@@ -108,9 +108,9 @@ onboard:
       executable: contact_planner
       params:
         default_polytope_size: 0.4 #0.6
-        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile_scene.xml
+        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile_scene.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile2_scene.xml
-        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
       # ----- Tile Scene ---- #
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9"]
       # ----- Swing Timing Paramers ---- #
@@ -230,8 +230,8 @@ onboard:
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: go2_model
-          model_xml_path: go2_scene.xml
-          # model_xml_path: go2_tile_scene.xml
+          # model_xml_path: go2_scene.xml
+          model_xml_path: go2_tile_scene.xml
           # model_xml_path: go2_tile2_scene.xml
           n_u: 36
           time_step: 0.001
