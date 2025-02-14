@@ -1004,7 +1004,11 @@ namespace robot
                 b_temp = b_temp + Eigen::Vector4d::Constant(-0.1*(frame_idx));
             }
             for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-                contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
+                torc::mpc::ContactInfo poly;
+                poly.A_ = A_temp;
+                poly.b_ = b_temp;
+                poly.height_ = 0;
+                contact_schedule_.SetPolytope(frame, i, poly);
             }
 
             frame_idx++;
@@ -1653,7 +1657,7 @@ namespace robot
                 if (contact_schedule_.GetNumContacts(frame) > 1) {
                     polytope = contact_schedule_.GetPolytopes(frame).at(contact_schedule_.GetPolytopes(frame).size() - 2);
                 }
-                contact_schedule_.SetPolytope(frame, contact_schedule_.GetNumContacts(frame) - 1, polytope.A_, polytope.b_);
+                contact_schedule_.SetPolytope(frame, contact_schedule_.GetNumContacts(frame) - 1, polytope);
             }
         }
 
@@ -1726,7 +1730,7 @@ namespace robot
             Eigen::Map<matrixx_t> A(a_mat.data(), 2, 2);
             Eigen::Vector4d b(msg.polytopes[i].b_vec.data());
 
-            polytopes.emplace_back(A, b);
+            polytopes.emplace_back(A, b, msg.polytopes[i].height);
         }
 
         std::lock_guard<std::mutex> lock(polytope_mutex_);
