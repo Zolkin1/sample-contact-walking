@@ -178,7 +178,7 @@ namespace robot
 
         // ---------- Swing Constraints ---------- //
         torc::mpc::SwingConstraint swing_constraint(mpc_settings_->swing_start_node, mpc_settings_->swing_end_node, model_name + "swing_constraint",
-            mpc_model_temp, mpc_settings_->contact_frames, //mpc_settings_->swing_kp,
+            mpc_model_temp, mpc_settings_->contact_frames,
             mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);
 
         // ---------- Holonomic Constraints ---------- //
@@ -191,13 +191,10 @@ namespace robot
             model_name + "collision_constraint", mpc_model_temp, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->collision_data);
 
         // ---------- Polytope Constraints ---------- //
-        // std::vector<std::string> polytope_frames;
-        // polytope_frames.push_back(mpc_settings_->contact_frames[1]);
-        // polytope_frames.push_back(mpc_settings_->contact_frames[3]);
         torc::mpc::PolytopeConstraint polytope_constraint(mpc_settings_->polytope_start_node, mpc_settings_->polytope_end_node, model_name + "polytope_constraint",
-            mpc_settings_->polytope_frames, //mpc_settings_->contact_frames,
+            mpc_settings_->polytope_frames,
             mpc_settings_->deriv_lib_path, 
-            true, //mpc_settings_->compile_derivs,
+            mpc_settings_->compile_derivs,
             mpc_model_temp);
 
         std::cout << "===== Constraints Created =====" << std::endl;
@@ -357,7 +354,6 @@ namespace robot
         ParseContactParameters();
 
         // Step Planning
-        // TODO: Parse the geoms from Mujoco (or an external node, this way I could read in the obstacle state from optitrack).
         std::vector<torc::mpc::ContactInfo> contact_polytopes;
         torc::mpc::vector4_t b;
         b << 10, 10, -10, -10;
@@ -368,26 +364,6 @@ namespace robot
             0.4, mpc_settings_->polytope_delta);
 
         
-
-        // // Setup q and v targets
-        // this->declare_parameter<std::vector<double>>("target_config");
-        // this->declare_parameter<std::vector<double>>("target_vel");
-        // std::vector<double> q_targ_temp, v_targ_temp;
-
-        // this->get_parameter("target_config", q_targ_temp);
-        // this->get_parameter("target_vel", v_targ_temp);
-
-        // vectorx_t q_target_eig = torc::utils::StdToEigenVector(q_targ_temp);
-        // vectorx_t v_target_eig = torc::utils::StdToEigenVector(v_targ_temp);
-        // q_target_ = torc::mpc::SimpleTrajectory(mpc_model_->GetConfigDim(), mpc_->GetNumNodes());
-        // v_target_ = torc::mpc::SimpleTrajectory(mpc_model_->GetVelDim(), mpc_->GetNumNodes());
-        // q_target_->SetAllData(q_target_eig);
-        // v_target_->SetAllData(v_target_eig);
-        // z_target_ = q_target_.value()[0](2);
-
-        // mpc_->SetConfigTarget(q_target_.value());
-        // mpc_->SetVelTarget(v_target_.value());
-
         // Set initial conditions
         this->declare_parameter<std::vector<double>>("mpc_ic_config");
         this->declare_parameter<std::vector<double>>("mpc_ic_vel");
@@ -399,41 +375,20 @@ namespace robot
         q_ic_ = torc::utils::StdToEigenVector(q_ic_temp);
         v_ic_ = torc::utils::StdToEigenVector(v_ic_temp);
 
-        // RCLCPP_INFO_STREAM(this->get_logger(), "q target: " << q_target_.value()[0].transpose());
-        // RCLCPP_INFO_STREAM(this->get_logger(), "v target: " << v_target_.value()[0].transpose());
-        // RCLCPP_INFO_STREAM(this->get_logger(), "q ic: " << q_ic_.transpose());
-        // RCLCPP_INFO_STREAM(this->get_logger(), "v ic: " << v_ic_.transpose());
-
         this->declare_parameter<bool>("fixed_target", true);
         this->get_parameter("fixed_target", fixed_target_);
         this->declare_parameter<bool>("controller_target", false);
         this->get_parameter("controller_target", controller_target_);
 
-        // // Contact Polytope defaults
-        // matrixx_t A_temp = matrixx_t::Identity(2, 2);
-        // Eigen::Vector4d b_temp = Eigen::Vector4d::Zero();
-        // b_temp << 10, 10, -10, -10;
-        // for (const auto& frame : mpc_->GetContactFrames()) {
-        //     // contact_polytopes_.insert({frame, {}});
-        //     for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-        //         contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
-        //         // contact_polytopes_[frame].emplace_back((A_temp, b_temp));
-        //     }
-        // }
-
-        // mpc_->SetWarmStartTrajectory(traj_out_);
         traj_out_ = mpc_->GetTrajectory();
         traj_out_.SetConfiguration(0, q_ic_);
         traj_out_.SetVelocity(0, v_ic_);
         traj_mpc_ = traj_out_;
         mpc_->SetLinTraj(traj_mpc_);
-        // mpc_->SetLinTrajConfig(traj_out_.GetConfigTrajectory());
-        // mpc_->SetLinTrajVel(traj_out_.GetVelocityTrajectory());
-        // RCLCPP_INFO_STREAM(this->get_logger(), "Warm start trajectory created...");
+
 
         // Go to initial condition
         TransitionState(SeekInitialCond);
-        // TransitionState(Mpc);
 
         // Visualization information
         this->declare_parameter<std::vector<std::string>>("viz_frames", {""});
