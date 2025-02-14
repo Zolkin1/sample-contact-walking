@@ -132,8 +132,8 @@ onboard:
     - pkg: contact_planning
       executable: mujoco_geom_reader
       params:
-        mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/basic_scene.xml
-        # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/basic_scene.xml
+        mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
       # ----- Tile Scene ---- #
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9"]
       publishers:
@@ -283,8 +283,8 @@ onboard:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model
           # model_xml_path: g1_29dof_with_hand_fixed_base.xml
-          # model_xml_path: tile_scene.xml
-          model_xml_path: basic_scene.xml
+          model_xml_path: tile_scene.xml
+          # model_xml_path: basic_scene.xml
           # model_xml_path: stairs_scene.xml
           # model_xml_path: g1_29dof_with_hand.xml
           num_steps_per_viz: 32 #16 # No longer used
