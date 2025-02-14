@@ -76,6 +76,47 @@ onboard:
                           0,  # Right wrist roll
                           0,  # Right wrist pitch
                           0,] # Right wrist yaw
+# --------- Control Params --------- #
+        # Note: Right now this will only be used on hardware and NOT in the sim!
+        control_joint_names: ["left_hip_pitch_joint",
+            "left_hip_roll_joint",
+            "left_hip_yaw_joint",
+            "left_knee_joint",
+            "left_ankle_pitch_joint",
+            "left_ankle_roll_joint",
+            "right_hip_pitch_joint",
+            "right_hip_roll_joint",
+            "right_hip_yaw_joint",
+            "right_knee_joint",
+            "right_ankle_pitch_joint",
+            "right_ankle_roll_joint",
+            "waist_yaw_joint",
+            # "waist_roll_joint",
+            # "waist_pitch_joint",
+            "left_shoulder_pitch_joint",
+            "left_shoulder_roll_joint",
+            "left_shoulder_yaw_joint",
+            "left_elbow_joint",
+            "left_wrist_roll_joint",
+            "left_wrist_pitch_joint",
+            "left_wrist_yaw_joint",
+            "right_shoulder_pitch_joint",
+            "right_shoulder_roll_joint",
+            "right_shoulder_yaw_joint",
+            "right_elbow_joint",
+            "right_wrist_roll_joint",
+            "right_wrist_pitch_joint",
+            "right_wrist_yaw_joint",]
+        kp: [240., 260, 220, 270, 200, 40,
+             240., 260, 220, 270, 200, 40,
+             0,
+             100, 100, 100, 100, 40, 40, 40,
+             100, 100, 100, 100, 40, 40, 40]
+        kd: [4., 4, 4, 4, 4, 2,
+             4, 4, 4, 4, 4, 2,
+             0,
+             2, 2, 2, 2, 5, 5, 5,
+             2, 2, 2, 2, 5, 5, 5,]
 # ---------- Step Planner ---------- #
         foot_offsets: [0.025, 0.1164, 0.025, 0.1164, 0.025, -0.1164, 0.025, -0.1164]  # Making the offsets the same so the feet are always projected to the same place
       callback_groups: 
@@ -134,6 +175,7 @@ onboard:
       params:
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/basic_scene.xml
         mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/g1_tile2_scene.xml
       # ----- Tile Scene ---- #
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9"]
       publishers:
@@ -284,6 +326,7 @@ onboard:
           robot_pkg: g1_model
           # model_xml_path: g1_29dof_with_hand_fixed_base.xml
           model_xml_path: tile_scene.xml
+          # model_xml_path: g1_tile2_scene.xml
           # model_xml_path: basic_scene.xml
           # model_xml_path: stairs_scene.xml
           # model_xml_path: g1_29dof_with_hand.xml

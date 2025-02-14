@@ -308,7 +308,9 @@ namespace robot
         mpc_->SetLinTrajConfig(q_target_.value());
         mpc_->SetLinTrajVel(v_target_.value());
 
-        // Other variables
+        // --------------------------------- //
+        // ---------- Skip Joints ---------- //
+        // --------------------------------- //        
         this->declare_parameter<std::vector<long int>>("skip_indexes", {-1});
         mpc_skipped_joint_indexes_ = this->get_parameter("skip_indexes").as_integer_array();
         if (mpc_skipped_joint_indexes_[0] == -1 && (model_->GetConfigDim() == mpc_model_->GetConfigDim())) {
@@ -324,9 +326,32 @@ namespace robot
             throw std::runtime_error("MPC skip joint indexes size does not match the corresponding value array!");
         }
 
-
         // this->declare_parameter<std::vector<long int>>("wbc_skip_indexes", {-1});
         // wbc_skipped_joint_indexes_ = this->get_parameter("wbc_skip_indexes").as_integer_array();
+
+        // --------------------------------- //
+        // Make the joint names
+        // --------------------------------- //
+        this->declare_parameter<std::vector<std::string>>("control_joint_names", {""});
+        control_joint_names_ = this->get_parameter("control_joint_names").as_string_array();
+
+        RCLCPP_INFO_STREAM(this->get_logger(), "Control joint names:");
+        for (int i = 0; i < control_joint_names_.size(); i++) {
+            RCLCPP_INFO_STREAM(this->get_logger(), control_joint_names_[i]);
+        }
+
+        this->declare_parameter<std::vector<double>>("kp", {0.});
+        this->declare_parameter<std::vector<double>>("kd", {0.});
+        kp_ = this->get_parameter("kp").as_double_array();
+        kd_ = this->get_parameter("kd").as_double_array();
+
+        if (kp_.size() != kd_.size() || kp_.size() != control_joint_names_.size()) {
+            RCLCPP_ERROR_STREAM(this->get_logger(), "kp size: " << kp_.size());
+            RCLCPP_ERROR_STREAM(this->get_logger(), "kd size: " << kd_.size());
+            RCLCPP_ERROR_STREAM(this->get_logger(), "joint name size: " << control_joint_names_.size());
+            throw std::runtime_error("kp, kd, or joint name sizes don't match!");
+        }
+
 
         // Parse contact schedule info
         ParseContactParameters();
@@ -893,6 +918,20 @@ namespace robot
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Message's u_mujoco is incorrectly sized. Size: " << msg.u_mujoco.size());
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Expected size: " << 3*(mpc_model_->GetNumInputs() + mpc_skipped_joint_indexes_.size()));
             }
+
+            if (msg.feed_forward.size() != control_joint_names_.size()) {
+                throw std::runtime_error("Invalid feedforward size/control joint name size!");
+            }
+            if (msg.pos_target.size() != kp_.size()) {
+                throw std::runtime_error("Position target size does not match kp size!");
+            }
+            if (msg.pos_target.size() != kd_.size()) {
+                throw std::runtime_error("Velocity target size does not match kd size!");
+            }
+
+            msg.kp = kp_;
+            msg.kd = kd_;
+            msg.joint_names = control_joint_names_;
 
             // TODO: Use only when the mujoco model doesn't match the MPC
             // // Make the message

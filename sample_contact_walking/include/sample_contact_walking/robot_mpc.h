@@ -186,6 +186,11 @@ namespace robot {
             // broadcasters
             std::shared_ptr<tf2_ros::StaticTransformBroadcaster> torso_mocap_broadcaster_;
 
+            // For hardware
+            std::vector<std::string> control_joint_names_;
+            std::vector<double> kp_;
+            std::vector<double> kd_;
+
             double time_offset_;
             std::ofstream log_file_;
             std::ofstream timing_log_file_;
