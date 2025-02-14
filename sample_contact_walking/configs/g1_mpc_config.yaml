@@ -103,7 +103,7 @@ constraints:
     #   frame2: "right_knee_link"
     #   radius1: 0.05
     #   radius2: 0.05
-  swing_start_node: 3 #2 #2  # Making this > 2 makes us less senitive to bad tracking # Make 1 for centroidal
+  swing_start_node: 3  # Making this > 2 makes us less senitive to bad tracking # Make 1 for centroidal
   swing_end_node: 32
   holonomic_start_node: 1 # Make 0 for centroidal 
   holonomic_end_node: 27 #31  # Keeping this lower might seem to help??, it was 24

@@ -3,10 +3,10 @@ Position and velocity actuators added. -->
 <mujoco model="g1_27dof">
   <compiler angle="radian" meshdir="../meshes"/>
 
-  <!-- TODO: Tune the impratio -->
   <option cone="elliptic" impratio="100" integrator="implicitfast" timestep="0.0005"/>
-  <!-- <option cone="elliptic" impratio="100" integrator="implicitfast" timestep="0.0005"/> -->
-  <!-- <option cone="pyramidal" integrator="implicitfast" timestep="0.0005"/> -->
+
+  <!-- TODO: Pyramidal actual maybe looks a little better in sim -->
+  <!-- <option cone="pyramidal" impratio="100" integrator="implicitfast" timestep="0.0005"/> -->
 
   <!-- Defaults -->
   <default>
@@ -94,12 +94,12 @@ Position and velocity actuators added. -->
     <!-- Ankle Roll -->
     <default class="ankle_roll_pos">
     <!-- TODO: Put gains back -->
-      <!-- <position kp="200" ctrllimited="false"/> -->
-      <position kp="0" ctrllimited="false"/>
+      <position kp="40" ctrllimited="false"/>
+      <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="ankle_roll_vel">
-      <!-- <position kv="2" ctrllimited="false"/> -->
-      <position kv="0" ctrllimited="false"/>
+      <position kv="2" ctrllimited="false"/>
+      <!-- <position kv="0" ctrllimited="false"/> -->
     </default>
 
     <!-- ############## -->
@@ -107,12 +107,12 @@ Position and velocity actuators added. -->
     <!-- ############## -->
     <!-- Waist Yaw -->
     <default class="waist_yaw_pos">
-      <!-- <position kp="800" ctrllimited="false"/> -->
-      <position kp="0" ctrllimited="false"/>
+      <position kp="40" ctrllimited="false"/>
+      <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="waist_yaw_vel">
-      <!-- <position kv="20" ctrllimited="false"/> -->
-      <position kv="0" ctrllimited="false"/>
+      <position kv="5" ctrllimited="false"/>
+      <!-- <position kv="0" ctrllimited="false"/> -->
     </default>
 
     <!-- ############## -->
@@ -160,7 +160,7 @@ Position and velocity actuators added. -->
 
     <!-- Wrist Roll -->
     <default class="wrist_roll_pos">
-      <position kp="300" ctrllimited="false"/>
+      <position kp="40" ctrllimited="false"/>
       <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="wrist_roll_vel">
@@ -170,7 +170,7 @@ Position and velocity actuators added. -->
 
     <!-- Wrist Pitch -->
     <default class="wrist_pitch_pos">
-      <position kp="300" ctrllimited="false"/>
+      <position kp="40" ctrllimited="false"/>
         <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="wrist_pitch_vel">
@@ -180,7 +180,7 @@ Position and velocity actuators added. -->
 
     <!-- Wrist Yaw -->
     <default class="wrist_yaw_pos">
-      <position kp="300" ctrllimited="false"/>
+      <position kp="40" ctrllimited="false"/>
       <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="wrist_yaw_vel">
@@ -262,35 +262,30 @@ Position and velocity actuators added. -->
       <body name="left_hip_pitch_link" pos="0 0.064452 -0.1027">
         <inertial pos="0.002741 0.047791 -0.02606" quat="0.954862 0.293964 0.0302556 0.030122" mass="1.35" diaginertia="0.00181517 0.00153422 0.00116212"/>
         <joint name="left_hip_pitch_joint" pos="0 0 0" axis="0 1 0" range="-2.5307 2.8798" actuatorfrcrange="-88 88" class="g1"/>
-        <!-- <joint name="left_hip_pitch_joint" pos="0 0 0" axis="0 1 0" range="-2.5307 2.8798"/> -->
         <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.2 0.2 0.2 1" mesh="left_hip_pitch_link"/>
         <geom type="mesh" rgba="0.2 0.2 0.2 1" mesh="left_hip_pitch_link"/>
 
         <body name="left_hip_roll_link" pos="0 0.052 -0.030465" quat="0.996179 0 -0.0873386 0">
           <inertial pos="0.029812 -0.001045 -0.087934" quat="0.977808 -1.97119e-05 0.205576 -0.0403793" mass="1.52" diaginertia="0.00254986 0.00241169 0.00148755"/>
           <joint name="left_hip_roll_joint" pos="0 0 0" axis="1 0 0" range="-0.5236 2.9671" actuatorfrcrange="-88 88" class="g1"/>
-          <!-- <joint name="left_hip_roll_joint" pos="0 0 0" axis="1 0 0" range="-0.5236 2.9671"/> -->
           <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="left_hip_roll_link"/>
           <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="left_hip_roll_link"/>
 
           <body name="left_hip_yaw_link" pos="0.025001 0 -0.12412">
             <inertial pos="-0.057709 -0.010981 -0.15078" quat="0.600598 0.15832 0.223482 0.751181" mass="1.702" diaginertia="0.00776166 0.00717575 0.00160139"/>
             <joint name="left_hip_yaw_joint" pos="0 0 0" axis="0 0 1" range="-2.7576 2.7576" actuatorfrcrange="-88 88" class="g1"/>
-            <!-- <joint name="left_hip_yaw_joint" pos="0 0 0" axis="0 0 1" range="-2.7576 2.7576"/> -->
             <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="left_hip_yaw_link"/>
             <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="left_hip_yaw_link"/>
 
             <body name="left_knee_link" pos="-0.078273 0.0021489 -0.17734" quat="0.996179 0 0.0873386 0">
               <inertial pos="0.005457 0.003964 -0.12074" quat="0.923418 -0.0327699 0.0158246 0.382067" mass="1.932" diaginertia="0.0113804 0.0112778 0.00146458"/>
               <joint name="left_knee_joint" pos="0 0 0" axis="0 1 0" range="-0.087267 2.8798" actuatorfrcrange="-139 139" class="g1"/>
-              <!-- <joint name="left_knee_joint" pos="0 0 0" axis="0 1 0" range="-0.087267 2.8798"/> -->
               <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="left_knee_link"/>
               <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="left_knee_link"/>
 
               <body name="left_ankle_pitch_link" pos="0 -9.4445e-05 -0.30001">
                 <inertial pos="-0.007269 0 0.011137" quat="0.603053 0.369225 0.369225 0.603053" mass="0.074" diaginertia="1.89e-05 1.40805e-05 6.9195e-06"/>
                 <joint name="left_ankle_pitch_joint" pos="0 0 0" axis="0 1 0" range="-0.87267 0.5236" actuatorfrcrange="-50 50" class="g1"/>
-                <!-- <joint name="left_ankle_pitch_joint" pos="0 0 0" axis="0 1 0" range="-0.87267 0.5236"/> -->
                 <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="left_ankle_pitch_link"/>
                 <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="left_ankle_pitch_link"/>
 
@@ -298,17 +293,29 @@ Position and velocity actuators added. -->
                   <inertial pos="0.026505 0 -0.016425" quat="-0.000481092 0.728482 -0.000618967 0.685065" mass="0.608" diaginertia="0.00167218 0.0016161 0.000217621"/>
                   <joint name="left_ankle_roll_joint" pos="0 0 0" axis="1 0 0" range="-0.2618 0.2618" actuatorfrcrange="-50 50" class="g1"/>
                   <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.2 0.2 0.2 1" mesh="left_ankle_roll_link"/>
-                  <!-- <geom size="0.005" pos="-0.05 0.025 -0.03" rgba="0.2 0.2 0.2 1"/>
+                  <!-- ####################### -->
+                  <!-- ####################### -->
+                  <!-- Rows of point contacts -->
+                  <geom size="0.005" pos="-0.05 0.025 -0.03" rgba="0.2 0.2 0.2 1"/>
                   <geom size="0.005" pos="-0.05 -0.025 -0.03" rgba="0.2 0.2 0.2 1"/>
+                  <geom size="0.005" pos="0.035 0.025 -0.03" rgba="0.2 0.2 0.2 1"/>
+                  <geom size="0.005" pos="0.035 -0.025 -0.03" rgba="0.2 0.2 0.2 1"/>
                   <geom size="0.005" pos="0.12 0.03 -0.03" rgba="0.2 0.2 0.2 1"/>
-                  <geom size="0.005" pos="0.12 -0.03 -0.03" rgba="0.2 0.2 0.2 1"/> -->
+                  <geom size="0.005" pos="0.12 -0.03 -0.03" rgba="0.2 0.2 0.2 1"/>
+                  <!-- ####################### -->
+                  <!-- ####################### -->
 
+                  <!-- ####################### -->
+                  <!-- ####################### -->
+                  <!-- Line of point contacts -->
                   <!-- Match the URDF -->
-                  <geom pos="-0.05 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/>
-                  <geom pos="0.12 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/>
+                  <!-- <geom pos="-0.05 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/>
+                  <geom pos="0.12 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/> -->
 
                   <!-- Extra contacts for stepping stones -->
-                  <geom pos="0.035 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/>
+                  <!-- <geom pos="0.035 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/> -->
+                  <!-- ####################### -->
+                  <!-- ####################### -->
                 </body>
               </body>
             </body>
@@ -320,35 +327,30 @@ Position and velocity actuators added. -->
       <body name="right_hip_pitch_link" pos="0 -0.064452 -0.1027">
         <inertial pos="0.002741 -0.047791 -0.02606" quat="0.954862 -0.293964 0.0302556 -0.030122" mass="1.35" diaginertia="0.00181517 0.00153422 0.00116212"/>
         <joint name="right_hip_pitch_joint" pos="0 0 0" axis="0 1 0" range="-2.5307 2.8798" actuatorfrcrange="-88 88" class="g1"/>
-        <!-- <joint name="right_hip_pitch_joint" pos="0 0 0" axis="0 1 0" range="-2.5307 2.8798"/> -->
         <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.2 0.2 0.2 1" mesh="right_hip_pitch_link"/>
         <geom type="mesh" rgba="0.2 0.2 0.2 1" mesh="right_hip_pitch_link"/>
 
         <body name="right_hip_roll_link" pos="0 -0.052 -0.030465" quat="0.996179 0 -0.0873386 0">
           <inertial pos="0.029812 0.001045 -0.087934" quat="0.977808 1.97119e-05 0.205576 0.0403793" mass="1.52" diaginertia="0.00254986 0.00241169 0.00148755"/>
           <joint name="right_hip_roll_joint" pos="0 0 0" axis="1 0 0" range="-2.9671 0.5236" actuatorfrcrange="-88 88" class="g1"/>
-          <!-- <joint name="right_hip_roll_joint" pos="0 0 0" axis="1 0 0" range="-2.9671 0.5236"/> -->
           <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="right_hip_roll_link"/>
           <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="right_hip_roll_link"/>
 
           <body name="right_hip_yaw_link" pos="0.025001 0 -0.12412">
             <inertial pos="-0.057709 0.010981 -0.15078" quat="0.751181 0.223482 0.15832 0.600598" mass="1.702" diaginertia="0.00776166 0.00717575 0.00160139"/>
             <joint name="right_hip_yaw_joint" pos="0 0 0" axis="0 0 1" range="-2.7576 2.7576" actuatorfrcrange="-88 88" class="g1"/>
-            <!-- <joint name="right_hip_yaw_joint" pos="0 0 0" axis="0 0 1" range="-2.7576 2.7576"/> -->
             <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="right_hip_yaw_link"/>
             <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="right_hip_yaw_link"/>
 
             <body name="right_knee_link" pos="-0.078273 -0.0021489 -0.17734" quat="0.996179 0 0.0873386 0">
               <inertial pos="0.005457 -0.003964 -0.12074" quat="0.923439 0.0345276 0.0116333 -0.382012" mass="1.932" diaginertia="0.011374 0.0112843 0.00146452"/>
               <joint name="right_knee_joint" pos="0 0 0" axis="0 1 0" range="-0.087267 2.8798" actuatorfrcrange="-139 139" class="g1"/>
-              <!-- <joint name="right_knee_joint" pos="0 0 0" axis="0 1 0" range="-0.087267 2.8798"/> -->
               <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="right_knee_link"/>
               <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="right_knee_link"/>
 
               <body name="right_ankle_pitch_link" pos="0 9.4445e-05 -0.30001">
                 <inertial pos="-0.007269 0 0.011137" quat="0.603053 0.369225 0.369225 0.603053" mass="0.074" diaginertia="1.89e-05 1.40805e-05 6.9195e-06"/>
                 <joint name="right_ankle_pitch_joint" pos="0 0 0" axis="0 1 0" range="-0.87267 0.5236" actuatorfrcrange="-50 50" class="g1"/>
-                <!-- <joint name="right_ankle_pitch_joint" pos="0 0 0" axis="0 1 0" range="-0.87267 0.5236"/> -->
                 <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="right_ankle_pitch_link"/>
                 <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="right_ankle_pitch_link"/>
 
@@ -356,17 +358,29 @@ Position and velocity actuators added. -->
                   <inertial pos="0.026505 0 -0.016425" quat="0.000481092 0.728482 0.000618967 0.685065" mass="0.608" diaginertia="0.00167218 0.0016161 0.000217621"/>
                   <joint name="right_ankle_roll_joint" pos="0 0 0" axis="1 0 0" range="-0.2618 0.2618" actuatorfrcrange="-50 50" class="g1"/>
                   <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.2 0.2 0.2 1" mesh="right_ankle_roll_link"/>
-                  <!-- <geom size="0.005" pos="-0.05 0.025 -0.03" rgba="0.2 0.2 0.2 1"/>
+                  <!-- ####################### -->
+                  <!-- ####################### -->
+                  <!-- Rows of point contacts -->
+                  <geom size="0.005" pos="-0.05 0.025 -0.03" rgba="0.2 0.2 0.2 1"/>
                   <geom size="0.005" pos="-0.05 -0.025 -0.03" rgba="0.2 0.2 0.2 1"/>
+                  <geom size="0.005" pos="0.035 0.025 -0.03" rgba="0.2 0.2 0.2 1"/>
+                  <geom size="0.005" pos="0.035 -0.025 -0.03" rgba="0.2 0.2 0.2 1"/>
                   <geom size="0.005" pos="0.12 0.03 -0.03" rgba="0.2 0.2 0.2 1"/>
-                  <geom size="0.005" pos="0.12 -0.03 -0.03" rgba="0.2 0.2 0.2 1"/> -->
+                  <geom size="0.005" pos="0.12 -0.03 -0.03" rgba="0.2 0.2 0.2 1"/>
+                  <!-- ####################### -->
+                  <!-- ####################### -->
 
+                  <!-- ####################### -->
+                  <!-- ####################### -->
+                  <!-- Line of point contacts -->
                   <!-- Match the URDF -->
-                  <geom pos="-0.05 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/>
-                  <geom pos="0.12 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/>
+                  <!-- <geom pos="-0.05 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/> -->
+                  <!-- <geom pos="0.12 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/> -->
 
                   <!-- Extra contacts for stepping stones -->
-                  <geom pos="0.035 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/>
+                  <!-- <geom pos="0.035 0 -0.03" rgba="0.2 0.2 0.2 1" class="collision"/> -->
+                  <!-- ####################### -->
+                  <!-- ####################### -->
 
                   <!-- Polytope Frame position -->
                   <!-- <geom pos="0.035 0 -0.03" rgba="0.2 0.2 0.2 1" size="0.01"/> -->
@@ -379,7 +393,7 @@ Position and velocity actuators added. -->
       <!-- Waist -->
       <body name="waist_yaw_link">
         <inertial pos="0.003964 0 0.018769" quat="-0.0178291 0.628464 0.0282471 0.777121" mass="0.244" diaginertia="0.000158561 0.000124229 9.67669e-05"/>
-        <joint name="waist_yaw_joint" pos="0 0 0" axis="0 0 1" range="-2.618 2.618" actuatorfrcrange="-88 88" class="g1"/>
+        <!-- <joint name="waist_yaw_joint" pos="0 0 0" axis="0 0 1" range="-2.618 2.618" actuatorfrcrange="-88 88" class="g1"/> -->
         <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="waist_yaw_link"/>
         <body name="waist_roll_link" pos="-0.0039635 0 0.035">
           <inertial pos="0 -0.000236 0.010111" quat="0.99979 0.020492 0 0" mass="0.047" diaginertia="7.515e-06 6.40206e-06 3.98394e-06"/>
@@ -599,7 +613,7 @@ Position and velocity actuators added. -->
     <position name="right_ankle_roll_joint_pos" class="ankle_roll_pos" joint="right_ankle_roll_joint"/>
 
     <!-- Waist -->
-    <position name="waist_yaw_joint_pos" class="waist_yaw_pos" joint="waist_yaw_joint"/>
+    <!-- <position name="waist_yaw_joint_pos" class="waist_yaw_pos" joint="waist_yaw_joint"/> -->
 
     <!-- Left Arm -->
     <position name="left_shoulder_pitch_joint_pos" class="shoulder_pitch_pos" joint="left_shoulder_pitch_joint"/>
@@ -639,7 +653,7 @@ Position and velocity actuators added. -->
     <velocity name="right_ankle_roll_joint_vel" class="ankle_roll_vel" joint="right_ankle_roll_joint"/>
 
     <!-- Waist -->
-    <velocity name="waist_yaw_joint_vel" class="waist_yaw_vel" joint="waist_yaw_joint"/>
+    <!-- <velocity name="waist_yaw_joint_vel" class="waist_yaw_vel" joint="waist_yaw_joint"/> -->
 
     <!-- Left Arm -->
     <velocity name="left_shoulder_pitch_joint_vel" class="shoulder_pitch_vel" joint="left_shoulder_pitch_joint"/>
@@ -679,7 +693,7 @@ Position and velocity actuators added. -->
     <motor name="right_ankle_roll_joint" joint="right_ankle_roll_joint"/>
 
     <!-- Waist -->
-    <motor name="waist_yaw_joint" joint="waist_yaw_joint"/>
+    <!-- <motor name="waist_yaw_joint" joint="waist_yaw_joint"/> -->
 
     <!-- Left Arm -->
     <motor name="left_shoulder_pitch_joint" joint="left_shoulder_pitch_joint"/>
@@ -721,7 +735,7 @@ Position and velocity actuators added. -->
     <jointpos name="right_ankle_roll_joint_pos_sensor" joint="right_ankle_roll_joint" noise="0.001"/>
 
     <!-- Waist -->
-    <jointpos name="waist_yaw_joint_pos_sensor" joint="waist_yaw_joint" noise="0.001"/>
+    <!-- <jointpos name="waist_yaw_joint_pos_sensor" joint="waist_yaw_joint" noise="0.001"/> -->
 
     <!-- Left Arm -->
     <jointpos name="left_shoulder_pitch_joint_pos_sensor" joint="left_shoulder_pitch_joint" noise="0.001"/>
@@ -761,7 +775,7 @@ Position and velocity actuators added. -->
     <jointvel name="right_ankle_roll_joint_vel_sensor" joint="right_ankle_roll_joint" noise="0.001"/>
 
     <!-- Waist -->
-    <jointvel name="waist_yaw_joint_vel_sensor" joint="waist_yaw_joint" noise="0.001"/>
+    <!-- <jointvel name="waist_yaw_joint_vel_sensor" joint="waist_yaw_joint" noise="0.001"/> -->
 
     <!-- Left Arm -->
     <jointvel name="left_shoulder_pitch_joint_vel_sensor" joint="left_shoulder_pitch_joint" noise="0.001"/>
@@ -797,24 +811,24 @@ Position and velocity actuators added. -->
             0 0 0 0
             -0.42 0 0 0.81 -0.4 0
             -0.42 0 0 0.81 -0.4 0
-            0
+            
             0 0.27 0 0.5 0 0 0
             0 -0.27 0 0.5 0 0 0"
       ctrl="-0.42 0 0 0.81 -0.4 0
             -0.42 0 0 0.81 -0.4 0
-            0
+            
             0 0.27 0 0.5 0 0 0
             0 -0.27 0 0.5 0 0 0
             
             0 0 0 0 0 0
             0 0 0 0 0 0
-            0
+            
             0 0 0 0 0 0 0
             0 0 0 0 0 0 0
             
             0 0 0 0 0 0
             0 0 0 0 0 0
-            0
+            
             0 0 0 0 0 0 0
             0 0 0 0 0 0 0"/>
   </keyframe>

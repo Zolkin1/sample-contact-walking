@@ -52,16 +52,22 @@ onboard:
         # TODO: Check values
         skip_indexes: [5,   # Left ankle roll
                        11,  # Right ankle roll
-                       12,  # Waist yaw
-                       17,  # Left wrist roll
-                       18,  # Left wrist pitch
-                       19,  # Left wrist yaw
-                       24,  # Right wrist roll
-                       25,  # Right wrist pitch
-                       26,] # Right wrist yaw
+                       16,  # Left wrist roll
+                       17,  # Left wrist pitch
+                       18,  # Left wrist yaw
+                       23,  # Right wrist roll
+                       24,  # Right wrist pitch
+                       25,] # Right wrist yaw
+                      #  12,  # Waist yaw
+                      #  17,  # Left wrist roll
+                      #  18,  # Left wrist pitch
+                      #  19,  # Left wrist yaw
+                      #  24,  # Right wrist roll
+                      #  25,  # Right wrist pitch
+                      #  26,] # Right wrist yaw
         skip_joint_vals: [0.,  # Left ankle roll
                           0,  # Right ankle roll
-                          0,  # Waist yaw
+                          # 0,  # Waist yaw
                           0,  # Left wrist roll
                           0,  # Left wrist pitch
                           0,  # Left wrist yaw
@@ -301,7 +307,7 @@ onboard:
               right_ankle_pitch_joint_pos_sensor: jointpos
               right_ankle_roll_joint_pos_sensor: jointpos
 
-              waist_yaw_joint_pos_sensor: jointpos
+              # waist_yaw_joint_pos_sensor: jointpos
               # waist_roll_joint_pos_sensor: jointpos
               # waist_pitch_joint_pos_sensor: jointpos
 
@@ -351,7 +357,7 @@ onboard:
               right_ankle_pitch_joint_vel_sensor: jointvel
               right_ankle_roll_joint_vel_sensor: jointvel
 
-              waist_yaw_joint_vel_sensor: jointvel
+              # waist_yaw_joint_vel_sensor: jointvel
               # waist_roll_joint_vel_sensor: jointvel
               # waist_pitch_joint_vel_sensor: jointvel
 

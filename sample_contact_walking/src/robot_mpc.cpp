@@ -963,15 +963,19 @@ namespace robot
         const std::vector<double>& dt_vec = mpc_settings_->dt;
 
         static torc::mpc::vector3_t q_base_target = q.head<3>();
+        static torc::mpc::vector4_t q_base_quat_target = q.segment<4>(3);
 
-        // if (v_target_.value()[0].head<2>().norm() > 0.01) { // I don't love it but its here for the drift
-            q_base_target(0) = q(0);
+        q_base_target(0) = q(0);
+
+        if (v_target_.value()[0].head<2>().norm() > 0.01) { // I don't love it but its here for the drift
             q_base_target(1) = q(1);
-        // }
+            q_base_quat_target = q.segment<4>(3);   // TODO: Play with this a bit
+        }
 
         q_base_target(2) = z_target_;
 
         q_target_.value()[0].head<3>() = q_base_target;
+        q_target_.value()[0].segment<4>(3) = q_base_quat_target;
 
         const quat_t q_quat(q.segment<QUAT_VARS>(POS_VARS));
         vector3_t euler_angles = q_quat.toRotationMatrix().eulerAngles(2, 1, 0);
