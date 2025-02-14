@@ -178,7 +178,7 @@ namespace robot
 
         // ---------- Swing Constraints ---------- //
         torc::mpc::SwingConstraint swing_constraint(mpc_settings_->swing_start_node, mpc_settings_->swing_end_node, model_name + "swing_constraint",
-            mpc_model_temp, mpc_settings_->contact_frames, //mpc_settings_->swing_kp,
+            mpc_model_temp, mpc_settings_->contact_frames,
             mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);
 
         // ---------- Holonomic Constraints ---------- //
@@ -191,13 +191,10 @@ namespace robot
             model_name + "collision_constraint", mpc_model_temp, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->collision_data);
 
         // ---------- Polytope Constraints ---------- //
-        // std::vector<std::string> polytope_frames;
-        // polytope_frames.push_back(mpc_settings_->contact_frames[1]);
-        // polytope_frames.push_back(mpc_settings_->contact_frames[3]);
         torc::mpc::PolytopeConstraint polytope_constraint(mpc_settings_->polytope_start_node, mpc_settings_->polytope_end_node, model_name + "polytope_constraint",
-            mpc_settings_->polytope_frames, //mpc_settings_->contact_frames,
+            mpc_settings_->polytope_frames,
             mpc_settings_->deriv_lib_path, 
-            true, //mpc_settings_->compile_derivs,
+            mpc_settings_->compile_derivs,
             mpc_model_temp);
 
         std::cout << "===== Constraints Created =====" << std::endl;
@@ -224,7 +221,7 @@ namespace robot
         // ---------- Forward Kinematics Tracking ---------- //
         // For now they all need the same weight
         // Need to read the contact frames from the settings (TODO, later)
-        RCLCPP_ERROR_STREAM(this->get_logger(), "weight: " << mpc_settings_->cost_data.at(4).weight.transpose());
+        RCLCPP_INFO_STREAM(this->get_logger(), "FK weight: " << mpc_settings_->cost_data.at(4).weight.transpose());
         torc::mpc::ForwardKinematicsCost fk_cost(0, mpc_settings_->nodes, model_name + "fk_cost", mpc_settings_->cost_data.at(4).weight.size(),
             mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_model_temp, mpc_settings_->contact_frames);
 
@@ -308,7 +305,9 @@ namespace robot
         mpc_->SetLinTrajConfig(q_target_.value());
         mpc_->SetLinTrajVel(v_target_.value());
 
-        // Other variables
+        // --------------------------------- //
+        // ---------- Skip Joints ---------- //
+        // --------------------------------- //        
         this->declare_parameter<std::vector<long int>>("skip_indexes", {-1});
         mpc_skipped_joint_indexes_ = this->get_parameter("skip_indexes").as_integer_array();
         if (mpc_skipped_joint_indexes_[0] == -1 && (model_->GetConfigDim() == mpc_model_->GetConfigDim())) {
@@ -317,15 +316,44 @@ namespace robot
             RCLCPP_ERROR_STREAM(this->get_logger(), "Provided skip indexes don't match the model differences! Got size: " << mpc_skipped_joint_indexes_.size() << ", expected: " 
                 << model_->GetConfigDim() - mpc_model_->GetConfigDim());
         }
+        this->declare_parameter<std::vector<double>>("skip_joint_vals", {-1});
+        mpc_skipped_joint_vals_ = this->get_parameter("skip_joint_vals").as_double_array();
+
+        if (mpc_skipped_joint_vals_.size() != mpc_skipped_joint_indexes_.size()) {
+            throw std::runtime_error("MPC skip joint indexes size does not match the corresponding value array!");
+        }
 
         // this->declare_parameter<std::vector<long int>>("wbc_skip_indexes", {-1});
         // wbc_skipped_joint_indexes_ = this->get_parameter("wbc_skip_indexes").as_integer_array();
+
+        // --------------------------------- //
+        // Make the joint names
+        // --------------------------------- //
+        this->declare_parameter<std::vector<std::string>>("control_joint_names", {""});
+        control_joint_names_ = this->get_parameter("control_joint_names").as_string_array();
+
+        RCLCPP_INFO_STREAM(this->get_logger(), "Control joint names:");
+        for (int i = 0; i < control_joint_names_.size(); i++) {
+            RCLCPP_INFO_STREAM(this->get_logger(), control_joint_names_[i]);
+        }
+
+        this->declare_parameter<std::vector<double>>("kp", {0.});
+        this->declare_parameter<std::vector<double>>("kd", {0.});
+        kp_ = this->get_parameter("kp").as_double_array();
+        kd_ = this->get_parameter("kd").as_double_array();
+
+        if (kp_.size() != kd_.size() || kp_.size() != control_joint_names_.size()) {
+            RCLCPP_ERROR_STREAM(this->get_logger(), "kp size: " << kp_.size());
+            RCLCPP_ERROR_STREAM(this->get_logger(), "kd size: " << kd_.size());
+            RCLCPP_ERROR_STREAM(this->get_logger(), "joint name size: " << control_joint_names_.size());
+            throw std::runtime_error("kp, kd, or joint name sizes don't match!");
+        }
+
 
         // Parse contact schedule info
         ParseContactParameters();
 
         // Step Planning
-        // TODO: Parse the geoms from Mujoco (or an external node, this way I could read in the obstacle state from optitrack).
         std::vector<torc::mpc::ContactInfo> contact_polytopes;
         torc::mpc::vector4_t b;
         b << 10, 10, -10, -10;
@@ -336,26 +364,6 @@ namespace robot
             0.4, mpc_settings_->polytope_delta);
 
         
-
-        // // Setup q and v targets
-        // this->declare_parameter<std::vector<double>>("target_config");
-        // this->declare_parameter<std::vector<double>>("target_vel");
-        // std::vector<double> q_targ_temp, v_targ_temp;
-
-        // this->get_parameter("target_config", q_targ_temp);
-        // this->get_parameter("target_vel", v_targ_temp);
-
-        // vectorx_t q_target_eig = torc::utils::StdToEigenVector(q_targ_temp);
-        // vectorx_t v_target_eig = torc::utils::StdToEigenVector(v_targ_temp);
-        // q_target_ = torc::mpc::SimpleTrajectory(mpc_model_->GetConfigDim(), mpc_->GetNumNodes());
-        // v_target_ = torc::mpc::SimpleTrajectory(mpc_model_->GetVelDim(), mpc_->GetNumNodes());
-        // q_target_->SetAllData(q_target_eig);
-        // v_target_->SetAllData(v_target_eig);
-        // z_target_ = q_target_.value()[0](2);
-
-        // mpc_->SetConfigTarget(q_target_.value());
-        // mpc_->SetVelTarget(v_target_.value());
-
         // Set initial conditions
         this->declare_parameter<std::vector<double>>("mpc_ic_config");
         this->declare_parameter<std::vector<double>>("mpc_ic_vel");
@@ -367,41 +375,20 @@ namespace robot
         q_ic_ = torc::utils::StdToEigenVector(q_ic_temp);
         v_ic_ = torc::utils::StdToEigenVector(v_ic_temp);
 
-        // RCLCPP_INFO_STREAM(this->get_logger(), "q target: " << q_target_.value()[0].transpose());
-        // RCLCPP_INFO_STREAM(this->get_logger(), "v target: " << v_target_.value()[0].transpose());
-        // RCLCPP_INFO_STREAM(this->get_logger(), "q ic: " << q_ic_.transpose());
-        // RCLCPP_INFO_STREAM(this->get_logger(), "v ic: " << v_ic_.transpose());
-
         this->declare_parameter<bool>("fixed_target", true);
         this->get_parameter("fixed_target", fixed_target_);
         this->declare_parameter<bool>("controller_target", false);
         this->get_parameter("controller_target", controller_target_);
 
-        // // Contact Polytope defaults
-        // matrixx_t A_temp = matrixx_t::Identity(2, 2);
-        // Eigen::Vector4d b_temp = Eigen::Vector4d::Zero();
-        // b_temp << 10, 10, -10, -10;
-        // for (const auto& frame : mpc_->GetContactFrames()) {
-        //     // contact_polytopes_.insert({frame, {}});
-        //     for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-        //         contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
-        //         // contact_polytopes_[frame].emplace_back((A_temp, b_temp));
-        //     }
-        // }
-
-        // mpc_->SetWarmStartTrajectory(traj_out_);
         traj_out_ = mpc_->GetTrajectory();
         traj_out_.SetConfiguration(0, q_ic_);
         traj_out_.SetVelocity(0, v_ic_);
         traj_mpc_ = traj_out_;
         mpc_->SetLinTraj(traj_mpc_);
-        // mpc_->SetLinTrajConfig(traj_out_.GetConfigTrajectory());
-        // mpc_->SetLinTrajVel(traj_out_.GetVelocityTrajectory());
-        // RCLCPP_INFO_STREAM(this->get_logger(), "Warm start trajectory created...");
+
 
         // Go to initial condition
         TransitionState(SeekInitialCond);
-        // TransitionState(Mpc);
 
         // Visualization information
         this->declare_parameter<std::vector<std::string>>("viz_frames", {""});
@@ -676,8 +663,6 @@ namespace robot
         static bool first_loop = true;
         const long max_mpc_solves = this->get_parameter("max_mpc_solves").as_int();
 
-        // mpc_->CreateQPData();
-
         // ----- Read in state ----- //
         // // TODO: If statement is only here for when we remove sim
         // if (first_loop) {   // TODO: Remove when I go back to sim
@@ -847,48 +832,61 @@ namespace robot
             //     tau = wbc_controller_->ComputeControl(q_est, v_est, q, v, tau, F, in_contact);     
             //     // RCLCPP_WARN_STREAM(this->get_logger(), "After control");           
             // }
-
+            
             // TODO: Remove
             // q = q_ic_;
             // v = v_ic_;
             // tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
 
             // TODO: Only use this when the mujoco model does not match!
-            // // Check if we need to insert other elements into the targets
-            // const auto& joint_skip_values = mpc_settings_->joint_skip_values;
-            // // TODO: Make this work for both MPC and WBC sizes!
-            // std::vector<double> q_vec(q.data(), q.data() + q.size());
-            // std::vector<double> v_vec(v.data(), v.data() + v.size());
-            // std::vector<double> tau_vec(tau.data(), tau.data() + tau.size());
+            // Check if we need to insert other elements into the targets
+            // TODO: Make this work for both MPC and WBC sizes!
+            std::vector<double> q_vec(q.data(), q.data() + q.size());
+            std::vector<double> v_vec(v.data(), v.data() + v.size());
+            std::vector<double> tau_vec(tau.data(), tau.data() + tau.size());
 
-            // for (int i = 0; i < mpc_skipped_joint_indexes_.size(); i++) {
-            //     // TODO: Compute angle so that ankle is parallel to the ground
-            //     q_vec.insert(q_vec.begin() + FLOATING_POS_SIZE + mpc_skipped_joint_indexes_[i], joint_skip_values[i]);
-            //     v_vec.insert(v_vec.begin() + FLOATING_VEL_SIZE + mpc_skipped_joint_indexes_[i], 0);
-            //     tau_vec.insert(tau_vec.begin() + mpc_skipped_joint_indexes_[i], 0);
-            // }
+            for (int i = 0; i < mpc_skipped_joint_indexes_.size(); i++) {
+                // TODO: Compute angle so that ankle is parallel to the ground
+                q_vec.insert(q_vec.begin() + FLOATING_POS_SIZE + mpc_skipped_joint_indexes_[i], mpc_skipped_joint_vals_[i]);
+                v_vec.insert(v_vec.begin() + FLOATING_VEL_SIZE + mpc_skipped_joint_indexes_[i], 0);
+                tau_vec.insert(tau_vec.begin() + mpc_skipped_joint_indexes_[i], 0);
+            }
 
-            // Eigen::Map<Eigen::VectorXd> q_map(q_vec.data(), q_vec.size());
-            // Eigen::Map<Eigen::VectorXd> v_map(v_vec.data(), v_vec.size());
-            // Eigen::Map<Eigen::VectorXd> tau_map(tau_vec.data(), tau_vec.size());
+            Eigen::Map<Eigen::VectorXd> q_map(q_vec.data(), q_vec.size());
+            Eigen::Map<Eigen::VectorXd> v_map(v_vec.data(), v_vec.size());
+            Eigen::Map<Eigen::VectorXd> tau_map(tau_vec.data(), tau_vec.size());
 
-            // q = q_map;
-            // v = v_map;
-            // tau = tau_map;
+            q = q_map;
+            v = v_map;
+            tau = tau_map;
             
-
             // Make the message
-            vectorx_t u_mujoco = ConvertControlToMujocoU(q.tail(mpc_model_->GetNumInputs()),
-                v.tail(mpc_model_->GetNumInputs()), tau);
+            vectorx_t u_mujoco = ConvertControlToMujocoU(q.tail(mpc_model_->GetNumInputs() + mpc_skipped_joint_indexes_.size()),
+                v.tail(mpc_model_->GetNumInputs() + mpc_skipped_joint_indexes_.size()), tau);
 
             ConvertEigenToStd(u_mujoco, msg.u_mujoco);
-            ConvertEigenToStd(q.tail(mpc_model_->GetNumInputs()), msg.pos_target);
-            ConvertEigenToStd(v.tail(mpc_model_->GetNumInputs()), msg.vel_target);
+            ConvertEigenToStd(q.tail(mpc_model_->GetNumInputs() + mpc_skipped_joint_indexes_.size()), msg.pos_target);
+            ConvertEigenToStd(v.tail(mpc_model_->GetNumInputs() + mpc_skipped_joint_indexes_.size()), msg.vel_target);
             ConvertEigenToStd(tau, msg.feed_forward);
             
-            if (msg.u_mujoco.size() != 3*mpc_model_->GetNumInputs()) {
+            if (msg.u_mujoco.size() != 3*(mpc_model_->GetNumInputs() + mpc_skipped_joint_indexes_.size())) {
                 RCLCPP_ERROR_STREAM(this->get_logger(), "Message's u_mujoco is incorrectly sized. Size: " << msg.u_mujoco.size());
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Expected size: " << 3*(mpc_model_->GetNumInputs() + mpc_skipped_joint_indexes_.size()));
             }
+
+            if (msg.feed_forward.size() != control_joint_names_.size()) {
+                throw std::runtime_error("Invalid feedforward size/control joint name size!");
+            }
+            if (msg.pos_target.size() != kp_.size()) {
+                throw std::runtime_error("Position target size does not match kp size!");
+            }
+            if (msg.pos_target.size() != kd_.size()) {
+                throw std::runtime_error("Velocity target size does not match kd size!");
+            }
+
+            msg.kp = kp_;
+            msg.kd = kd_;
+            msg.joint_names = control_joint_names_;
 
             // TODO: Use only when the mujoco model doesn't match the MPC
             // // Make the message
@@ -959,15 +957,19 @@ namespace robot
         const std::vector<double>& dt_vec = mpc_settings_->dt;
 
         static torc::mpc::vector3_t q_base_target = q.head<3>();
+        static torc::mpc::vector4_t q_base_quat_target = q.segment<4>(3);
 
-        // if (v_target_.value()[0].head<2>().norm() > 0.01) { // I don't love it but its here for the drift
-            q_base_target(0) = q(0);
+        q_base_target(0) = q(0);
+
+        if (v_target_.value()[0].head<2>().norm() > 0.01) { // I don't love it but its here for the drift
             q_base_target(1) = q(1);
-        // }
+            q_base_quat_target = q.segment<4>(3);   // TODO: Play with this a bit
+        }
 
         q_base_target(2) = z_target_;
 
         q_target_.value()[0].head<3>() = q_base_target;
+        q_target_.value()[0].segment<4>(3) = q_base_quat_target;
 
         const quat_t q_quat(q.segment<QUAT_VARS>(POS_VARS));
         vector3_t euler_angles = q_quat.toRotationMatrix().eulerAngles(2, 1, 0);

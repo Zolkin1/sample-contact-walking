@@ -176,6 +176,7 @@ namespace robot {
             // MPC Skipped joint indexes
             // TODO: Find a better way to do this
             std::vector<long int> mpc_skipped_joint_indexes_;
+            std::vector<double> mpc_skipped_joint_vals_;
             std::vector<long int> wbc_skipped_joint_indexes_;
 
             // Threads
@@ -184,6 +185,11 @@ namespace robot {
 
             // broadcasters
             std::shared_ptr<tf2_ros::StaticTransformBroadcaster> torso_mocap_broadcaster_;
+
+            // For hardware
+            std::vector<std::string> control_joint_names_;
+            std::vector<double> kp_;
+            std::vector<double> kd_;
 
             double time_offset_;
             std::ofstream log_file_;
