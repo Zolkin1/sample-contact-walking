@@ -107,12 +107,14 @@ Position and velocity actuators added. -->
     <!-- ############## -->
     <!-- Waist Yaw -->
     <default class="waist_yaw_pos">
-      <position kp="40" ctrllimited="false"/>
-      <!-- <position kp="0" ctrllimited="false"/> -->
+      <!-- <position kp="400" ctrllimited="false"/> -->
+      <!-- <position kp="40" ctrllimited="false"/> -->
+      <position kp="0" ctrllimited="false"/>
     </default>
     <default class="waist_yaw_vel">
-      <position kv="5" ctrllimited="false"/>
-      <!-- <position kv="0" ctrllimited="false"/> -->
+      <!-- <position kv="50" ctrllimited="false"/> -->
+      <!-- <position kv="5" ctrllimited="false"/> -->
+      <position kv="0" ctrllimited="false"/>
     </default>
 
     <!-- ############## -->
@@ -393,7 +395,7 @@ Position and velocity actuators added. -->
       <!-- Waist -->
       <body name="waist_yaw_link">
         <inertial pos="0.003964 0 0.018769" quat="-0.0178291 0.628464 0.0282471 0.777121" mass="0.244" diaginertia="0.000158561 0.000124229 9.67669e-05"/>
-        <!-- <joint name="waist_yaw_joint" pos="0 0 0" axis="0 0 1" range="-2.618 2.618" actuatorfrcrange="-88 88" class="g1"/> -->
+        <joint name="waist_yaw_joint" pos="0 0 0" axis="0 0 1" range="-2.618 2.618" actuatorfrcrange="-88 88" class="g1"/>
         <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="waist_yaw_link"/>
         <body name="waist_roll_link" pos="-0.0039635 0 0.035">
           <inertial pos="0 -0.000236 0.010111" quat="0.99979 0.020492 0 0" mass="0.047" diaginertia="7.515e-06 6.40206e-06 3.98394e-06"/>
@@ -613,7 +615,7 @@ Position and velocity actuators added. -->
     <position name="right_ankle_roll_joint_pos" class="ankle_roll_pos" joint="right_ankle_roll_joint"/>
 
     <!-- Waist -->
-    <!-- <position name="waist_yaw_joint_pos" class="waist_yaw_pos" joint="waist_yaw_joint"/> -->
+    <position name="waist_yaw_joint_pos" class="waist_yaw_pos" joint="waist_yaw_joint"/>
 
     <!-- Left Arm -->
     <position name="left_shoulder_pitch_joint_pos" class="shoulder_pitch_pos" joint="left_shoulder_pitch_joint"/>
@@ -653,7 +655,7 @@ Position and velocity actuators added. -->
     <velocity name="right_ankle_roll_joint_vel" class="ankle_roll_vel" joint="right_ankle_roll_joint"/>
 
     <!-- Waist -->
-    <!-- <velocity name="waist_yaw_joint_vel" class="waist_yaw_vel" joint="waist_yaw_joint"/> -->
+    <velocity name="waist_yaw_joint_vel" class="waist_yaw_vel" joint="waist_yaw_joint"/>
 
     <!-- Left Arm -->
     <velocity name="left_shoulder_pitch_joint_vel" class="shoulder_pitch_vel" joint="left_shoulder_pitch_joint"/>
@@ -693,7 +695,7 @@ Position and velocity actuators added. -->
     <motor name="right_ankle_roll_joint" joint="right_ankle_roll_joint"/>
 
     <!-- Waist -->
-    <!-- <motor name="waist_yaw_joint" joint="waist_yaw_joint"/> -->
+    <motor name="waist_yaw_joint" joint="waist_yaw_joint"/>
 
     <!-- Left Arm -->
     <motor name="left_shoulder_pitch_joint" joint="left_shoulder_pitch_joint"/>
@@ -735,7 +737,7 @@ Position and velocity actuators added. -->
     <jointpos name="right_ankle_roll_joint_pos_sensor" joint="right_ankle_roll_joint" noise="0.001"/>
 
     <!-- Waist -->
-    <!-- <jointpos name="waist_yaw_joint_pos_sensor" joint="waist_yaw_joint" noise="0.001"/> -->
+    <jointpos name="waist_yaw_joint_pos_sensor" joint="waist_yaw_joint" noise="0.001"/>
 
     <!-- Left Arm -->
     <jointpos name="left_shoulder_pitch_joint_pos_sensor" joint="left_shoulder_pitch_joint" noise="0.001"/>
@@ -775,7 +777,7 @@ Position and velocity actuators added. -->
     <jointvel name="right_ankle_roll_joint_vel_sensor" joint="right_ankle_roll_joint" noise="0.001"/>
 
     <!-- Waist -->
-    <!-- <jointvel name="waist_yaw_joint_vel_sensor" joint="waist_yaw_joint" noise="0.001"/> -->
+    <jointvel name="waist_yaw_joint_vel_sensor" joint="waist_yaw_joint" noise="0.001"/>
 
     <!-- Left Arm -->
     <jointvel name="left_shoulder_pitch_joint_vel_sensor" joint="left_shoulder_pitch_joint" noise="0.001"/>
@@ -811,24 +813,24 @@ Position and velocity actuators added. -->
             0 0 0 0
             -0.42 0 0 0.81 -0.4 0
             -0.42 0 0 0.81 -0.4 0
-            
+            0
             0 0.27 0 0.5 0 0 0
             0 -0.27 0 0.5 0 0 0"
       ctrl="-0.42 0 0 0.81 -0.4 0
             -0.42 0 0 0.81 -0.4 0
-            
+            0
             0 0.27 0 0.5 0 0 0
             0 -0.27 0 0.5 0 0 0
             
             0 0 0 0 0 0
             0 0 0 0 0 0
-            
+            0
             0 0 0 0 0 0 0
             0 0 0 0 0 0 0
             
             0 0 0 0 0 0
             0 0 0 0 0 0
-            
+            0
             0 0 0 0 0 0 0
             0 0 0 0 0 0 0"/>
   </keyframe>

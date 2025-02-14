@@ -207,6 +207,7 @@ costs:
               # 0.5, 1, 2, 0.01, 1, 1,         # Right Leg
               .01, 6, 7, .01, 1, #1,         # Left Leg
               .01, 6, 7, .01, 1, #1,         # Right Leg
+              1,
               .5, .5, .5, .5,      # Left Arm
               .5, .5, .5, .5]      # Right Arm
   - type: VelocityTracking
@@ -216,6 +217,7 @@ costs:
             15, 15, 15,
             .01, 2, 2, 0.1, 0.5, #0.1,         # Left Leg
             .01, 2, 2, 0.1, 0.5, #0.1,         # Right Leg
+            1,
             # 1.5, 1, 1, 0.01, 1, 1,         # Left Leg
             # 1.5, 1, 1, 0.01, 1, 1,         # Right Leg
             0.6, 0.7, 0.7, 0.6,
@@ -224,6 +226,7 @@ costs:
     name: "TorqueReg"
     weight: [0.0001, 0.0001, 0.0001, 0.00001, 0.0001, #0.001,            # Left Leg
             0.0001, 0.0001, 0.0001, 0.00001, 0.0001, #0.001,             # Right Leg
+            0.01,
             0.01, 0.01, 0.01, 0.01,                           # Left Arm
             0.01, 0.01, 0.01, 0.01,]                          # Right Arm
     # weight: [0.001, 0.001, 0.001, 0.001, 0.001, 0.001,            # Left Leg
@@ -251,6 +254,7 @@ costs:
               # 200, 200, 25,
               0.5, 4, 4, .01, 1, #1,         # Left Leg
               0.5, 4, 4, .01, 1, #1,         # Right Leg
+              3,
               # 8, 20, 20, 1, 1, #1,         # Left Leg
               # 8, 20, 20, 1, 1, #1,         # Right Leg
               10, 10, 10, 10,      # Left Arm
@@ -262,6 +266,7 @@ costs:
               # 15, 15, 15,
               .1, 3, 3, .1, 1, #1,         # Left Leg
               .1, 3, 3, .1, 1, #1,         # Right Leg
+              1,
               1, 1, 1, 1,      # Left Arm
               1, 1, 1, 1]      # Right Arm  
   - type: CentroidalForce
@@ -277,7 +282,8 @@ contacts:
   default_ground_height: 0.005
 joint_defaults:
   joints: [ "left_ankle_roll_joint", "right_ankle_roll_joint",
-           "waist_yaw_joint", "waist_roll_joint", "waist_pitch_joint", 
+          #  "waist_yaw_joint",
+            "waist_roll_joint", "waist_pitch_joint", 
            "left_wrist_roll_joint", "left_wrist_pitch_joint", "left_wrist_yaw_joint",
            "left_hand_thumb_0_joint", "left_hand_thumb_1_joint", "left_hand_thumb_2_joint",
            "left_hand_middle_0_joint", "left_hand_middle_1_joint",
@@ -286,8 +292,9 @@ joint_defaults:
            "right_hand_thumb_0_joint", "right_hand_thumb_1_joint", "right_hand_thumb_2_joint",
            "right_hand_middle_0_joint", "right_hand_middle_1_joint",
            "right_hand_index_0_joint", "right_hand_index_1_joint",]
-  values: [ 0, 0,
-           0, 0, 0.0,
+  values: [0, 0,
+          #  0,
+           0, 0.0,
            0, 0, 0,
            0, 0, 1.57,
            -1.57, -1.57,
@@ -309,12 +316,14 @@ targets:
               0, 0, 0, 1,
              -0.42, 0, 0, 0.81, -0.3, #-0.4, #0,
              -0.42, 0, 0, 0.81, -0.3, #-0.4, #0,
+             0,
              0, 0.27, 0, 0.5, #0.9,
              0, -0.27, 0, 0.5,] #0.9]
   v_target: [0, 0, 0,
              0, 0, 0,
              0, 0, 0, 0, 0, #0,
              0, 0, 0, 0, 0, #0,
+             0,
              0, 0, 0, 0,
              0, 0, 0, 0,]
 # ------------------------------ #
