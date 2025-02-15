@@ -175,6 +175,7 @@ onboard:
       params:
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/basic_scene.xml
         mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/stairs_scene.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/g1_tile2_scene.xml
       # ----- Tile Scene ---- #
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9", "stair1", "stair2", "stair3"]

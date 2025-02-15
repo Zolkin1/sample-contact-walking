@@ -104,6 +104,8 @@ namespace robot
         // Reference Generator
         ref_gen_ = std::make_unique<torc::mpc::ReferenceGenerator>(mpc_settings_->nodes, mpc_settings_->contact_frames, mpc_settings_->dt,
             mpc_model_temp, mpc_settings_->polytope_delta);
+        q_base_target_ = std::make_unique<torc::mpc::SimpleTrajectory>(FLOATING_POS_SIZE, mpc_settings_->nodes);
+        v_base_target_ = std::make_unique<torc::mpc::SimpleTrajectory>(FLOATING_VEL_SIZE, mpc_settings_->nodes);
 
         // ---------- Constraints ---------- //
         // torc::models::FullOrderRigidBody mpc_model_temp(model_name, "/home/zolkin/torc/tests/test_data/g1_hand.urdf", mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values);
@@ -699,10 +701,14 @@ namespace robot
             mpc_->UpdateContactSchedule(contact_schedule_);
             std::map<std::string, std::vector<torc::mpc::vector3_t>> contact_foot_pos;
             const auto [q_ref, v_ref] = ref_gen_->GenerateReference(q, v, q_target_.value(), v_target_.value(), mpc_->GetSwingTrajectory(),
-                mpc_settings_->hip_offsets, contact_schedule_, contact_foot_pos);
+                mpc_settings_->hip_offsets, contact_schedule_, contact_foot_pos, *q_base_target_, *v_base_target_);
 
             mpc_->SetForwardKinematicsTarget(contact_foot_pos);
         }
+
+        // Set base targets
+        mpc_->SetConfigBaseTarget(*q_base_target_);
+        mpc_->SetVelBaseTarget(*v_base_target_);
 
         double mpc_start_time = this->now().seconds();
         if (mpc_->GetSolveCounter() < max_mpc_solves) {
@@ -1044,11 +1050,13 @@ namespace robot
             num_proj_footholds += points.size();
         }
 
+        int num_markers = viz_frames.size() + force_frames_.size() + num_nom_footholds + num_proj_footholds + mpc_settings_->nodes;
+
         visualization_msgs::msg::MarkerArray msg;
-        msg.markers.resize(viz_frames.size() + force_frames_.size() + num_nom_footholds + num_proj_footholds);
-        std::cerr << "marker size: " << msg.markers.size() << std::endl;
-        std::cerr << "num nom footholds: " << num_nom_footholds << std::endl;
-        std::cerr << "num proj footholds: " << num_proj_footholds << std::endl;
+        msg.markers.resize(num_markers);
+        // std::cerr << "marker size: " << msg.markers.size() << std::endl;
+        // std::cerr << "num nom footholds: " << num_nom_footholds << std::endl;
+        // std::cerr << "num proj footholds: " << num_proj_footholds << std::endl;
         for (int i = 0; i < viz_frames.size(); i++) {
             msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
             msg.markers[i].header.frame_id = "world";
@@ -1197,17 +1205,93 @@ namespace robot
 
                 i++;
             }
+        }        
+
+        // Reference frames
+        // TODO: May want to move this under the mutex
+        for (int j = 0; j < mpc_settings_->nodes; j++) {
+                msg.markers[i].type = visualization_msgs::msg::Marker::LINE_LIST;
+                msg.markers[i].header.frame_id = "world";
+                msg.markers[i].header.stamp = this->now();
+                msg.markers[i].ns = "config_ref";
+                msg.markers[i].id = i;
+                msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
+
+                msg.markers[i].scale.x = 0.01;
+
+                geometry_msgs::msg::Point base, xpoint, ypoint, zpoint;
+
+                base.x = q_base_target_->GetNodeData(j)[0];
+                base.y = q_base_target_->GetNodeData(j)[1];
+                base.z = q_base_target_->GetNodeData(j)[2];
+
+                const double line_len = 0.05;
+                torc::mpc::vector3_t xline = {.05, 0, 0};
+                torc::mpc::vector3_t yline = {0, .05, 0};
+                torc::mpc::vector3_t zline = {0, 0, .05}; 
+                
+                // Rotate into the correct frame
+                torc::mpc::quat_t quat(q_base_target_->GetNodeData(0).segment<4>(3));
+                torc::mpc::matrix3_t R = quat.toRotationMatrix();   // TODO: add a transpose?
+
+                xline = R*xline;
+                yline = R*yline;
+                zline = R*zline;
+
+                xline += q_base_target_->GetNodeData(j).head<3>();
+                yline += q_base_target_->GetNodeData(j).head<3>();
+                zline += q_base_target_->GetNodeData(j).head<3>();
+
+                // TODO: Change the colors
+                std_msgs::msg::ColorRGBA color;
+
+                xpoint.x = xline[0];
+                xpoint.y = xline[1];
+                xpoint.z = xline[2];
+                color.a = 1.0;
+                color.r = 0.81;
+                color.g = 0.01;
+                color.b = 0.988;
+                msg.markers[i].points.emplace_back(base);
+                msg.markers[i].points.emplace_back(xpoint);
+                msg.markers[i].colors.push_back(color);
+                msg.markers[i].colors.push_back(color);
+
+                ypoint.x = yline[0];
+                ypoint.y = yline[1];
+                ypoint.z = yline[2];
+                color.a = 1.0;
+                color.r = 1.;
+                color.g = 0.72;
+                color.b = 0.01;
+                msg.markers[i].points.emplace_back(base);
+                msg.markers[i].points.emplace_back(ypoint);
+                msg.markers[i].colors.push_back(color);
+                msg.markers[i].colors.push_back(color);
+
+                zpoint.x = zline[0];
+                zpoint.y = zline[1];
+                zpoint.z = zline[2];
+                color.a = 1.0;
+                color.r = 0.01;
+                color.g = 0.988;
+                color.b = 0.92;
+                msg.markers[i].points.emplace_back(base);
+                msg.markers[i].points.emplace_back(zpoint);
+                msg.markers[i].colors.push_back(color);
+                msg.markers[i].colors.push_back(color);
+
+                i++;
         }
 
-
-        std::lock_guard<std::mutex> lock(polytope_mutex_);
+        std::lock_guard<std::mutex> lock(polytope_mutex_);        
 
         int num_polytope_markers = 0;
         for (const auto& frame : viz_polytope_frames_) {
             num_polytope_markers += contact_schedule_.GetNumContacts(frame);
         }
         
-        msg.markers.resize(viz_frames.size() + force_frames_.size() + num_nom_footholds + num_proj_footholds + num_polytope_markers);
+        msg.markers.resize(num_markers + num_polytope_markers);
 
         // TODO: There is a bug in this block of code for the quad
         int frame_idx = 0;
@@ -1280,7 +1364,7 @@ namespace robot
                 // TODO: Do better
                 // TODO: Check this to make sure it will work for more than the default polytope
                 geometry_msgs::msg::Point corner;
-                corner.z = 0;
+                corner.z = polytope.height_;
 
                 // std::cout << "b: " << polytope.b_.transpose() << std::endl;
                 corner.x = polytope.b_(0);

@@ -164,6 +164,8 @@ namespace robot {
 
             // Reference Generator
             std::unique_ptr<torc::mpc::ReferenceGenerator> ref_gen_;
+            std::unique_ptr<torc::mpc::SimpleTrajectory> q_base_target_;
+            std::unique_ptr<torc::mpc::SimpleTrajectory> v_base_target_;
 
             // Step Planner
             std::unique_ptr<torc::step_planning::StepPlanner> step_planner_;
