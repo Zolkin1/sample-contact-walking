@@ -1,4 +1,4 @@
-config: g1_sim
+config: g1_hardware
 onboard:
   control:
     - pkg: sample_contact_walking
@@ -170,9 +170,9 @@ onboard:
         - ros_parameter: state_viz_timer_setting
           timer_period_sec: 0.002
           callback_group: None
-  # ----------------------- #
-  # ----- Geom Reader ----- #
-  # ----------------------- #
+ # ----------------------------------------------- #
+ # -------------- Mujoco Geom Reader ------------- #
+ # ----------------------------------------------- #
     - pkg: contact_planning
       executable: mujoco_geom_reader
       params:
@@ -186,22 +186,52 @@ onboard:
         - ros_parameter: pub_ctrl_setting
           topic: /obelisk/g1/contact_polytopes
           msg_type: ContactPolytopeArray
-          key: "contact_schedule_pub"
           history_depth: 10
           callback_group: None
       subscribers:
         - ros_parameter: sub_est_setting
           topic: /obelisk/g1/est_state # est_state, target_state
           msg_type: EstimatedState
-          key: "est_state_sub"
           history_depth: 10
-          callback_group: estimation_cbg
+          callback_group: None
       timers:
         # Contact planning timer
         - ros_parameter: timer_ctrl_setting
           timer_period_sec: 0.05 #0.1
           callback_group: control_cbg
+ # ----------------------------------------------- #
+ # ----- High Level/Execution FSM Controller ----- #
+ # ----------------------------------------------- #
+    - pkg: obelisk_unitree_cpp
+      executable: obelisk_unitree_joystick
+      # callback_groups:
+      params:
+        low_level_ctrl_button: 4    # Enter low level control mode with the LEFT_BUMPER
+        high_level_ctrl_button: 5   # Enter high level control mode with the RIGHT_BUMPER
+        # Other controls: Damping on right DPAD, Home on left DPAD, user pose at squares
+      publishers:
+      # ----- Execution FSM ----- #
+        - ros_parameter: pub_exec_fsm_setting
+          topic: /obelisk/g1/exec_fsm
+          history_depth: 10
+          callback_group: None
+      # ----- High Level Control ----- #
+        - ros_parameter: pub_ctrl_setting
+          topic: /obelisk/g1/high_level_ctrl
+          history_depth: 10
+          callback_group: None
+      subscribers:
+      # ----- Joystick subscriber ----- #
+        - ros_parameter: sub_est_setting
+          topic: /obelisk/g1/joy
+      timers:
+        - ros_parameter: timer_ctrl_setting
+          timer_period_sec: 100  # Control callback is not being used
+          callback_group: None
   estimation:
+ # ----------------------------------------------- #
+ # ------------------ Estimator ------------------ #
+ # ----------------------------------------------- #
     - pkg: sample_contact_walking
       executable: state_estimator
       params:
@@ -246,31 +276,72 @@ onboard:
           non_obelisk: False
   # sensing:
   robot:
-    - is_simulated: True
-      pkg: sample_contact_walking
-      executable: simulation
+    - is_simulated: False
+      pkg: obelisk_unitree_cpp
+      executable: obelisk_unitree_g1_hardware
       params:
-        ic_keyframe: standing
-      # callback_groups:
+        network_interface_name: enp4s0
+        default_kp: [
+                    10., 10., 10.,    # L hip
+                    10., 10., 10.,    # L knee, ankle
+                    10., 10., 10.,    # R hip
+                    10., 10., 10.,    # R knee, ankle
+                    10., #10., 10.,    # Waist
+                    5., 5., 5.,       # L shoulder
+                    5., 5., 5., 5.,   # L elbow, wrist
+                    5., 5., 5.,       # R shoulder
+                    5., 5., 5., 5.,   # R elbow, wrist
+                    ]
+        default_kd: [
+                    1., 1., 1.,       # L hip
+                    1., 1., 1.,       # L knee, ankle
+                    1., 1., 1.,       # R hip
+                    1., 1., 1.,       # R knee, ankle
+                    1., #1., 1.,       # Waist
+                    1., 1., 1.,       # L shoulder
+                    1., 1., 1., 1.,   # L elbow, wrist
+                    1., 1., 1.,       # R shoulder
+                    1., 1., 1., 1.,   # R elbow, wrist
+        ]
+    # - is_simulated: True
+    #   pkg: sample_contact_walking
+    #   executable: simulation
+    #   params:
+    #     ic_keyframe: standing
+    #   # callback_groups:
       publishers:
-        - ros_parameter: pub_true_sim_state_setting
-          topic: /obelisk/g1/true_sim_state
+        # ----- Joints ----- #
+        - ros_parameter: pub_sensor_setting
+          topic: /obelisk/g1/joint_encoders
           history_depth: 10
-          callback_group: None
+        # ----- IMU ----- #
+        - ros_parameter: pub_imu_setting
+          topic: /obelisk/g1/croch_imu
+          history_depth: 10
+        # ----- Odom ----- #
+        - ros_parameter: pub_odom_setting
+          topic: /obelisk/g1/odom
+          history_depth: 10
       timers:
-        - ros_parameter: timer_true_sim_state_setting
-          history_depth: 10
-          timer_period_sec: 0.002
+        - ros_parameter: timer_sensor_setting
+          timer_period_sec: 0.02  # TODO: Tune the timing (?)
           callback_group: None
       subscribers:
+      # ----- Control ----- #
         - ros_parameter: sub_ctrl_setting
-          # key: sub1
           topic: /obelisk/g1/low_level_control
-          # msg_type: PD_FF
           history_depth: 10
-          # callback_key: sub_callback1
           callback_group: None
-          non_obelisk: False
+      # ----- Execution FSM ----- #
+        - ros_parameter: sub_fsm_setting
+          topic: /obelisk/g1/exec_fsm
+          history_depth: 10
+          callback_group: None
+      # ----- High Level Control ----- #
+        - ros_parameter: sub_high_level_ctrl_setting
+          topic: /obelisk/g1/high_level_ctrl
+          history_depth: 10
+          callback_group: None
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model

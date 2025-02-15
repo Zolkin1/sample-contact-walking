@@ -3,6 +3,7 @@
 ## TODO:
 - Add Proxqp to the docker
 - Make obelisk pull to the uniree-interface branch
+- Add ping to the docker
 
 ## Useful commands
 Setup:
@@ -120,3 +121,28 @@ to see what devices are found.
 ## Running the Unitree Interface
 - Need to set the local enivornment variable: OBELISK_BUILD_UNITREE=true
 - Need to change the ROS_DOMAIN_ID to be different (going to 5 works)
+```
+export ROS_DOMAIN_ID=5
+```
+Be sure to change the `ROS_DOMAIN_ID` in all terminals!
+```
+export OBELISK_BUILD_UNITREE=true
+```
+
+### Connecting to the robot
+- Make sure you can run `ping 192.168.123.161` and see the robot
+- Run the basic G1 obelisk example
+```
+obk-launch config_file_path=g1_cpp.yaml device_name=onboard bag=false
+```
+Make sure the joints move and that you can cycle through them.
+
+### Launch the G1 Hardware stack:
+```
+obk-launch config_file_path=${SAMPLE_WALKING_ROOT}/sample_contact_walking/configs/g1_hardware_config.yaml device_name=onboard auto_start=configure bag=false
+```
+
+Wait for the viz software to connect then run in a seperate terminal:
+```
+obk-activate g1_hardware
+```
