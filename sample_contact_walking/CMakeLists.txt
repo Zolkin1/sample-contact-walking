@@ -62,7 +62,7 @@ ament_target_dependencies(ll_controller
 add_executable(state_estimator 
     src/robot_estimator.cpp
     )
-target_link_libraries(state_estimator PUBLIC Obelisk::Core pinocchio::pinocchio)
+target_link_libraries(state_estimator PUBLIC Obelisk::Core pinocchio::pinocchio StateEstimation Mpc Models)
 
 ament_target_dependencies(
     state_estimator PUBLIC

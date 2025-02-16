@@ -258,7 +258,12 @@ Position and velocity actuators added. -->
       <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.2 0.2 0.2 1" mesh="pelvis"/>
       <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="pelvis_contour_link"/>
       <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="pelvis_contour_link"/>
-      <site name="torso_mocap_site" pos="0 0 0" euler="0 0 0"/>
+
+      <!-- NOTE: This is NOT where the real mocap will be attached, this is just here for testing -->
+      <site name="pelvis_mocap_site" pos="0 0 0" euler="0 0 0" rgba="0 1 0 1"/>
+
+      <!-- Pelvis IMU -->
+      <site name="pelvis_imu" size="0.01" pos="0.04525 0 -0.08339" rgba="1 0 0 1"/>
 
       <!-- Left Leg -->
       <body name="left_hip_pitch_link" pos="0 0.064452 -0.1027">
@@ -410,7 +415,12 @@ Position and velocity actuators added. -->
             <geom pos="0.0039635 0 -0.054" type="mesh" rgba="0.2 0.2 0.2 1" mesh="head_link"/>
             <geom pos="0.0039635 0 -0.054" quat="1 0 0 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="waist_support_link"/>
             <geom pos="0.0039635 0 -0.054" quat="1 0 0 0" type="mesh" rgba="0.7 0.7 0.7 1" mesh="waist_support_link"/>
-            <site name="imu" size="0.01" pos="-0.03959 -0.00224 0.13792"/>
+
+            <!-- Torso IMU -->
+            <site name="torso_imu" size="0.01" pos="-0.03959 -0.00224 0.13792" rgba="1 0 0 1"/>
+
+            <!-- TODO: Might need to tune this. Make sure this matches the URDF! -->
+            <site name="torso_mocap_site" pos="0 0 .1" euler="0 0 0" rgba="0 0 1 1" size="0.01"/>
 
             <!-- Left Arm -->
             <body name="left_shoulder_pitch_link" pos="0.0039563 0.10022 0.23778" quat="0.990264 0.139201 1.38722e-05 -9.86868e-05">
@@ -797,14 +807,23 @@ Position and velocity actuators added. -->
     <jointvel name="right_wrist_pitch_joint_vel_sensor" joint="right_wrist_pitch_joint"/>
     <jointvel name="right_wrist_yaw_joint_vel_sensor" joint="right_wrist_yaw_joint"/>
 
-    <!-- IMU sensors -->
-    <accelerometer name="imu_acc_sensor" site="imu" noise="0.1"/>
-    <gyro name="imu_gyro_sensor" site="imu" noise="0.01"/>
-    <framequat name="imu_quat_sensor" objtype="site" objname="imu" noise="0.01"/>
+    <!-- Torso IMU -->
+    <accelerometer name="torso_imu_acc_sensor" site="torso_imu" noise="0.1"/>
+    <gyro name="torso_imu_gyro_sensor" site="torso_imu" noise="0.01"/>
+    <framequat name="torso_imu_quat_sensor" objtype="site" objname="torso_imu" noise="0.01"/>
 
-    <!-- Mocap sensors -->
-    <framepos name="base_mocap_pos_sensor" objtype="site" objname="torso_mocap_site" noise="0.01"/>
-    <framequat name="base_mocap_quat_sensor" objtype="site" objname="torso_mocap_site" noise="0.01"/>
+    <!-- Pelvis IMU -->
+    <accelerometer name="pelvis_imu_acc_sensor" site="pelvis_imu" noise="0.1"/>
+    <gyro name="pelvis_imu_gyro_sensor" site="pelvis_imu" noise="0.01"/>
+    <framequat name="pelvis_imu_quat_sensor" objtype="site" objname="pelvis_imu" noise="0.01"/>
+
+    <!-- Pelvis Mocap -->
+    <framepos name="base_mocap_pos_sensor" objtype="site" objname="pelvis_mocap_site" noise="0.01"/>
+    <framequat name="base_mocap_quat_sensor" objtype="site" objname="pelvis_mocap_site" noise="0.01"/>
+
+    <!-- Torso Mocap -->
+    <framepos name="torso_mocap_pos_sensor" objtype="site" objname="torso_mocap_site" noise="0.01"/>
+    <framequat name="torso_mocap_quat_sensor" objtype="site" objname="torso_mocap_site" noise="0.01"/>
   </sensor>
 
   <keyframe>

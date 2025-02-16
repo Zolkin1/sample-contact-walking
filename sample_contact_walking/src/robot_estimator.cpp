@@ -14,28 +14,70 @@
 namespace robot {
     RobotEstimator::RobotEstimator(const std::string& name) 
         : obelisk::ObeliskEstimator<obelisk_estimator_msgs::msg::EstimatedState>(name),
-        recieved_first_encoders_(false), recieved_first_mocap_(false), recieved_first_imu_(false)  {
+        recieved_first_encoders_(false), recieved_first_mocap_(false), recieved_first_pelvis_imu_(false), recieved_first_torso_imu_(false),
+            use_sim_state_(false), use_torso_mocap_(true)  {
         // ---------- Joint Encoder Subscription ---------- /, /
         this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkJointEncoders>(
             "joint_encoders_setting", "jnt_sensor",
             std::bind(&RobotEstimator::JointEncoderCallback, this, std::placeholders::_1));
         
-        // ---------- Mocap Subscription ---------- //
-        this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkFramePose>(
-            "mocap_setting", "mocap_sensor",
-            std::bind(&RobotEstimator::MocapCallback, this, std::placeholders::_1));
+        this->declare_parameter<bool>("use_torso_mocap", true);
+        use_torso_mocap_ = this->get_parameter("use_torso_mocap").as_bool();
+
+        if (!use_torso_mocap_) {
+            // ---------- Pelvis Mocap Subscription ---------- //
+            this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkFramePose>(
+                "mocap_setting", "pelvis_mocap_sensor",
+                std::bind(&RobotEstimator::PelvisMocapCallback, this, std::placeholders::_1));
+            RCLCPP_INFO_STREAM(this->get_logger(), "Using the pelvis mocap!");
+        } else {
+            // ---------- Torso Mocap Subscription ---------- //
+            this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkFramePose>(
+                "torso_mocap_setting", "torso_mocap_sensor",
+                std::bind(&RobotEstimator::TorsoMocapCallback, this, std::placeholders::_1));
+            RCLCPP_INFO_STREAM(this->get_logger(), "Using the torso mocap!");
+        }
 
         // ---------- IMU Subscriptions ---------- //
         this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkImu>(
             "torso_imu_setting", "torso_imu_sensor",
             std::bind(&RobotEstimator::TorsoImuCallback, this, std::placeholders::_1));
+        
+        this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkImu>(
+            "pelvis_imu_setting", "pelvis_imu_sensor",
+            std::bind(&RobotEstimator::PelvisImuCallback, this, std::placeholders::_1));
 
-        // ---------- True Sim State Subscription ---------- //
-        this->RegisterObkSubscription<obelisk_sensor_msgs::msg::TrueSimState>(
-            "true_sim_sub_setting", "true_sim_state",
-            std::bind(&RobotEstimator::TrueStateCallback, this, std::placeholders::_1));
+
+        this->declare_parameter<bool>("use_sim_state", false);
+        use_sim_state_ = this->get_parameter("use_sim_state").as_bool();
+
+        if (use_sim_state_) {
+            RCLCPP_WARN_STREAM(this->get_logger(), "Using the true sim state for state estimation!");
+            // ---------- True Sim State Subscription ---------- //
+            this->RegisterObkSubscription<obelisk_sensor_msgs::msg::TrueSimState>(
+                "true_sim_sub_setting", "true_sim_state",
+                std::bind(&RobotEstimator::TrueStateCallback, this, std::placeholders::_1));
+        }
+
+        // URDF
+        this->declare_parameter<std::string>("urdf_path", "");
+        std::filesystem::path urdf_path(this->get_parameter("urdf_path").as_string());
+
+        // MPC Settings
+        this->declare_parameter<std::string>("mpc_settings_path", "");
+        mpc_settings_ = std::make_shared<torc::mpc::MpcSettings>(this->get_parameter("mpc_settings_path").as_string());
+
+        // Create model
+        this->declare_parameter<std::string>("robot_name", "");
+        std::string robot_name = this->get_parameter("robot_name").as_string();
+        RCLCPP_INFO_STREAM(this->get_logger(), "Config yaml robot name: " << robot_name);
+        std::string model_name = name + robot_name + "_model";
+        mpc_model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path,  mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values);
 
         this->declare_parameter<std::string>("base_link_name");
+
+        this->declare_parameter<std::vector<double>>("pelvis_ang_vel_lpf_coefs");
+        pelvis_ang_vel_lpf_ = std::make_unique<torc::state_est::LowPassFilter>(this->get_parameter("pelvis_ang_vel_lpf_coefs").as_double_array());
 
         // Reset values
         joint_names_.clear();
@@ -45,29 +87,59 @@ namespace robot {
         std::fill(std::begin(prev_base_pos_), std::end(prev_base_pos_), 0);
         std::fill(std::begin(base_pos_), std::end(base_pos_), 0);
 
-        // TODO: remove
-        recieved_first_imu_ = true;
-
         // Make broadcasters
         torso_mocap_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
         this->MakeTorsoMocapTransform();
     }
 
     void RobotEstimator::JointEncoderCallback(const obelisk_sensor_msgs::msg::ObkJointEncoders& msg) {
-        recieved_first_encoders_ = true;
+        // TODO: Assign joints by name to match the model
+        // joint_pos_ = msg.joint_pos;
+        // joint_vels_ = msg.joint_vel;
+        // joint_names_ = msg.joint_names;        
 
-        joint_pos_ = msg.joint_pos;
-        joint_vels_ = msg.joint_vel;
-        joint_names_ = msg.joint_names;        
+        joint_pos_.resize(mpc_model_->GetConfigDim() - 7);
+        joint_vels_.resize(mpc_model_->GetVelDim() - 6);
+        joint_names_.resize(mpc_model_->GetConfigDim() - 7);
+
+        if (msg.joint_names.size() != msg.joint_pos.size()) {
+            throw std::runtime_error("[JointEncoderCallback] msg is not self consistent!");
+        }
+
+        // Configuration
+        // Only receive the joints that we use in the MPC
+        for (size_t i = 0; i < msg.joint_pos.size(); i++) {
+            const auto joint_idx = mpc_model_->GetJointID(msg.joint_names[i]);
+            if (joint_idx.has_value()) {
+                if (joint_idx.value() < 2) {
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Invalid joint name!");
+                }
+                joint_pos_[joint_idx.value() - 2] = msg.joint_pos.at(i);     // Offset for the root and base joints
+
+                joint_names_[joint_idx.value() - 2] = msg.joint_names[i];   // Assing joint names
+            }
+        }
+
+        // Velocity
+        for (size_t i = 0; i < msg.joint_vel.size(); i++) {
+            const auto joint_idx = mpc_model_->GetJointID(msg.joint_names[i]);
+            if (joint_idx.has_value()) {
+                if (joint_idx.value() < 2) {
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "Invalid joint name!");
+                }
+                joint_vels_[joint_idx.value() - 2] = msg.joint_vel.at(i);     // Offset for the root and base joints
+            }
+        }
+
+        recieved_first_encoders_ = true;
     }
 
-    void RobotEstimator::MocapCallback(const obelisk_sensor_msgs::msg::ObkFramePose& msg) {
-        recieved_first_mocap_ = true;
-
+    void RobotEstimator::PelvisMocapCallback(const obelisk_sensor_msgs::msg::ObkFramePose& msg) {
         prev_base_pos_ = base_pos_;
         prev_base_quat_ = base_quat_;
         prev_base_sec_ = base_sec_;
         prev_base_nanosec_ = base_nanosec_;
+        prev_mocap_time_ = mocap_time_;
 
         base_pos_.at(0) = msg.position.x;
         base_pos_.at(1) = msg.position.y;
@@ -80,21 +152,109 @@ namespace robot {
 
         base_sec_ = msg.header.stamp.sec;
         base_nanosec_ = msg.header.stamp.nanosec;
+        mocap_time_ = msg.header.stamp;
 
         base_link_name_ = msg.frame_name;
+
+
+        if (!use_sim_state_ && recieved_first_mocap_) {
+            double elapsed_time = (mocap_time_ - prev_mocap_time_).seconds();
+            if (elapsed_time > 0) {
+                // Finite difference the mocap data for velocities
+                base_vel_world_[0] = (base_pos_[0] - prev_base_pos_[0])/elapsed_time;
+                base_vel_world_[1] = (base_pos_[1] - prev_base_pos_[1])/elapsed_time;
+                base_vel_world_[2] = (base_pos_[2] - prev_base_pos_[2])/elapsed_time;
+            }
+        }
 
         if (msg.header.frame_id != "world") {
             RCLCPP_ERROR_STREAM(this->get_logger(), "Mocap sensor is with respect to the wrong frame! Expecting `world`, got: " << msg.header.frame_id);
         }
+
+        recieved_first_mocap_ = true;
     }
 
+        void RobotEstimator::TorsoMocapCallback(const obelisk_sensor_msgs::msg::ObkFramePose& msg) {
+        prev_base_pos_ = base_pos_;
+        prev_base_quat_ = base_quat_;
+        prev_base_sec_ = base_sec_;
+        prev_base_nanosec_ = base_nanosec_;
+        prev_mocap_time_ = mocap_time_;
+
+        // TODO: If I go to async then I may want to do this in a the compute estimated state function
+        // Convert the sensor data into the pelvis (base) frame
+        torc::models::vector3_t pos;
+        pos << msg.position.x, msg.position.y, msg.position.z;
+        torc::models::quat_t orientation(msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z);
+        pinocchio::SE3 frame_pose(orientation, pos);
+
+        torc::models::vectorx_t config = mpc_model_->GetNeutralConfig();
+        for (int i = 0; i < joint_pos_.size(); i++) {
+            config[7 + i] = joint_pos_[i];
+        }
+
+        pinocchio::SE3 base_pose = mpc_model_->TransformPose(frame_pose, "torso_mocap", "pelvis", config);
+
+        base_pos_.at(0) = base_pose.translation()[0];
+        base_pos_.at(1) = base_pose.translation()[1];
+        base_pos_.at(2) = base_pose.translation()[2];
+
+        torc::models::quat_t fb_quat(base_pose.rotation());
+
+        base_quat_.x() = fb_quat.x();
+        base_quat_.y() = fb_quat.y();
+        base_quat_.z() = fb_quat.z();
+        base_quat_.w() = fb_quat.w();
+
+        base_sec_ = msg.header.stamp.sec;
+        base_nanosec_ = msg.header.stamp.nanosec;
+        mocap_time_ = msg.header.stamp;
+
+        base_link_name_ = msg.frame_name;
+
+
+        if (!use_sim_state_ && recieved_first_mocap_) {
+            double elapsed_time = (mocap_time_ - prev_mocap_time_).seconds();
+            if (elapsed_time > 0) {
+                // Finite difference the mocap data for velocities
+                base_vel_world_[0] = (base_pos_[0] - prev_base_pos_[0])/elapsed_time;
+                base_vel_world_[1] = (base_pos_[1] - prev_base_pos_[1])/elapsed_time;
+                base_vel_world_[2] = (base_pos_[2] - prev_base_pos_[2])/elapsed_time;
+            }
+        }
+
+        if (msg.header.frame_id != "world") {
+            RCLCPP_ERROR_STREAM(this->get_logger(), "Mocap sensor is with respect to the wrong frame! Expecting `world`, got: " << msg.header.frame_id);
+        }
+
+        recieved_first_mocap_ = true;
+    }
+
+    // TODO: Fill out callback
     void RobotEstimator::TorsoImuCallback(__attribute__((__unused__)) const obelisk_sensor_msgs::msg::ObkImu& msg) {
-        recieved_first_imu_ = true;
+        recieved_first_torso_imu_ = true;
+    }
+
+    void RobotEstimator::PelvisImuCallback(__attribute__((__unused__)) const obelisk_sensor_msgs::msg::ObkImu& msg) {
+        if (!use_sim_state_) {
+            // Low pass filter this
+            Eigen::Vector3d new_ang_vel;
+            new_ang_vel << msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z;
+            Eigen::Vector3d filtered_ang_vel = pelvis_ang_vel_lpf_->Filter(new_ang_vel);
+
+            // TODO: Rotate into the correct frame. For the G1 this sould be an identity rotation
+
+            base_ang_vel_local_[0] = filtered_ang_vel(0);
+            base_ang_vel_local_[1] = filtered_ang_vel(1);
+            base_ang_vel_local_[2] = filtered_ang_vel(2);
+        }
+
+        recieved_first_pelvis_imu_ = true;
     }
 
     obelisk_estimator_msgs::msg::EstimatedState RobotEstimator::ComputeStateEstimate() {
         
-        if (recieved_first_imu_ && recieved_first_encoders_ && recieved_first_mocap_) {
+        if (recieved_first_pelvis_imu_ && recieved_first_encoders_ && recieved_first_mocap_) {
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Starting to publish estimated states.");
 
             double d_sec = base_sec_ - prev_base_sec_;
@@ -120,8 +280,8 @@ namespace robot {
 
             // Assign v_base from the true sim state
             // Need to rotate in to the local frame
-            Eigen::Map<vector3_t> v_world_linear(base_vel_.data());
-            Eigen::Map<vector3_t> v_local_angular(base_vel_.data() + 3);
+            Eigen::Map<vector3_t> v_world_linear(base_vel_world_.data());
+            Eigen::Map<vector3_t> v_local_angular(base_ang_vel_local_.data());
 
             vector6_t local_vel;
 
@@ -174,8 +334,11 @@ namespace robot {
     } 
 
     void RobotEstimator::TrueStateCallback(const obelisk_sensor_msgs::msg::TrueSimState& msg) {
-        for (size_t i = 0; i < FLOATING_VEL_SIZE; i++) {
-            base_vel_[i] = msg.v_base[i];
+        for (size_t i = 0; i < POS_VARS; i++) {
+            base_vel_world_[i] = msg.v_base[i];
+        }
+        for (size_t i = 0; i < POS_VARS; i++) {
+            base_ang_vel_local_[i] = msg.v_base[i + POS_VARS];
         }
     }
 } // namespace robot

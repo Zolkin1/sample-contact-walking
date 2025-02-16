@@ -117,6 +117,14 @@ to see what devices are found.
 - OSQP (pip) -->
 
 - Remember that the topics in the contact planner need to updated in the source code until Obelisk is updated
+- If all the ros commands are hanging try:
+```
+ps aux | grep ros2
+```
+```
+pkill -9 -f ros2
+```
+To see then kill all the poosible processes
 
 ## Running the Unitree Interface
 - Need to set the local enivornment variable: OBELISK_BUILD_UNITREE=true
