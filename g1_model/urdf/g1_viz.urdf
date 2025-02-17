@@ -1044,7 +1044,7 @@
     </collision>
   </link>
   <joint name="left_hand_thumb_2_joint" type="fixed">
-    <origin xyz="0 -0.0458 0" rpy="0 0 0"/>
+    <origin xyz="0 -0.0458 0" rpy="0 0 1.57"/>
     <axis xyz="0 0 1"/>
     <parent link="left_hand_thumb_1_link"/>
     <child link="left_hand_thumb_2_link"/>
@@ -1073,7 +1073,7 @@
     </collision>
   </link>
   <joint name="left_hand_middle_0_joint" type="fixed">
-    <origin xyz="0.0777 0.0016 -0.0285" rpy="0 0 0"/>
+    <origin xyz="0.0777 0.0016 -0.0285" rpy="0 0 -1.57"/>
     <axis xyz="0 0 1"/>
     <parent link="left_hand_palm_link"/>
     <child link="left_hand_middle_0_link"/>
@@ -1102,7 +1102,7 @@
     </collision>
   </link>
   <joint name="left_hand_middle_1_joint" type="fixed">
-    <origin xyz="0.0458 0 0" rpy="0 0 0"/>
+    <origin xyz="0.0458 0 0" rpy="0 0 -1.57"/>
     <axis xyz="0 0 1"/>
     <parent link="left_hand_middle_0_link"/>
     <child link="left_hand_middle_1_link"/>
@@ -1131,7 +1131,7 @@
     </collision>
   </link>
   <joint name="left_hand_index_0_joint" type="fixed">
-    <origin xyz="0.0777 0.0016 0.0285" rpy="0 0 0"/>
+    <origin xyz="0.0777 0.0016 0.0285" rpy="0 0 -1.57"/>
     <axis xyz="0 0 1"/>
     <parent link="left_hand_palm_link"/>
     <child link="left_hand_index_0_link"/>
@@ -1160,7 +1160,7 @@
     </collision>
   </link>
   <joint name="left_hand_index_1_joint" type="fixed">
-    <origin xyz="0.0458 0 0" rpy="0 0 0"/>
+    <origin xyz="0.0458 0 0" rpy="0 0 -1.57"/>
     <axis xyz="0 0 1"/>
     <parent link="left_hand_index_0_link"/>
     <child link="left_hand_index_1_link"/>
@@ -1477,7 +1477,7 @@
     </collision>
   </link>
   <joint name="right_hand_thumb_2_joint" type="fixed">
-    <origin xyz="0 0.0458 0" rpy="0 0 0"/>
+    <origin xyz="0 0.0458 0" rpy="0 0 -1.57"/>
     <axis xyz="0 0 1"/>
     <parent link="right_hand_thumb_1_link"/>
     <child link="right_hand_thumb_2_link"/>
@@ -1506,7 +1506,7 @@
     </collision>
   </link>
   <joint name="right_hand_middle_0_joint" type="fixed">
-    <origin xyz="0.0777 -0.0016 -0.0285" rpy="0 0 0"/>
+    <origin xyz="0.0777 -0.0016 -0.0285" rpy="0 0 1.57"/>
     <axis xyz="0 0 1"/>
     <parent link="right_hand_palm_link"/>
     <child link="right_hand_middle_0_link"/>
@@ -1535,7 +1535,7 @@
     </collision>
   </link>
   <joint name="right_hand_middle_1_joint" type="fixed">
-    <origin xyz="0.0458 0 0" rpy="0 0 0"/>
+    <origin xyz="0.0458 0 0" rpy="0 0 1.57"/>
     <axis xyz="0 0 1"/>
     <parent link="right_hand_middle_0_link"/>
     <child link="right_hand_middle_1_link"/>
@@ -1564,7 +1564,7 @@
     </collision>
   </link>
   <joint name="right_hand_index_0_joint" type="fixed">
-    <origin xyz="0.0777 -0.0016 0.0285" rpy="0 0 0"/>
+    <origin xyz="0.0777 -0.0016 0.0285" rpy="0 0 1.57"/>
     <axis xyz="0 0 1"/>
     <parent link="right_hand_palm_link"/>
     <child link="right_hand_index_0_link"/>
@@ -1593,7 +1593,7 @@
     </collision>
   </link>
   <joint name="right_hand_index_1_joint" type="fixed">
-    <origin xyz="0.0458 0 0" rpy="0 0 0"/>
+    <origin xyz="0.0458 0 0" rpy="0 0 1.57"/>
     <axis xyz="0 0 1"/>
     <parent link="right_hand_index_0_link"/>
     <child link="right_hand_index_1_link"/>
