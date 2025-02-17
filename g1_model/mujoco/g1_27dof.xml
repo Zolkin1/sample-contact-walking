@@ -21,14 +21,8 @@ Position and velocity actuators added. -->
     <!-- Hip Pitch -->
     <default class="hip_pitch_pos">
       <position kp="240" ctrllimited="false"/>
-      <!-- <position kp="0" ctrllimited="false"/> -->
-      <!-- <position kp="50" ctrllimited="false"/> -->
-      <!-- <position kp="440" ctrllimited="false"/> -->
     </default>
     <default class="hip_pitch_vel">
-      <!-- <position kv="6" ctrllimited="false"/> -->
-      <!-- <position kv="0" ctrllimited="false"/> -->
-      <!-- <position kv="2" ctrllimited="false"/> -->
       <position kv="4" ctrllimited="false"/>
     </default>
 

@@ -81,9 +81,9 @@ namespace robot {
             // States
             enum ControllerState {
                 SeekInitialCond,
+                HoldInitialCond,
                 Mpc,
                 NoOutput
-                // TODO: Add a state for changing contact schedule
             };
             void TransitionState(const ControllerState& new_state);
             ControllerState GetState();

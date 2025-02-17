@@ -152,6 +152,13 @@ namespace robot {
         base_quat_.z() = msg.pose.orientation.z;
         base_quat_.w() = msg.pose.orientation.w;
 
+        // Normalize
+        double norm = std::sqrt(base_quat_.x()*base_quat_.x() + base_quat_.y()*base_quat_.y() + base_quat_.z()*base_quat_.z() + base_quat_.w()*base_quat_.w());
+        base_quat_.x() = base_quat_.x()/norm;
+        base_quat_.y() = base_quat_.y()/norm;
+        base_quat_.z() = base_quat_.z()/norm;
+        base_quat_.w() = base_quat_.w()/norm;
+
         base_sec_ = msg.header.stamp.sec;
         base_nanosec_ = msg.header.stamp.nanosec;
         mocap_time_ = msg.header.stamp;

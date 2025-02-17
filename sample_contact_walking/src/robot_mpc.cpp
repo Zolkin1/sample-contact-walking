@@ -412,7 +412,7 @@ namespace robot
         this->get_parameter("force_frames", force_frames_);
 
         for (const auto& frame : force_frames_) {
-            std::cout << "Force frame: " << frame << std::endl;
+            RCLCPP_INFO_STREAM(this->get_logger(), "Viz force frame: " << frame);
         }
 
         this->declare_parameter<std::vector<std::string>>("polytope_frames", {""});
@@ -807,6 +807,11 @@ namespace robot
                 // for (int i = 0; i < in_contact.size(); i++) {
                 //     in_contact[i] = true;
                 // }
+            } else if (ctrl_state_ == HoldInitialCond) {
+                q = q_ic_;
+                v = v_ic_;
+                tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
+                F = vectorx_t::Zero(mpc_settings_->contact_frames.size()*3);
             } else {
                 throw std::runtime_error("Not a valid state!");
             }
@@ -886,6 +891,15 @@ namespace robot
 
             msg.kp = kp_;
             msg.kd = kd_;
+
+            if (ctrl_state_ == SeekInitialCond) {
+                // When going to the initial condition, use smaller gains
+                for (int i = 0; i < msg.kp.size(); i++) {
+                    msg.kp[i] *= 0.1;
+                    msg.kd[i] *= 0.1;
+                }
+            }
+
             msg.joint_names = control_joint_names_;
 
             // TODO: Use only when the mujoco model doesn't match the MPC
@@ -943,7 +957,7 @@ namespace robot
         ctrl_state_ = new_state;
         std::string new_state_str = GetStateString(new_state);
 
-        RCLCPP_INFO_STREAM(this->get_logger(), "Transitioning to state: " << new_state_str);
+        RCLCPP_INFO_STREAM(this->get_logger(), "[MPC] Transitioning to state: " << new_state_str);
     }
 
     MpcController::ControllerState MpcController::GetState() {
@@ -1016,7 +1030,8 @@ namespace robot
         switch (state) {
         case SeekInitialCond:
             return "Seek Initial Condition";
-            break;
+        case HoldInitialCond:
+            return "Hold Initial Condition";
         case Mpc:
             return "MPC";
         case NoOutput:
@@ -1782,9 +1797,11 @@ namespace robot
 
         if (msg.buttons[X] && (this->now() - last_X_press).seconds() > 9e-1) {
             if (GetState() == SeekInitialCond) {
+                TransitionState(HoldInitialCond);
+            } else if (GetState() == HoldInitialCond) {
                 TransitionState(Mpc);
             } else if (GetState() == NoOutput) {
-                TransitionState(Mpc);
+                TransitionState(SeekInitialCond);
             } else if (GetState() == Mpc) {
                 TransitionState(SeekInitialCond);
             }
