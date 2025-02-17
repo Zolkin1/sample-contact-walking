@@ -235,7 +235,13 @@ onboard:
     - pkg: sample_contact_walking
       executable: state_estimator
       params:
+        mpc_settings_path:  /home/zolkin/sample-contact-walking/sample_contact_walking/configs/g1_mpc_config.yaml
+        urdf_path: /home/zolkin/sample-contact-walking/g1_model/urdf/g1_hand.urdf
+        robot_name: "g1"
         base_link_name: "pelvis"
+        use_sim_state: false #true
+        use_torso_mocap: true #false
+        pelvis_ang_vel_lpf_coefs: [0.05, 0.15, 0.8] # TODO: Tune these
       callback_groups:
         debug_cbg: MutuallyExclusiveCallbackGroup 
       publishers:
@@ -252,28 +258,33 @@ onboard:
       # ---------- Joint Encoders ---------- #
         - ros_parameter: joint_encoders_setting
           topic: /obelisk/g1/joint_encoders
-          # msg_type: ObkJointEncoders
           history_depth: 10
           callback_group: None
-          non_obelisk: False
-      # ---------- Mocap ---------- #
+      # ---------- Pelvis Mocap ---------- #
         - ros_parameter: mocap_setting
-          topic: /obelisk/g1/torso_pose
+          topic: /obelisk/g1/pelvis_pose
           history_depth: 10
           callback_group: None
-          non_obelisk: False
+      # ---------- Torso Mocap ---------- #
+        - ros_parameter: torso_mocap_setting
+          topic: G1_torso/pose #/obelisk/g1/torso_pose
+          history_depth: 10
+          callback_group: None
       # ---------- Torso IMU ---------- #
         - ros_parameter: torso_imu_setting
           topic: /obelisk/g1/torso_imu
           history_depth: 10
           callback_group: None
-          non_obelisk: False
+      # ---------- Pelvis IMU ---------- #
+        - ros_parameter: pelvis_imu_setting
+          topic: /obelisk/g1/pelvis_imu
+          history_depth: 10
+          callback_group: None
       # ---------- True Sim State ---------- #
         - ros_parameter: true_sim_sub_setting
           topic: /obelisk/g1/true_sim_state
           history_depth: 10
           callback_group: None
-          non_obelisk: False
   # sensing:
   robot:
     - is_simulated: False
@@ -316,7 +327,7 @@ onboard:
           history_depth: 10
         # ----- IMU ----- #
         - ros_parameter: pub_imu_setting
-          topic: /obelisk/g1/croch_imu
+          topic: /obelisk/g1/pelvis_imu
           history_depth: 10
         # ----- Odom ----- #
         - ros_parameter: pub_odom_setting
@@ -458,21 +469,36 @@ onboard:
               # right_hand_middle_1_joint_vel_sensor: jointvel
               # right_hand_index_0_joint_vel_sensor: jointvel
               # right_hand_index_1_joint_vel_sensor: jointvel
-          # ---------- Base IMU ---------- #
+          # ---------- Torso IMU ---------- #
           - topic: /obelisk/g1/torso_imu
             dt: 0.001
             msg_type: ObkImu
             sensor_names:
-              imu_acc_sensor: accelerometer
-              imu_gyro_sensor: gyro
-              imu_quat_sensor: framequat
-          # ---------- Mocap ---------- #
-          - topic: /obelisk/g1/torso_pose
+              torso_imu_acc_sensor: accelerometer
+              torso_imu_gyro_sensor: gyro
+              torso_imu_quat_sensor: framequat
+          # ---------- Pelvis IMU ---------- #
+          - topic: /obelisk/g1/pelvis_imu
             dt: 0.001
-            msg_type: ObkFramePose
+            msg_type: ObkImu
+            sensor_names:
+              pelvis_imu_acc_sensor: accelerometer
+              pelvis_imu_gyro_sensor: gyro
+              pelvis_imu_quat_sensor: framequat
+          # ---------- Pelvis Mocap ---------- #
+          - topic: /obelisk/g1/pelvis_pose
+            dt: 0.002   # 500 Hz
+            msg_type: PoseStamped
             sensor_names:
               base_mocap_pos_sensor: framepos
               base_mocap_quat_sensor: framequat
+          # ---------- Torso Mocap ---------- #
+          - topic: /obelisk/g1/torso_pose
+            dt: 0.002   # 500 Hz
+            msg_type: PoseStamped
+            sensor_names:
+              torso_mocap_pos_sensor: framepos
+              torso_mocap_quat_sensor: framequat
           viz_geoms:
             dt: 1
             # ----- Stair scene ----- #
@@ -498,7 +524,7 @@ onboard:
       - pkg: obelisk_viz_cpp
         executable: default_robot_viz
         robot_pkg: g1_model
-        urdf: g1_hand.urdf
+        urdf: g1_viz.urdf
         robot_topic: robot_description
         subscribers:
           - ros_parameter: sub_viz_est_setting

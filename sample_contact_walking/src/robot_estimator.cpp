@@ -76,6 +76,7 @@ namespace robot {
         mpc_model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path,  mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values);
 
         this->declare_parameter<std::string>("base_link_name");
+        base_link_name_ = this->get_parameter("base_link_name").as_string();
 
         this->declare_parameter<std::vector<double>>("pelvis_ang_vel_lpf_coefs");
         pelvis_ang_vel_lpf_ = std::make_unique<torc::state_est::LowPassFilter>(this->get_parameter("pelvis_ang_vel_lpf_coefs").as_double_array());
@@ -306,26 +307,27 @@ namespace robot {
     }
 
     void RobotEstimator::MakeTorsoMocapTransform() {
-        geometry_msgs::msg::TransformStamped t;
+        // TODO: Investigate if this is needed
+        // geometry_msgs::msg::TransformStamped t;
 
-        t.header.stamp = this->get_clock()->now();
-        t.header.frame_id = "torso_mocap_site";     // This must match the base link in the estimated state
-        t.child_frame_id = this->get_parameter("base_link_name").as_string();             // Must match the the base link in the urdf
+        // t.header.stamp = this->get_clock()->now();
+        // t.header.frame_id = "world"; //"pelvis"//"torso_mocap_site";     // This must match the base link in the estimated state
+        // t.child_frame_id = this->get_parameter("base_link_name").as_string();             // Must match the the base link in the urdf
 
-        t.transform.translation.x = 0.0;
-        t.transform.translation.y = 0.0;
-        t.transform.translation.z = 0.0;
-        tf2::Quaternion q;
-        q.setRPY(
-        0.0,
-        0.0, //3.14,
-        0.0); //3.14);
-        t.transform.rotation.x = q.x();
-        t.transform.rotation.y = q.y();
-        t.transform.rotation.z = q.z();
-        t.transform.rotation.w = q.w();
+        // t.transform.translation.x = 0.0;
+        // t.transform.translation.y = 0.0;
+        // t.transform.translation.z = 0.0;
+        // tf2::Quaternion q;
+        // q.setRPY(
+        // 0.0,
+        // 0.0, //3.14,
+        // 0.0); //3.14);
+        // t.transform.rotation.x = q.x();
+        // t.transform.rotation.y = q.y();
+        // t.transform.rotation.z = q.z();
+        // t.transform.rotation.w = q.w();
 
-        torso_mocap_broadcaster_->sendTransform(t);
+        // torso_mocap_broadcaster_->sendTransform(t);
     } 
 
     void RobotEstimator::TrueStateCallback(const obelisk_sensor_msgs::msg::TrueSimState& msg) {
