@@ -1,9 +1,12 @@
 # sample-contact-walking
 
-## TODO:
+## TODO for the docker:
 - Add Proxqp to the docker
 - Make obelisk pull to the uniree-interface branch
 - Add ping to the docker
+- Add the optitrack library
+- Add lshw (apt-get install -y lshw)
+- Add python3-pyqt5 (apt-get install python3-pyqt5)
 
 ## Useful commands
 Setup:
@@ -154,3 +157,13 @@ Wait for the viz software to connect then run in a seperate terminal:
 ```
 obk-activate g1_hardware
 ```
+
+### Seting up the Mocap
+We use https://github.com/L2S-lab/natnet_ros2 which I hope to eventually add into obelisk for automatic installation.
+Make sure this is installed. For now I am installing it in `~/sample-contact-walking`
+
+Launch with 
+```
+ros2 launch natnet_ros2 gui_natnet_ros2.launch.py
+```
+

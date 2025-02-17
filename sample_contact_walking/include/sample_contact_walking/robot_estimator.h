@@ -21,8 +21,8 @@ namespace robot {
         private:
             // TODO: What should be the callback groups
             void JointEncoderCallback(const obelisk_sensor_msgs::msg::ObkJointEncoders& msg);
-            void PelvisMocapCallback(const obelisk_sensor_msgs::msg::ObkFramePose& msg);
-            void TorsoMocapCallback(const obelisk_sensor_msgs::msg::ObkFramePose& msg);
+            void PelvisMocapCallback(const geometry_msgs::msg::PoseStamped& msg);
+            void TorsoMocapCallback(const geometry_msgs::msg::PoseStamped& msg);
             void TorsoImuCallback(const obelisk_sensor_msgs::msg::ObkImu& msg);
             void PelvisImuCallback(const obelisk_sensor_msgs::msg::ObkImu& msg);
 

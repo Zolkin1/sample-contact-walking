@@ -422,14 +422,14 @@ onboard:
           # ---------- Pelvis Mocap ---------- #
           - topic: /obelisk/g1/pelvis_pose
             dt: 0.002   # 500 Hz
-            msg_type: ObkFramePose
+            msg_type: PoseStamped
             sensor_names:
               base_mocap_pos_sensor: framepos
               base_mocap_quat_sensor: framequat
           # ---------- Torso Mocap ---------- #
           - topic: /obelisk/g1/torso_pose
             dt: 0.002   # 500 Hz
-            msg_type: ObkFramePose
+            msg_type: PoseStamped
             sensor_names:
               torso_mocap_pos_sensor: framepos
               torso_mocap_quat_sensor: framequat

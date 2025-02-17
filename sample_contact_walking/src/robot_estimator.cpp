@@ -4,6 +4,7 @@
 #include "pinocchio/fwd.hpp"
 #include "pinocchio/spatial/explog.hpp"
 
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/static_transform_broadcaster.h"
@@ -26,13 +27,13 @@ namespace robot {
 
         if (!use_torso_mocap_) {
             // ---------- Pelvis Mocap Subscription ---------- //
-            this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkFramePose>(
+            this->RegisterObkSubscription<geometry_msgs::msg::PoseStamped>(
                 "mocap_setting", "pelvis_mocap_sensor",
                 std::bind(&RobotEstimator::PelvisMocapCallback, this, std::placeholders::_1));
             RCLCPP_INFO_STREAM(this->get_logger(), "Using the pelvis mocap!");
         } else {
             // ---------- Torso Mocap Subscription ---------- //
-            this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkFramePose>(
+            this->RegisterObkSubscription<geometry_msgs::msg::PoseStamped>(
                 "torso_mocap_setting", "torso_mocap_sensor",
                 std::bind(&RobotEstimator::TorsoMocapCallback, this, std::placeholders::_1));
             RCLCPP_INFO_STREAM(this->get_logger(), "Using the torso mocap!");
@@ -134,28 +135,25 @@ namespace robot {
         recieved_first_encoders_ = true;
     }
 
-    void RobotEstimator::PelvisMocapCallback(const obelisk_sensor_msgs::msg::ObkFramePose& msg) {
+    void RobotEstimator::PelvisMocapCallback(const geometry_msgs::msg::PoseStamped& msg) {
         prev_base_pos_ = base_pos_;
         prev_base_quat_ = base_quat_;
         prev_base_sec_ = base_sec_;
         prev_base_nanosec_ = base_nanosec_;
         prev_mocap_time_ = mocap_time_;
 
-        base_pos_.at(0) = msg.position.x;
-        base_pos_.at(1) = msg.position.y;
-        base_pos_.at(2) = msg.position.z;
+        base_pos_.at(0) = msg.pose.position.x;
+        base_pos_.at(1) = msg.pose.position.y;
+        base_pos_.at(2) = msg.pose.position.z;
 
-        base_quat_.x() = msg.orientation.x;
-        base_quat_.y() = msg.orientation.y;
-        base_quat_.z() = msg.orientation.z;
-        base_quat_.w() = msg.orientation.w;
+        base_quat_.x() = msg.pose.orientation.x;
+        base_quat_.y() = msg.pose.orientation.y;
+        base_quat_.z() = msg.pose.orientation.z;
+        base_quat_.w() = msg.pose.orientation.w;
 
         base_sec_ = msg.header.stamp.sec;
         base_nanosec_ = msg.header.stamp.nanosec;
         mocap_time_ = msg.header.stamp;
-
-        base_link_name_ = msg.frame_name;
-
 
         if (!use_sim_state_ && recieved_first_mocap_) {
             double elapsed_time = (mocap_time_ - prev_mocap_time_).seconds();
@@ -174,7 +172,7 @@ namespace robot {
         recieved_first_mocap_ = true;
     }
 
-        void RobotEstimator::TorsoMocapCallback(const obelisk_sensor_msgs::msg::ObkFramePose& msg) {
+        void RobotEstimator::TorsoMocapCallback(const geometry_msgs::msg::PoseStamped& msg) {
         prev_base_pos_ = base_pos_;
         prev_base_quat_ = base_quat_;
         prev_base_sec_ = base_sec_;
@@ -184,8 +182,8 @@ namespace robot {
         // TODO: If I go to async then I may want to do this in a the compute estimated state function
         // Convert the sensor data into the pelvis (base) frame
         torc::models::vector3_t pos;
-        pos << msg.position.x, msg.position.y, msg.position.z;
-        torc::models::quat_t orientation(msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z);
+        pos << msg.pose.position.x, msg.pose.position.y, msg.pose.position.z;
+        torc::models::quat_t orientation(msg.pose.orientation.w, msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z);
         pinocchio::SE3 frame_pose(orientation, pos);
 
         torc::models::vectorx_t config = mpc_model_->GetNeutralConfig();
@@ -209,9 +207,6 @@ namespace robot {
         base_sec_ = msg.header.stamp.sec;
         base_nanosec_ = msg.header.stamp.nanosec;
         mocap_time_ = msg.header.stamp;
-
-        base_link_name_ = msg.frame_name;
-
 
         if (!use_sim_state_ && recieved_first_mocap_) {
             double elapsed_time = (mocap_time_ - prev_mocap_time_).seconds();
