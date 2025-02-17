@@ -162,6 +162,10 @@ obk-activate g1_hardware
 We use https://github.com/L2S-lab/natnet_ros2 which I hope to eventually add into obelisk for automatic installation.
 Make sure this is installed. For now I am installing it in `~/sample-contact-walking`
 
+Note that you should be connected to the network with the optitrack computer via ethernet.
+You should set the `Server IP` as the opti track computer's IP (normally `192.168.1.2`).
+`Client IP` should be your IP.
+
 Launch with 
 ```
 ros2 launch natnet_ros2 gui_natnet_ros2.launch.py
