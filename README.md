@@ -166,4 +166,10 @@ Launch with
 ```
 ros2 launch natnet_ros2 gui_natnet_ros2.launch.py
 ```
-
+I had to run
+```
+mkdir -p /tmp/runtime-$USER
+chmod 700 /tmp/runtime-$USER
+export XDG_RUNTIME_DIR=/tmp/runtime-$USER
+```
+To make a temp directory that I had permissions to write to first otherwise the nat net driver complains.
