@@ -15,16 +15,19 @@ onboard:
         force_frames: ["left_toe", "left_heel", "right_toe", "right_heel"]
         polytope_frames: ["left_toe", "right_toe", "left_heel", "right_heel"]
         # polytope_frames: ["left_heel", "right_heel"]
+# --------- Logging --------- #
+        mpc_loop_log: "sim_mpc_loop_log.csv"
+        mpc_timing_log: "sim_mpc_timing_log.csv"
 # ---------- Swing trajectory ---------- #
         default_swing_height: 0.08 # 0.1
         default_stand_foot_height: 0.005 #0.01
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.01 #0.01 #0.013 #0.01 # Can run closer to 8-9 ms now
+        mpc_loop_period_sec: 0.01 #0.013 #0.01 # Can run closer to 8-9 ms now
         max_mpc_solves: 5000000 #5 #40 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.4 #0.3 #0.4 #NOTE: High frequency makes it a bit more reactive/stable
-        first_swing_time: 0.5 #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
+        first_swing_time: 500. #0.5 #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -109,12 +112,12 @@ onboard:
             "right_wrist_yaw_joint",]
         kp: [240., 260, 220, 270, 200, 40,
              240., 260, 220, 270, 200, 40,
-             0,
+             40,
              100, 100, 100, 100, 40, 40, 40,
              100, 100, 100, 100, 40, 40, 40]
         kd: [4., 4, 4, 4, 4, 2,
              4, 4, 4, 4, 4, 2,
-             0,
+             2,
              2, 2, 2, 2, 5, 5, 5,
              2, 2, 2, 2, 5, 5, 5,]
 # ---------- Step Planner ---------- #
@@ -421,14 +424,14 @@ onboard:
               pelvis_imu_quat_sensor: framequat
           # ---------- Pelvis Mocap ---------- #
           - topic: /obelisk/g1/pelvis_pose
-            dt: 0.002   # 500 Hz
+            dt: 0.00416   # 240 Hz
             msg_type: PoseStamped
             sensor_names:
               base_mocap_pos_sensor: framepos
               base_mocap_quat_sensor: framequat
           # ---------- Torso Mocap ---------- #
           - topic: /obelisk/g1/torso_pose
-            dt: 0.002   # 500 Hz
+            dt: 0.00416   # 240 Hz
             msg_type: PoseStamped
             sensor_names:
               torso_mocap_pos_sensor: framepos

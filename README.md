@@ -82,7 +82,7 @@ obk-activate go2_sim
 ```
 obk-launch config_file_path=${SAMPLE_WALKING_ROOT}/sample_contact_walking/configs/g1_sim_config.yaml device_name=onboard auto_start=configure bag=false
 ```
-
+ 
 Wait for the viz software to connect then run in a seperate terminal:
 ```
 obk-activate g1_sim

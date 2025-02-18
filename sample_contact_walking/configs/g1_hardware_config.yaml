@@ -15,16 +15,19 @@ onboard:
         force_frames: ["left_toe", "left_heel", "right_toe", "right_heel"]
         polytope_frames: ["left_toe", "right_toe", "left_heel", "right_heel"]
         # polytope_frames: ["left_heel", "right_heel"]
+# --------- Logging --------- #
+        mpc_loop_log: "hardware_mpc_loop_log.csv"
+        mpc_timing_log: "hardware_mpc_timing_log.csv"
 # ---------- Swing trajectory ---------- #
         default_swing_height: 0.08 # 0.1
         default_stand_foot_height: 0.005 #0.01
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.01 #0.01 #0.013 #0.01 # Can run closer to 8-9 ms now
+        mpc_loop_period_sec: 0.1 #0.01 #0.013 #0.01 # Can run closer to 8-9 ms now
         max_mpc_solves: 5000000 #5 #40 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.4 #0.3 #0.4 #NOTE: High frequency makes it a bit more reactive/stable
-        first_swing_time: 50. #0.5 #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
+        first_swing_time: 5000. #0.5 #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -109,12 +112,12 @@ onboard:
             "right_wrist_yaw_joint",]
         kp: [240., 260, 220, 270, 200, 40,
              240., 260, 220, 270, 200, 40,
-             0,
+             40,
              100, 100, 100, 100, 40, 40, 40,
              100, 100, 100, 100, 40, 40, 40]
         kd: [4., 4, 4, 4, 4, 2,
              4, 4, 4, 4, 4, 2,
-             0,
+             2,
              2, 2, 2, 2, 5, 5, 5,
              2, 2, 2, 2, 5, 5, 5,]
 # ---------- Step Planner ---------- #
@@ -176,8 +179,8 @@ onboard:
     - pkg: contact_planning
       executable: mujoco_geom_reader
       params:
-        # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/basic_scene.xml
-        mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
+        mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/basic_scene.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/g1_tile2_scene.xml
       # ----- Tile Scene ---- #
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9"]

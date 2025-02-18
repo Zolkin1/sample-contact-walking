@@ -12,8 +12,8 @@ Position and velocity actuators added. -->
   <default>
     <default class="g1">
       <!-- <joint damping="2" armature="0.01" frictionloss="0.2"/> -->
-      <joint damping="1" armature="0.01" frictionloss="0.1"/>
-      <!-- <joint damping="0" armature="0.01" frictionloss="0.0"/> -->
+      <!-- <joint damping="1" armature="0.01" frictionloss="0.1"/> -->
+      <joint damping="0" armature="0.01" frictionloss="0.0"/>
     </default>
     <!-- ############## -->
     <!--   Leg Gains    -->
@@ -102,13 +102,13 @@ Position and velocity actuators added. -->
     <!-- Waist Yaw -->
     <default class="waist_yaw_pos">
       <!-- <position kp="400" ctrllimited="false"/> -->
-      <!-- <position kp="40" ctrllimited="false"/> -->
-      <position kp="0" ctrllimited="false"/>
+      <position kp="40" ctrllimited="false"/>
+      <!-- <position kp="0" ctrllimited="false"/> -->
     </default>
     <default class="waist_yaw_vel">
       <!-- <position kv="50" ctrllimited="false"/> -->
-      <!-- <position kv="5" ctrllimited="false"/> -->
-      <position kv="0" ctrllimited="false"/>
+      <position kv="2" ctrllimited="false"/>
+      <!-- <position kv="0" ctrllimited="false"/> -->
     </default>
 
     <!-- ############## -->

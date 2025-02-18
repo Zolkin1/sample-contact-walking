@@ -418,9 +418,16 @@ namespace robot
         this->declare_parameter<std::vector<std::string>>("polytope_frames", {""});
         this->get_parameter("polytope_frames", viz_polytope_frames_);
 
+        this->declare_parameter<std::string>("mpc_loop_log", {"mpc_loop_log.csv"});
+        this->declare_parameter<std::string>("mpc_timing_log", {"mpc_timing_log.csv"});
+        std::string mpc_loop_log_name = this->get_parameter("mpc_loop_log").as_string();
+        std::string mpc_timing_log_name = this->get_parameter("mpc_timing_log").as_string();
+
+        this->get_parameter("polytope_frames", viz_polytope_frames_);
+
         time_offset_ = this->now().seconds();
-        log_file_.open("mpc_loop_log.csv");
-        timing_log_file_.open("mpc_timing_log.csv");
+        log_file_.open("mpc_logs/" + mpc_loop_log_name);
+        timing_log_file_.open("mpc_logs/" + mpc_timing_log_name);
 
         // Spin up MPC thread
         mpc_thread_ = std::thread(&MpcController::MpcThread, this);
@@ -452,8 +459,9 @@ namespace robot
             q_(i) = msg.q_base.at(i);
         }
 
-        if ((q_.segment<4>(3).norm() - 1) > 1e-8) {
+        if ((q_.segment<4>(3).norm() - 1) > 1e-4) {
             recieved_first_state_ = false;
+            RCLCPP_ERROR_STREAM(this->get_logger(), "q floating base: " << q_.head<7>());
             throw std::runtime_error("recieved q is not normalized!");
         }
 
@@ -757,6 +765,9 @@ namespace robot
                     traj_out_.GetVelocityInterp(time_into_traj, v);
                     traj_out_.GetTorqueInterp(time_into_traj, tau);
 
+                    // TODO: Remove after debugging
+                    // tau = traj_out_.GetTau(0);
+
                     for (int i = 0; i < mpc_settings_->num_contact_locations; i++) {
                         vector3_t f_temp;
                         traj_out_.GetForceInterp(time_into_traj, mpc_settings_->contact_frames[i], f_temp);
@@ -824,6 +835,12 @@ namespace robot
             }
             log_counter++;
 
+            // // TODO: Remove when ready to run this
+            // q = q_ic_;
+            // v = v_ic_;
+            // tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
+            // F = vectorx_t::Zero(mpc_settings_->contact_frames.size()*3);
+
             // if (recieved_first_state_) {
             //     // Use WBC
             //     // Get current state
@@ -838,7 +855,7 @@ namespace robot
             //     // RCLCPP_WARN_STREAM(this->get_logger(), "After control");           
             // }
             
-            // TODO: Remove
+            // // TODO: Remove
             // q = q_ic_;
             // v = v_ic_;
             // tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
