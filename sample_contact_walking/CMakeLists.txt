@@ -58,6 +58,18 @@ ament_target_dependencies(ll_controller
     sample_contact_msgs
     sensor_msgs)
 
+# ------- Basic Test Controller ------- #
+add_executable(basic_torque_control src/torque_control_test.cpp)
+target_link_libraries(basic_torque_control PUBLIC Obelisk::Core Obelisk::Zoo) # Wbc
+
+ament_target_dependencies(basic_torque_control
+    PUBLIC
+    visualization_msgs
+    tf2_ros
+    tf2
+    sample_contact_msgs
+    sensor_msgs)
+
 # ------- Estimator ------- #
 add_executable(state_estimator 
     src/robot_estimator.cpp
@@ -77,6 +89,7 @@ target_link_libraries(simulation PUBLIC Obelisk::Core)
 # ------- Install ------- #
 install(TARGETS
     ll_controller
+    basic_torque_control
     state_estimator
     simulation
     DESTINATION lib/${PROJECT_NAME})

@@ -17,7 +17,8 @@ general_settings:
   initial_constraint_tol: 5e-4
   nodes_full_dynamics: 24
   delay_prediction_dt: 0
-  terminal_cost_weight: 60 
+  terminal_cost_weight: 60
+  log_file_name: "mpc_logs/mpc_sim_log.csv"
 solver_settings:
 # ----------------------------- #
 # ----- Simulation Params ----- #

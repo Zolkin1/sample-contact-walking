@@ -55,3 +55,4 @@ mpc_loop_log.csv
 *.csv
 
 natnet_ros2/
+mpc_logs/

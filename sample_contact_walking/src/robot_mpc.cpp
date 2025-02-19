@@ -858,7 +858,13 @@ namespace robot
             // // TODO: Remove
             // q = q_ic_;
             // v = v_ic_;
-            // tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
+            tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
+            // tau = vectorx_t::Ones(mpc_model_->GetNumInputs());
+
+            // Only actuate legs
+            // q.tail(8) = q_ic_.tail(8);
+            // v.tail(8) = v_ic_.tail(8);
+            // tau.tail(8).setZero();
 
             // TODO: Only use this when the mujoco model does not match!
             // Check if we need to insert other elements into the targets

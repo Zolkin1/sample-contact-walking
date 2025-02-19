@@ -177,3 +177,13 @@ chmod 700 /tmp/runtime-$USER
 export XDG_RUNTIME_DIR=/tmp/runtime-$USER
 ```
 To make a temp directory that I had permissions to write to first otherwise the nat net driver complains.
+
+
+## Torque Testing
+Run the stack
+```
+obk-launch config_file_path=${SAMPLE_WALKING_ROOT}/sample_contact_walking/configs/basic_torque_config.yaml device_name=onboard auto_start=configure bag=false
+```
+```
+obk-activate g1_basic_ctrl_hardware
+```
