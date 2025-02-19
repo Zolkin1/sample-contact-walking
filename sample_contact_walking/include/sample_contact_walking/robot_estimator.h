@@ -89,5 +89,13 @@ namespace robot {
             // Robot model
             std::unique_ptr<torc::models::FullOrderRigidBody> mpc_model_; // Reduced model
             std::shared_ptr<torc::mpc::MpcSettings> mpc_settings_;
+
+            // Simulation
+            double jnt_vel_var_;
+            double base_vel_var_;
+
+            // Logging
+            double time_offset_;
+            std::ofstream log_file_;
     };
 } // namespace robot

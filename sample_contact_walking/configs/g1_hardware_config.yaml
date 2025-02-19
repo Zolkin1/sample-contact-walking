@@ -245,6 +245,7 @@ onboard:
         use_sim_state: false #true
         use_torso_mocap: true #false
         pelvis_ang_vel_lpf_coefs: [0.05, 0.15, 0.8] # TODO: Tune these
+        log_file_name: "mpc_logs/hardware_estimator_log.csv"
       callback_groups:
         debug_cbg: MutuallyExclusiveCallbackGroup 
       publishers:
@@ -270,8 +271,8 @@ onboard:
           callback_group: None
       # ---------- Torso Mocap ---------- #
         - ros_parameter: torso_mocap_setting
-          topic: G1_torso/pose
-          # topic: /obelisk/g1/torso_pose
+          # topic: G1_torso/pose
+          topic: /obelisk/g1/torso_pose
           history_depth: 10
           callback_group: None
       # ---------- Torso IMU ---------- #
@@ -291,38 +292,38 @@ onboard:
           callback_group: None
   # sensing:
   robot:
-    - is_simulated: False
-      pkg: obelisk_unitree_cpp
-      executable: obelisk_unitree_g1_hardware
-      params:
-        network_interface_name: enp4s0
-        default_kp: [
-                    10., 10., 10.,    # L hip
-                    10., 10., 10.,    # L knee, ankle
-                    10., 10., 10.,    # R hip
-                    10., 10., 10.,    # R knee, ankle
-                    10., #10., 10.,    # Waist
-                    5., 5., 5.,       # L shoulder
-                    5., 5., 5., 5.,   # L elbow, wrist
-                    5., 5., 5.,       # R shoulder
-                    5., 5., 5., 5.,   # R elbow, wrist
-                    ]
-        default_kd: [
-                    1., 1., 1.,       # L hip
-                    1., 1., 1.,       # L knee, ankle
-                    1., 1., 1.,       # R hip
-                    1., 1., 1.,       # R knee, ankle
-                    1., #1., 1.,       # Waist
-                    1., 1., 1.,       # L shoulder
-                    1., 1., 1., 1.,   # L elbow, wrist
-                    1., 1., 1.,       # R shoulder
-                    1., 1., 1., 1.,   # R elbow, wrist
-        ]
-    # - is_simulated: True
-    #   pkg: sample_contact_walking
-    #   executable: simulation
+    # - is_simulated: False
+    #   pkg: obelisk_unitree_cpp
+    #   executable: obelisk_unitree_g1_hardware
     #   params:
-    #     ic_keyframe: standing
+    #     network_interface_name: enp4s0
+    #     default_kp: [
+    #                 10., 10., 10.,    # L hip
+    #                 10., 10., 10.,    # L knee, ankle
+    #                 10., 10., 10.,    # R hip
+    #                 10., 10., 10.,    # R knee, ankle
+    #                 10., #10., 10.,    # Waist
+    #                 5., 5., 5.,       # L shoulder
+    #                 5., 5., 5., 5.,   # L elbow, wrist
+    #                 5., 5., 5.,       # R shoulder
+    #                 5., 5., 5., 5.,   # R elbow, wrist
+    #                 ]
+    #     default_kd: [
+    #                 1., 1., 1.,       # L hip
+    #                 1., 1., 1.,       # L knee, ankle
+    #                 1., 1., 1.,       # R hip
+    #                 1., 1., 1.,       # R knee, ankle
+    #                 1., #1., 1.,       # Waist
+    #                 1., 1., 1.,       # L shoulder
+    #                 1., 1., 1., 1.,   # L elbow, wrist
+    #                 1., 1., 1.,       # R shoulder
+    #                 1., 1., 1., 1.,   # R elbow, wrist
+    #     ]
+    - is_simulated: True
+      pkg: sample_contact_walking
+      executable: simulation
+      params:
+        ic_keyframe: standing
       # callback_groups:
       publishers:
         # ----- Joints ----- #

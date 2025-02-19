@@ -14,7 +14,7 @@
 #include "hpipm_mpc.h"
 #include "reference_generator.h"
 #include "step_planner.h"
-// #include "wbc_controller.h"
+#include "wbc_controller.h"
 // #include "cross_entropy.h"
 
 namespace robot {
@@ -160,7 +160,7 @@ namespace robot {
             std::unique_ptr<torc::models::FullOrderRigidBody> wbc_model_;           // Potentially reduced model for the MPC
             torc::mpc::ContactSchedule contact_schedule_;
 
-            // std::unique_ptr<torc::controller::WbcController> wbc_controller_;
+            std::unique_ptr<torc::controller::WbcController> wbc_controller_;
 
             // Reference Generator
             std::unique_ptr<torc::mpc::ReferenceGenerator> ref_gen_;
@@ -170,7 +170,7 @@ namespace robot {
             std::map<std::string, std::vector<torc::step_planning::vector2_t>> nom_footholds_, projected_footholds_;   // For visualization
 
             std::shared_ptr<torc::mpc::MpcSettings> mpc_settings_;
-            // std::shared_ptr<torc::controller::WbcSettings> wbc_settings_;
+            std::shared_ptr<torc::controller::WbcSettings> wbc_settings_;
             std::shared_ptr<torc::mpc::HpipmMpc> mpc_;
 
             // MPC Skipped joint indexes

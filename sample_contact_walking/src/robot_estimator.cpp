@@ -16,7 +16,7 @@ namespace robot {
     RobotEstimator::RobotEstimator(const std::string& name) 
         : obelisk::ObeliskEstimator<obelisk_estimator_msgs::msg::EstimatedState>(name),
         recieved_first_encoders_(false), recieved_first_mocap_(false), recieved_first_pelvis_imu_(false), recieved_first_torso_imu_(false),
-            use_sim_state_(false), use_torso_mocap_(true)  {
+            use_sim_state_(false), use_torso_mocap_(true), jnt_vel_var_(0), base_vel_var_(0)  {
         // ---------- Joint Encoder Subscription ---------- /, /
         this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkJointEncoders>(
             "joint_encoders_setting", "jnt_sensor",
@@ -81,6 +81,12 @@ namespace robot {
         this->declare_parameter<std::vector<double>>("pelvis_ang_vel_lpf_coefs");
         pelvis_ang_vel_lpf_ = std::make_unique<torc::state_est::LowPassFilter>(this->get_parameter("pelvis_ang_vel_lpf_coefs").as_double_array());
 
+        this->declare_parameter<double>("joint_vel_variance", 0);
+        this->get_parameter("joint_vel_variance", jnt_vel_var_);
+
+        this->declare_parameter<double>("base_vel_variance", 0);
+        this->get_parameter("base_vel_variance", base_vel_var_);
+
         // Reset values
         joint_names_.clear();
         joint_pos_.clear();
@@ -88,6 +94,13 @@ namespace robot {
 
         std::fill(std::begin(prev_base_pos_), std::end(prev_base_pos_), 0);
         std::fill(std::begin(base_pos_), std::end(base_pos_), 0);
+
+
+        time_offset_ = this->now().seconds();
+        this->declare_parameter<std::string>("log_file_name", "mpc_logs/estimator_log.csv");
+        std::string log_name = this->get_parameter("log_file_name").as_string();
+        RCLCPP_INFO_STREAM(this->get_logger(), "Estimator is logging to: " << log_name);
+        log_file_.open(log_name);
 
         // Make broadcasters
         torso_mocap_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
@@ -99,6 +112,11 @@ namespace robot {
         // joint_pos_ = msg.joint_pos;
         // joint_vels_ = msg.joint_vel;
         // joint_names_ = msg.joint_names;        
+
+        static std::random_device rd;  // Seed generator
+        static std::mt19937 gen(rd()); // Mersenne Twister engine
+        double stddev = std::sqrt(jnt_vel_var_);  // Standard deviation
+        static std::normal_distribution<double> dist(0, stddev); // Normal distribution
 
         joint_pos_.resize(mpc_model_->GetConfigDim() - 7);
         joint_vels_.resize(mpc_model_->GetVelDim() - 6);
@@ -130,6 +148,9 @@ namespace robot {
                     RCLCPP_ERROR_STREAM(this->get_logger(), "Invalid joint name!");
                 }
                 joint_vels_[joint_idx.value() - 2] = msg.joint_vel.at(i);     // Offset for the root and base joints
+                if (jnt_vel_var_ > 0) {
+                    joint_vels_[joint_idx.value() - 2] += dist(gen);
+                }
             }
         }
 
@@ -239,6 +260,11 @@ namespace robot {
     }
 
     void RobotEstimator::PelvisImuCallback(__attribute__((__unused__)) const obelisk_sensor_msgs::msg::ObkImu& msg) {
+        static std::random_device rd;  // Seed generator
+        static std::mt19937 gen(rd()); // Mersenne Twister engine
+        double stddev = std::sqrt(base_vel_var_);  // Standard deviation
+        static std::normal_distribution<double> dist(0, stddev); // Normal distribution
+
         if (!use_sim_state_) {
             // Low pass filter this
             Eigen::Vector3d new_ang_vel;
@@ -250,6 +276,12 @@ namespace robot {
             base_ang_vel_local_[0] = filtered_ang_vel(0);
             base_ang_vel_local_[1] = filtered_ang_vel(1);
             base_ang_vel_local_[2] = filtered_ang_vel(2);
+
+            if (base_vel_var_ > 0) {
+                base_ang_vel_local_[0] += dist(gen);
+                base_ang_vel_local_[1] += dist(gen);
+                base_ang_vel_local_[2] += dist(gen);
+            }
         }
 
         recieved_first_pelvis_imu_ = true;
@@ -303,6 +335,20 @@ namespace robot {
 
             est_state_msg_.header.stamp = this->now();
 
+            log_file_ << this->now().seconds() - time_offset_ << ",";
+            for (int i = 0; i < 7; i++) {
+                log_file_ << est_state_msg_.q_base[i] << ",";
+            }
+            for (int i = 0; i < joint_names_.size(); i++) {
+                log_file_ << est_state_msg_.q_joints[i] << ",";
+            }
+            for (int i = 0; i < 6; i++) {
+                log_file_ << est_state_msg_.v_base[i] << ",";
+            }
+            for (int i = 0; i < joint_names_.size(); i++) {
+                log_file_ << est_state_msg_.v_joints[i] << ",";
+            }
+            log_file_ << std::endl;
             // Regardless of state of incoming data (i.e. even if dt <= 0)
             // TODO: Put back!
             this->GetPublisher<obelisk_estimator_msgs::msg::EstimatedState>(this->est_pub_key_)->publish(est_state_msg_);

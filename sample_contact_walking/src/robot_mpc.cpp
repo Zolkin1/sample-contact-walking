@@ -261,33 +261,10 @@ namespace robot
         // --------------------------------- //
         // -------------- WBC -------------- //
         // --------------------------------- //
-        // wbc_settings_ = std::make_shared<torc::controller::WbcSettings>(this->get_parameter("params_path").as_string());
-        // wbc_model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path, wbc_settings_->skip_joints, wbc_settings_->joint_values);
-        // wbc_controller_ = std::make_unique<torc::controller::WbcController>(mpc_model_temp, mpc_settings_->contact_frames,
-        //     *wbc_settings_, mpc_settings_->friction_coef, wbc_settings_->verbose, mpc_settings_->deriv_lib_path, wbc_settings_->compile_derivs);
-
-        // torc::mpc::SimpleTrajectory q_target(mpc_model_->GetConfigDim(), mpc_settings_->nodes);
-        // q_target.SetAllData(mpc_settings_->q_target);
-        // mpc_->SetConfigTarget(q_target);
-
-        // torc::mpc::SimpleTrajectory v_target(mpc_model_->GetVelDim(), mpc_settings_->nodes);
-        // v_target.SetAllData(mpc_settings_->v_target);
-        // mpc_->SetVelTarget(v_target);
-
-        // mpc_->SetLinTrajConfig(q_target);
-        // mpc_->SetLinTrajVel(v_target);
-
-        // torc::mpc::ContactSchedule cs(mpc_settings_->contact_frames);
-        // cs.InsertSwing("right_toe", 0.1, 0.4);
-        // cs.InsertSwing("right_heel", 0.1, 0.4);
-        // cs.InsertSwing("left_toe", 0.4, 0.8);   // TODO: Why does making it swing past the end of the traj hurt it?
-        // cs.InsertSwing("left_heel", 0.4, 0.8);
-        // mpc_->UpdateContactSchedule(cs);
-
-        // vectorx_t q = mpc_settings_->q_target;
-
-        // mpc_->Compute(q, vectorx_t::Zero(mpc_model_->GetVelDim()), traj_mpc_);
-        // traj_mpc_.ExportToCSV(std::filesystem::current_path() / "trajectory_output.csv");
+        wbc_settings_ = std::make_shared<torc::controller::WbcSettings>(this->get_parameter("params_path").as_string());
+        wbc_model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path, mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values); //wbc_settings_->skip_joints, wbc_settings_->joint_values);
+        wbc_controller_ = std::make_unique<torc::controller::WbcController>(mpc_model_temp, mpc_settings_->contact_frames,
+            *wbc_settings_, mpc_settings_->friction_coef, wbc_settings_->verbose, mpc_settings_->deriv_lib_path, wbc_settings_->compile_derivs);
 
         // --------------------------------- //
         // ------------ Targets ------------ //
@@ -497,6 +474,12 @@ namespace robot
             }
         }
 
+        if (GetState() != Mpc) {
+            // Set the initial condition x-y-z position to where the robot is
+            q_ic_.head<7>() = q_.head<7>();
+            q_target_.value()[0].head<7>() = q_.head<7>();
+        }
+
         if (!recieved_first_state_ && q_.size() == mpc_model_->GetConfigDim() && v_.size() == mpc_model_->GetVelDim() && q_.segment<QUAT_VARS>(POS_VARS).norm() > 0.95) {
             RCLCPP_INFO_STREAM(this->get_logger(), "Recieved first message! q: " << q_.transpose());
             recieved_first_state_ = true;
@@ -555,6 +538,9 @@ namespace robot
                         mpc_->UpdateContactSchedule(contact_schedule_);  // TODO: There is an issue with polytopes here
                     }
 
+                    UpdateMpcTargets(q);
+                    mpc_->SetConfigTarget(q_target_.value());
+                    mpc_->SetVelTarget(v_target_.value());
 
                     for (int i = 0; i < 2; i++) {   // TODO: If i run too many iterations of this then sometimes I get a quat normilazation error in the next loop
                         mpc_->Compute(this->now().seconds() - time_offset_, q, v, traj_mpc_);
@@ -748,7 +734,7 @@ namespace robot
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Publishing first control.");
             
             vectorx_t q, v, tau, F(3*mpc_settings_->num_contact_locations);
-            // std::vector<bool> in_contact(mpc_settings_->num_contact_locations);
+            std::vector<bool> in_contact(mpc_settings_->num_contact_locations);
 
             if (GetState() == Mpc) {
                 double time_into_traj = 0;
@@ -815,16 +801,25 @@ namespace robot
                 F(8) = 80;
                 F(11) = 80;
 
-                // for (int i = 0; i < in_contact.size(); i++) {
-                //     in_contact[i] = true;
-                // }
+                for (int i = 0; i < in_contact.size(); i++) {
+                    in_contact[i] = true;
+                }
             } else if (ctrl_state_ == HoldInitialCond) {
                 q = q_ic_;
                 v = v_ic_;
                 tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
                 F = vectorx_t::Zero(mpc_settings_->contact_frames.size()*3);
+
+                for (int i = 0; i < in_contact.size(); i++) {
+                    in_contact[i] = true;
+                }
             } else {
                 throw std::runtime_error("Not a valid state!");
+            }
+
+            // TODO: Remove!
+            for (int i = 0; i < in_contact.size(); i++) {
+                in_contact[i] = true;
             }
 
             // TODO: Move the log to after the publish call
@@ -835,30 +830,35 @@ namespace robot
             }
             log_counter++;
 
-            // // TODO: Remove when ready to run this
-            // q = q_ic_;
-            // v = v_ic_;
-            // tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
-            // F = vectorx_t::Zero(mpc_settings_->contact_frames.size()*3);
+            // TODO: Put back in when using the WBC
+            if (recieved_first_state_ && GetState() == Mpc) {
+                // Use WBC
+                // Get current state
+                vectorx_t q_est, v_est;
+                {
+                    std::lock_guard<std::mutex> lock(est_state_mut_);
+                    q_est = q_;
+                    v_est = v_;
+                }
 
-            // if (recieved_first_state_) {
-            //     // Use WBC
-            //     // Get current state
-            //     vectorx_t q_est, v_est;
-            //     {
-            //         std::lock_guard<std::mutex> lock(est_state_mut_);
-            //         q_est = q_;
-            //         v_est = v_;
-            //     }
-            //     // RCLCPP_WARN_STREAM(this->get_logger(), "Before control");
-            //     tau = wbc_controller_->ComputeControl(q_est, v_est, q, v, tau, F, in_contact);     
-            //     // RCLCPP_WARN_STREAM(this->get_logger(), "After control");           
+                // // TODO: Remove
+                q = q_ic_; //q_target_.value()[0];
+                v = v_ic_; //v_target_.value()[0];
+
+                for (int i = 0; i < in_contact.size(); i++) {
+                    in_contact[i] = true;
+                } 
+                tau = wbc_controller_->ComputeControl(q_est, v_est, q, v, tau, F, in_contact);     
+            }
+
+            // if (GetState() != Mpc) {
+            //     tau.setZero();
             // }
             
             // // TODO: Remove
             // q = q_ic_;
             // v = v_ic_;
-            tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
+            // tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
             // tau = vectorx_t::Ones(mpc_model_->GetNumInputs());
 
             // Only actuate legs
@@ -921,6 +921,13 @@ namespace robot
                     msg.kp[i] *= 0.1;
                     msg.kd[i] *= 0.1;
                 }
+            } else if (ctrl_state_ == Mpc) {
+                // NOTE: This is only for use with the WBC
+                // When going to the initial condition, use smaller gains
+                // for (int i = 0; i < msg.kp.size(); i++) {
+                //     msg.kp[i] *= 0;
+                //     msg.kd[i] *= 0;
+                // }
             }
 
             msg.joint_names = control_joint_names_;

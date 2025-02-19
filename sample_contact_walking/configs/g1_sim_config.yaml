@@ -27,7 +27,7 @@ onboard:
         max_mpc_solves: 5000000 #5 #40 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.4 #0.3 #0.4 #NOTE: High frequency makes it a bit more reactive/stable
-        first_swing_time: 500. #0.5 #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
+        first_swing_time: 5000. #0.5 #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -179,8 +179,8 @@ onboard:
     - pkg: contact_planning
       executable: mujoco_geom_reader
       params:
-        # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/basic_scene.xml
-        mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
+        mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/basic_scene.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/g1_tile2_scene.xml
       # ----- Tile Scene ---- #
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9"]
@@ -218,6 +218,9 @@ onboard:
         use_sim_state: false #true
         use_torso_mocap: true #false
         pelvis_ang_vel_lpf_coefs: [0.05, 0.15, 0.8] # TODO: Tune these
+        joint_vel_variance: 0.0004
+        base_vel_variance: 0.0004
+        log_file_name: "mpc_logs/sim_estimator_log.csv"
       # callback_groups:
       publishers:
         - ros_parameter: pub_est_setting
@@ -294,9 +297,9 @@ onboard:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model
           # model_xml_path: g1_29dof_with_hand_fixed_base.xml
-          model_xml_path: tile_scene.xml
+          # model_xml_path: tile_scene.xml
           # model_xml_path: g1_tile2_scene.xml
-          # model_xml_path: basic_scene.xml
+          model_xml_path: basic_scene.xml
           # model_xml_path: stairs_scene.xml
           # model_xml_path: g1_29dof_with_hand.xml
           num_steps_per_viz: 32 #16 # No longer used
