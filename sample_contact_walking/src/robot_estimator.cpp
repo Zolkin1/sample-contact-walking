@@ -16,27 +16,33 @@ namespace robot {
     RobotEstimator::RobotEstimator(const std::string& name) 
         : obelisk::ObeliskEstimator<obelisk_estimator_msgs::msg::EstimatedState>(name),
         recieved_first_encoders_(false), recieved_first_mocap_(false), recieved_first_pelvis_imu_(false), recieved_first_torso_imu_(false),
-            use_sim_state_(false), use_torso_mocap_(true), jnt_vel_var_(0), base_vel_var_(0)  {
+            use_sim_state_(false), received_first_camera_(false), base_pose_sensor_(0), jnt_vel_var_(0), base_vel_var_(0)  {
         // ---------- Joint Encoder Subscription ---------- /, /
         this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkJointEncoders>(
             "joint_encoders_setting", "jnt_sensor",
             std::bind(&RobotEstimator::JointEncoderCallback, this, std::placeholders::_1));
         
-        this->declare_parameter<bool>("use_torso_mocap", true);
-        use_torso_mocap_ = this->get_parameter("use_torso_mocap").as_bool();
+        this->declare_parameter<int>("base_pose_sensor", 0);
+        base_pose_sensor_ = this->get_parameter("base_pose_sensor").as_int();
 
-        if (!use_torso_mocap_) {
+        if (base_pose_sensor_ == 2) {
             // ---------- Pelvis Mocap Subscription ---------- //
             this->RegisterObkSubscription<geometry_msgs::msg::PoseStamped>(
                 "mocap_setting", "pelvis_mocap_sensor",
                 std::bind(&RobotEstimator::PelvisMocapCallback, this, std::placeholders::_1));
             RCLCPP_INFO_STREAM(this->get_logger(), "Using the pelvis mocap!");
-        } else {
+        } else if (base_pose_sensor_ == 1) {
             // ---------- Torso Mocap Subscription ---------- //
             this->RegisterObkSubscription<geometry_msgs::msg::PoseStamped>(
                 "torso_mocap_setting", "torso_mocap_sensor",
                 std::bind(&RobotEstimator::TorsoMocapCallback, this, std::placeholders::_1));
             RCLCPP_INFO_STREAM(this->get_logger(), "Using the torso mocap!");
+        } else if (base_pose_sensor_ == 0) {
+            // ---------- Torso Camera Subscription ---------- //
+            this->RegisterObkSubscription<nav_msgs::msg::Odometry>(
+                "torso_camera_setting", "torso_camera_sensor",
+                std::bind(&RobotEstimator::TorsoOdomCallback, this, std::placeholders::_1));
+            RCLCPP_INFO_STREAM(this->get_logger(), "Using the torso tracking camera!");
         }
 
         // ---------- IMU Subscriptions ---------- //
@@ -254,6 +260,60 @@ namespace robot {
         recieved_first_mocap_ = true;
     }
 
+    void RobotEstimator::TorsoOdomCallback(const nav_msgs::msg::Odometry& msg) {
+        // TODO: Add in button to reset state to 0
+
+        // Receive the odometry information
+
+        // ---------- Pose Information ---------- //
+        // TODO: If I go to async then I may want to do this in a the compute estimated state function
+        // Convert the sensor data into the pelvis (base) frame
+        torc::models::vector3_t pos;
+        pos << msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z;
+        torc::models::quat_t orientation(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z);
+        pinocchio::SE3 frame_pose(orientation, pos);
+
+        torc::models::vectorx_t config = mpc_model_->GetNeutralConfig();
+        for (int i = 0; i < joint_pos_.size(); i++) {
+            config[7 + i] = joint_pos_[i];
+        }
+
+        pinocchio::SE3 base_pose = mpc_model_->TransformPose(frame_pose, "torso_tracking_camera", "pelvis", config);
+
+        base_pos_.at(0) = base_pose.translation()[0];
+        base_pos_.at(1) = base_pose.translation()[1];
+        base_pos_.at(2) = base_pose.translation()[2];
+
+        torc::models::quat_t fb_quat(base_pose.rotation());
+
+        base_quat_.x() = fb_quat.x();
+        base_quat_.y() = fb_quat.y();
+        base_quat_.z() = fb_quat.z();
+        base_quat_.w() = fb_quat.w();
+
+        // ---------- Twist Information ---------- //
+        // Compute the base twist given the measured twist
+        torc::models::vector3_t lin_vel, ang_vel;
+        lin_vel << msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z;
+        ang_vel << msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z;
+        pinocchio::Motion camera_twist(lin_vel, ang_vel);
+        torc::models::vectorx_t vel = torc::models::vectorx_t::Zero(mpc_model_->GetVelDim());
+        for (int i = 0; i < joint_vels_.size(); i++) {
+            vel[6 + i] = joint_vels_[i];
+        }
+        pinocchio::Motion base_twist = mpc_model_->DeduceBaseVelocity(camera_twist, pinocchio::LOCAL, "torso_tracking_camera", "pelvis", config, vel);
+
+        base_vel_local_[0] = base_twist.linear()[0];
+        base_vel_local_[1] = base_twist.linear()[1];
+        base_vel_local_[2] = base_twist.linear()[2];
+
+        base_ang_vel_local_[0] = base_twist.angular()[0];
+        base_ang_vel_local_[1] = base_twist.angular()[1];
+        base_ang_vel_local_[2] = base_twist.angular()[2];
+
+        received_first_camera_ = true;
+    }
+
     // TODO: Fill out callback
     void RobotEstimator::TorsoImuCallback(__attribute__((__unused__)) const obelisk_sensor_msgs::msg::ObkImu& msg) {
         recieved_first_torso_imu_ = true;
@@ -289,7 +349,7 @@ namespace robot {
 
     obelisk_estimator_msgs::msg::EstimatedState RobotEstimator::ComputeStateEstimate() {
         
-        if (recieved_first_pelvis_imu_ && recieved_first_encoders_ && recieved_first_mocap_) {
+        if (recieved_first_pelvis_imu_ && recieved_first_encoders_ && (recieved_first_mocap_ || received_first_camera_)) {
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Starting to publish estimated states.");
 
             double d_sec = base_sec_ - prev_base_sec_;
@@ -313,24 +373,38 @@ namespace robot {
 
             est_state_msg_.v_joints = joint_vels_;
 
-            // Assign v_base from the true sim state
-            // Need to rotate in to the local frame
-            Eigen::Map<vector3_t> v_world_linear(base_vel_world_.data());
-            Eigen::Map<vector3_t> v_local_angular(base_ang_vel_local_.data());
+            if (base_pose_sensor_ != 0) {
+                // Assign v_base from the true sim state
+                // Need to rotate in to the local frame
+                Eigen::Map<vector3_t> v_world_linear(base_vel_world_.data());
+                Eigen::Map<vector3_t> v_local_angular(base_ang_vel_local_.data());
 
-            vector6_t local_vel;
+                vector6_t local_vel;
 
-            Eigen::Quaterniond base_quat(base_quat_.w(), base_quat_.x(), base_quat_.y(), base_quat_.z());
-            // TODO: Double check this conversion
-            local_vel.head<POS_VARS>() = base_quat.toRotationMatrix().transpose() * v_world_linear;
-            local_vel.tail<POS_VARS>() = v_local_angular;
+                Eigen::Quaterniond base_quat(base_quat_.w(), base_quat_.x(), base_quat_.y(), base_quat_.z());
+                // TODO: Double check this conversion
+                local_vel.head<POS_VARS>() = base_quat.toRotationMatrix().transpose() * v_world_linear;
+                local_vel.tail<POS_VARS>() = v_local_angular;
 
-            // local_vel.head<POS_VARS>() = v_world_linear;
-            // local_vel.tail<POS_VARS>() = v_world_angular;
+                // local_vel.head<POS_VARS>() = v_world_linear;
+                // local_vel.tail<POS_VARS>() = v_world_angular;
 
-            est_state_msg_.v_base.clear();
-            for (int i = 0; i < FLOATING_VEL_SIZE; i++) {
-                est_state_msg_.v_base.emplace_back(local_vel(i));
+                est_state_msg_.v_base.clear();
+                for (int i = 0; i < FLOATING_VEL_SIZE; i++) {
+                    est_state_msg_.v_base.emplace_back(local_vel(i));
+                }
+            } else {
+                Eigen::Map<vector3_t> v_local_linear(base_vel_local_.data());
+                Eigen::Map<vector3_t> v_local_angular(base_ang_vel_local_.data());
+
+                vector6_t local_vel;
+                local_vel.head<POS_VARS>() = v_local_linear;
+                local_vel.tail<POS_VARS>() = v_local_angular;
+
+                est_state_msg_.v_base.clear();
+                for (int i = 0; i < FLOATING_VEL_SIZE; i++) {
+                    est_state_msg_.v_base.emplace_back(local_vel(i));
+                }  
             }
 
             est_state_msg_.header.stamp = this->now();

@@ -1,5 +1,6 @@
 #include <Eigen/Core>
 #include "rclcpp/time.hpp"
+#include <nav_msgs/msg/odometry.hpp>
 
 #include "obelisk_estimator.h"
 #include "low_pass_filter.h"
@@ -25,6 +26,7 @@ namespace robot {
             void TorsoMocapCallback(const geometry_msgs::msg::PoseStamped& msg);
             void TorsoImuCallback(const obelisk_sensor_msgs::msg::ObkImu& msg);
             void PelvisImuCallback(const obelisk_sensor_msgs::msg::ObkImu& msg);
+            void TorsoOdomCallback(const nav_msgs::msg::Odometry& msg);
 
             obelisk_estimator_msgs::msg::EstimatedState ComputeStateEstimate() override;
 
@@ -47,9 +49,11 @@ namespace robot {
             bool recieved_first_mocap_;
             bool recieved_first_pelvis_imu_;
             bool recieved_first_torso_imu_;
+            bool received_first_camera_;
 
             bool use_sim_state_;    // Determine if TrueSimState should be read
             bool use_torso_mocap_;
+            int base_pose_sensor_;
 
             // Intermediate estimate variables
             std::array<double, POS_VARS> prev_base_pos_;
@@ -75,6 +79,7 @@ namespace robot {
             std::array<double, POS_VARS> base_pos_;
             Eigen::Quaterniond base_quat_;
             std::array<double, POS_VARS> base_vel_world_;
+            std::array<double, POS_VARS> base_vel_local_;
             std::array<double, POS_VARS> base_ang_vel_local_;
 
             // Messages

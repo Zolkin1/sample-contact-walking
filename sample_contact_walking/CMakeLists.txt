@@ -17,6 +17,7 @@ find_package(tf2_ros REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(sample_contact_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 # find_package(obelisk_estimator_msgs REQUIRED)
 
 # ------- Fetch the Obelisk library ------- #
@@ -80,6 +81,7 @@ ament_target_dependencies(
     state_estimator PUBLIC
     tf2_ros
     tf2
+    nav_msgs
 )
 
 # ------- Simulation ------- #

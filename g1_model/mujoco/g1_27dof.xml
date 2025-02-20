@@ -422,6 +422,9 @@ Position and velocity actuators added. -->
             <!-- TODO: Might need to tune this. Make sure this matches the URDF! -->
             <site name="torso_mocap_site" pos="0 0 .1" euler="0 0 0" rgba="0 0 1 1" size="0.01"/>
 
+            <!-- TODO: Verify position -->
+            <site name="tracking_camera_site" pos="0 0 .1" euler="0 0 0" rgba="0 0 1 1" size="0.01"/>
+
             <!-- Left Arm -->
             <body name="left_shoulder_pitch_link" pos="0.0039563 0.10022 0.23778" quat="0.990264 0.139201 1.38722e-05 -9.86868e-05">
               <inertial pos="0 0.035892 -0.011628" quat="0.654152 0.0130458 -0.326267 0.68225" mass="0.718" diaginertia="0.000465864 0.000432842 0.000406394"/>
@@ -824,6 +827,13 @@ Position and velocity actuators added. -->
     <!-- Torso Mocap -->
     <framepos name="torso_mocap_pos_sensor" objtype="site" objname="torso_mocap_site" noise="0.01"/>
     <framequat name="torso_mocap_quat_sensor" objtype="site" objname="torso_mocap_site" noise="0.01"/>
+
+    <!-- Torso Camera Odometry -->
+    <framepos name="torso_camera_pos_sensor" objtype="site" objname="tracking_camera_site" noise="0.01"/>
+    <framequat name="torso_camera_orientation_sensor" objtype="site" objname="tracking_camera_site" noise="0.01"/>
+    <gyro name="torso_camera_gyro" site="tracking_camera_site" noise="0.01"/>
+    <velocimeter name="torso_camera_velocimeter" site="tracking_camera_site"/>
+
   </sensor>
 
   <keyframe>

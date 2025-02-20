@@ -221,6 +221,7 @@ onboard:
         joint_vel_variance: 0.0004
         base_vel_variance: 0.0004
         log_file_name: "mpc_logs/sim_estimator_log.csv"
+        base_pose_sensor: 0
       # callback_groups:
       publishers:
         - ros_parameter: pub_est_setting
@@ -256,6 +257,11 @@ onboard:
       # ---------- Pelvis IMU ---------- #
         - ros_parameter: pelvis_imu_setting
           topic: /obelisk/g1/pelvis_imu
+          history_depth: 10
+          callback_group: None
+      # ---------- Torso Camera ---------- #
+        - ros_parameter: torso_camera_setting
+          topic: /obelisk/g1/torso_odom
           history_depth: 10
           callback_group: None
       # ---------- True Sim State ---------- #
@@ -439,6 +445,15 @@ onboard:
             sensor_names:
               torso_mocap_pos_sensor: framepos
               torso_mocap_quat_sensor: framequat
+          # ---------- Torso Camera Odometry ---------- #
+          - topic: /obelisk/g1/torso_odom
+            dt: 0.005
+            msg_type: Odometry
+            sensor_names:
+              torso_camera_pos_sensor: framepos
+              torso_camera_orientation_sensor: framequat
+              torso_camera_velocimeter: velocimeter
+              torso_camera_gyro: gyro
           viz_geoms:
             dt: 1
             # ----- Stair scene ----- #

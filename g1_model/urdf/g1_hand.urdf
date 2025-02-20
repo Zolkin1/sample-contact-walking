@@ -738,6 +738,15 @@
     <child link="torso_mocap"/>
   </joint>
 
+  <!-- TODO: Determine exact location! -->
+  <!-- Torso Tracking Camera -->
+  <link name="torso_tracking_camera"></link>
+  <joint name="torso_tracking_camera_joint" type="fixed">
+    <origin xyz="0 0 0.1" rpy="0 0 0"/>
+    <parent link="torso_link"/>
+    <child link="torso_tracking_camera"/>
+  </joint>
+
   <!-- d435 -->
   <link name="d435_link"></link>
   <joint name="d435_joint" type="fixed">
