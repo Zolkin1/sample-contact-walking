@@ -17,6 +17,12 @@ namespace robot {
         : obelisk::ObeliskEstimator<obelisk_estimator_msgs::msg::EstimatedState>(name),
         recieved_first_encoders_(false), recieved_first_mocap_(false), recieved_first_pelvis_imu_(false), recieved_first_torso_imu_(false),
             use_sim_state_(false), received_first_camera_(false), base_pose_sensor_(0), jnt_vel_var_(0), base_vel_var_(0)  {
+
+        default_pose_.setIdentity();
+        if (!default_pose_.isIdentity()) {
+            throw std::runtime_error("Default pose did not initialize to identity!");
+        }
+
         // ---------- Joint Encoder Subscription ---------- /, /
         this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkJointEncoders>(
             "joint_encoders_setting", "jnt_sensor",
@@ -44,6 +50,11 @@ namespace robot {
                 std::bind(&RobotEstimator::TorsoOdomCallback, this, std::placeholders::_1));
             RCLCPP_INFO_STREAM(this->get_logger(), "Using the torso tracking camera!");
         }
+
+        // ---------- Joystick Subscription ---------- //
+        this->RegisterObkSubscription<sensor_msgs::msg::Joy>(
+            "joystick_sub_setting", "joystick_sub",
+            std::bind(&RobotEstimator::JoystickCallback, this, std::placeholders::_1));
 
         // ---------- IMU Subscriptions ---------- //
         this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkImu>(
@@ -280,6 +291,9 @@ namespace robot {
 
         pinocchio::SE3 base_pose = mpc_model_->TransformPose(frame_pose, "torso_tracking_camera", "pelvis", config);
 
+        // Now adjust by the default pose
+        base_pose = default_pose_.inverse()*base_pose;
+
         base_pos_.at(0) = base_pose.translation()[0];
         base_pos_.at(1) = base_pose.translation()[1];
         base_pos_.at(2) = base_pose.translation()[2];
@@ -463,6 +477,67 @@ namespace robot {
         }
         for (size_t i = 0; i < POS_VARS; i++) {
             base_ang_vel_local_[i] = msg.v_base[i + POS_VARS];
+        }
+    }
+
+    void RobotEstimator::JoystickCallback(const sensor_msgs::msg::Joy& msg) {
+        // ----- Axes ----- //
+        constexpr int DPAD_VERTICAL = 7;
+        constexpr int DPAD_HORIZONTAL = 6;
+
+        constexpr int RIGHT_JOY_VERT = 4;
+        constexpr int RIGHT_JOY_HORZ = 3;
+
+        constexpr int LEFT_JOY_VERT = 1;
+        constexpr int LEFT_JOY_HORZ = 0;
+
+        constexpr int LEFT_TRIGGER = 2;
+        constexpr int RIGHT_TRIGGER = 5;
+
+        // ----- Buttons ----- //
+        constexpr int A = 0;
+        constexpr int B = 1;
+        constexpr int X = 2;
+        constexpr int Y = 3;
+
+        constexpr int LEFT_BUMPER = 4;
+        constexpr int RIGHT_BUMPER = 5;
+
+        constexpr int MENU = 7;
+        constexpr int SQUARES = 6;
+
+        static rclcpp::Time last_menu_press = this->now();
+        static rclcpp::Time last_A_press = this->now();
+        static rclcpp::Time last_X_press = this->now();
+        static rclcpp::Time last_B_press = this->now();
+        static rclcpp::Time last_target_update = this->now();
+
+        if (msg.buttons[B] && (this->now() - last_B_press).seconds() > 5e-1) {
+            // Compute z height assuming the feet are on the ground
+            torc::models::vector3_t left_toe_pos = {0, 0, 0};   // Only using the z value so the x and y don't matter
+
+            torc::models::vectorx_t q = mpc_model_->GetNeutralConfig();
+            for (int i = 0; i < joint_pos_.size(); i++) {
+                q[7 + i] = joint_pos_[i];
+            }
+
+            // TODO: Make this frame not hard coded
+            torc::models::vector3_t base_position = mpc_model_->DeduceBasePosition(left_toe_pos, "left_toe", q);
+
+            // NOTE: I don't adjust the z height since the feet should be on the ground!
+            for (int i = 0; i < 2; i++) {
+                default_pose_.translation()[i] = base_pos_[i];
+            }
+            // TODO: Check
+            default_pose_.translation()[2] = -base_position[2] + base_pos_[2];
+
+            // throw std::runtime_error("ACCOUNT FOR ALL 3 DOF ROATION!");
+            default_pose_.rotation() = base_quat_.toRotationMatrix();
+            // default_pose_.rotation().topLeftCorner<2,2>() = base_quat_.toRotationMatrix().topLeftCorner<2,2>();
+
+            RCLCPP_WARN_STREAM(this->get_logger(), "SETTING DEFAULT POSE TO CURRENT STATE!");
+
+            last_B_press = this->now();
         }
     }
 } // namespace robot

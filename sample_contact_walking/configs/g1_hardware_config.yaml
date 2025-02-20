@@ -285,6 +285,15 @@ onboard:
           topic: /obelisk/g1/pelvis_imu
           history_depth: 10
           callback_group: None
+      # ---------- Torso Camera ---------- #
+        - ros_parameter: torso_camera_setting
+          # topic: /obelisk/g1/torso_odom
+          topic: /rs_t265/odom
+          history_depth: 10
+          callback_group: None
+      # ----- Joystick subscriber ----- #
+        - ros_parameter: joystick_sub_setting
+          topic: /obelisk/g1/joy
       # ---------- True Sim State ---------- #
         - ros_parameter: true_sim_sub_setting
           topic: /obelisk/g1/true_sim_state
@@ -292,38 +301,38 @@ onboard:
           callback_group: None
   # sensing:
   robot:
-    # - is_simulated: False
-    #   pkg: obelisk_unitree_cpp
-    #   executable: obelisk_unitree_g1_hardware
-    #   params:
-    #     network_interface_name: enp4s0
-    #     default_kp: [
-    #                 10., 10., 10.,    # L hip
-    #                 10., 10., 10.,    # L knee, ankle
-    #                 10., 10., 10.,    # R hip
-    #                 10., 10., 10.,    # R knee, ankle
-    #                 10., #10., 10.,    # Waist
-    #                 5., 5., 5.,       # L shoulder
-    #                 5., 5., 5., 5.,   # L elbow, wrist
-    #                 5., 5., 5.,       # R shoulder
-    #                 5., 5., 5., 5.,   # R elbow, wrist
-    #                 ]
-    #     default_kd: [
-    #                 1., 1., 1.,       # L hip
-    #                 1., 1., 1.,       # L knee, ankle
-    #                 1., 1., 1.,       # R hip
-    #                 1., 1., 1.,       # R knee, ankle
-    #                 1., #1., 1.,       # Waist
-    #                 1., 1., 1.,       # L shoulder
-    #                 1., 1., 1., 1.,   # L elbow, wrist
-    #                 1., 1., 1.,       # R shoulder
-    #                 1., 1., 1., 1.,   # R elbow, wrist
-    #     ]
-    - is_simulated: True
-      pkg: sample_contact_walking
-      executable: simulation
+    - is_simulated: False
+      pkg: obelisk_unitree_cpp
+      executable: obelisk_unitree_g1_hardware
       params:
-        ic_keyframe: standing
+        network_interface_name: enp4s0
+        default_kp: [
+                    10., 10., 10.,    # L hip
+                    10., 10., 10.,    # L knee, ankle
+                    10., 10., 10.,    # R hip
+                    10., 10., 10.,    # R knee, ankle
+                    10., #10., 10.,    # Waist
+                    5., 5., 5.,       # L shoulder
+                    5., 5., 5., 5.,   # L elbow, wrist
+                    5., 5., 5.,       # R shoulder
+                    5., 5., 5., 5.,   # R elbow, wrist
+                    ]
+        default_kd: [
+                    1., 1., 1.,       # L hip
+                    1., 1., 1.,       # L knee, ankle
+                    1., 1., 1.,       # R hip
+                    1., 1., 1.,       # R knee, ankle
+                    1., #1., 1.,       # Waist
+                    1., 1., 1.,       # L shoulder
+                    1., 1., 1., 1.,   # L elbow, wrist
+                    1., 1., 1.,       # R shoulder
+                    1., 1., 1., 1.,   # R elbow, wrist
+        ]
+    # - is_simulated: True
+    #   pkg: sample_contact_walking
+    #   executable: simulation
+    #   params:
+    #     ic_keyframe: standing
       # callback_groups:
       publishers:
         # ----- Joints ----- #
@@ -362,9 +371,9 @@ onboard:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model
           # model_xml_path: g1_29dof_with_hand_fixed_base.xml
-          model_xml_path: tile_scene.xml
+          # model_xml_path: tile_scene.xml
           # model_xml_path: g1_tile2_scene.xml
-          # model_xml_path: basic_scene.xml
+          model_xml_path: basic_scene.xml
           # model_xml_path: stairs_scene.xml
           # model_xml_path: g1_29dof_with_hand.xml
           num_steps_per_viz: 32 #16 # No longer used
@@ -504,6 +513,15 @@ onboard:
             sensor_names:
               torso_mocap_pos_sensor: framepos
               torso_mocap_quat_sensor: framequat
+          # ---------- Torso Camera Odometry ---------- #
+          - topic: /obelisk/g1/torso_odom
+            dt: 0.005
+            msg_type: Odometry
+            sensor_names:
+              torso_camera_pos_sensor: framepos
+              torso_camera_orientation_sensor: framequat
+              torso_camera_velocimeter: velocimeter
+              torso_camera_gyro: gyro
           viz_geoms:
             dt: 1
             # ----- Stair scene ----- #

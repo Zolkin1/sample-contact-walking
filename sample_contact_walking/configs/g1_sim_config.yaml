@@ -264,6 +264,9 @@ onboard:
           topic: /obelisk/g1/torso_odom
           history_depth: 10
           callback_group: None
+      # ----- Joystick subscriber ----- #
+        - ros_parameter: joystick_sub_setting
+          topic: /obelisk/g1/joy
       # ---------- True Sim State ---------- #
         - ros_parameter: true_sim_sub_setting
           topic: /obelisk/g1/true_sim_state

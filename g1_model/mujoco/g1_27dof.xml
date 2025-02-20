@@ -423,7 +423,7 @@ Position and velocity actuators added. -->
             <site name="torso_mocap_site" pos="0 0 .1" euler="0 0 0" rgba="0 0 1 1" size="0.01"/>
 
             <!-- TODO: Verify position -->
-            <site name="tracking_camera_site" pos="0 0 .1" euler="0 0 0" rgba="0 0 1 1" size="0.01"/>
+            <site name="tracking_camera_site" pos="0.085725 0 0.2413" euler="0.02 -0.08 0" rgba="0 0 1 1" size="0.01"/>
 
             <!-- Left Arm -->
             <body name="left_shoulder_pitch_link" pos="0.0039563 0.10022 0.23778" quat="0.990264 0.139201 1.38722e-05 -9.86868e-05">
@@ -863,8 +863,8 @@ Position and velocity actuators added. -->
             0 0 0 0 0 0 0
             0 0 0 0 0 0 0"/> -->
       <key name="standing" 
-      qpos="1 -1.5 0.74
-            0.707106781 0 0 0.707106781
+      qpos="1.2 1.5 0.74
+            0.707106781 0 0 -0.707106781
             -0.42 0 0 0.81 -0.4 0
             -0.42 0 0 0.81 -0.4 0
             0

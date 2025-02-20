@@ -187,3 +187,9 @@ obk-launch config_file_path=${SAMPLE_WALKING_ROOT}/sample_contact_walking/config
 ```
 obk-activate g1_basic_ctrl_hardware
 ```
+
+
+## On the Robot
+```
+ros2 launch perception_node perception_launch_tracking_only.py
+```

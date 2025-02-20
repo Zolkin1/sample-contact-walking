@@ -1,6 +1,7 @@
 #include <Eigen/Core>
 #include "rclcpp/time.hpp"
 #include <nav_msgs/msg/odometry.hpp>
+#include "sensor_msgs/msg/joy.hpp"
 
 #include "obelisk_estimator.h"
 #include "low_pass_filter.h"
@@ -27,6 +28,7 @@ namespace robot {
             void TorsoImuCallback(const obelisk_sensor_msgs::msg::ObkImu& msg);
             void PelvisImuCallback(const obelisk_sensor_msgs::msg::ObkImu& msg);
             void TorsoOdomCallback(const nav_msgs::msg::Odometry& msg);
+            void JoystickCallback(const sensor_msgs::msg::Joy& msg);
 
             obelisk_estimator_msgs::msg::EstimatedState ComputeStateEstimate() override;
 
@@ -102,5 +104,8 @@ namespace robot {
             // Logging
             double time_offset_;
             std::ofstream log_file_;
+
+            // Default pose
+            pinocchio::SE3 default_pose_;
     };
 } // namespace robot

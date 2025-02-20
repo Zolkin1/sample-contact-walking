@@ -417,6 +417,10 @@ namespace robot
     MpcController::~MpcController() {
         log_file_.close();
         timing_log_file_.close();
+
+        if (mpc_thread_.joinable()) {
+            mpc_thread_.join();
+        }
     }
 
     void MpcController::UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) {
@@ -844,6 +848,8 @@ namespace robot
                 // // TODO: Remove
                 q = q_ic_; //q_target_.value()[0];
                 v = v_ic_; //v_target_.value()[0];
+                F.setZero();
+                tau.setZero();
 
                 for (int i = 0; i < in_contact.size(); i++) {
                     in_contact[i] = true;
