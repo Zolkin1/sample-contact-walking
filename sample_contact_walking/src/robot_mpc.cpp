@@ -110,11 +110,11 @@ namespace robot
         // Dynamics //
         // ---------- Full Order Dynamics ---------- //
         torc::mpc::DynamicsConstraint dynamics_constraint(mpc_model_temp, mpc_settings_->contact_frames, model_name + "_robot_full_order",
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, 0, mpc_settings_->nodes_full_dynamics);
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, 0, mpc_settings_->nodes_full_dynamics + 100);
 
         // ---------- Centroidal Dynamics ---------- //
         torc::mpc::CentroidalDynamicsConstraint centroidal_dynamics(mpc_model_temp, mpc_settings_->contact_frames, model_name + "_robot_centroidal",
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->nodes_full_dynamics, mpc_settings_->nodes); // 0, mpc_settings_->nodes
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->nodes_full_dynamics - 100, mpc_settings_->nodes - 100); // 0, mpc_settings_->nodes
         // ---------- SRB Dynamics ---------- //
         torc::mpc::SRBConstraint srb_dynamics(mpc_settings_->nodes_full_dynamics - 100, mpc_settings_->nodes - 100, // 0 - 100, mpc_settings_->nodes - 100,
              model_name + "_robot_srb",
@@ -266,6 +266,8 @@ namespace robot
         wbc_controller_ = std::make_unique<torc::controller::WbcController>(mpc_model_temp, mpc_settings_->contact_frames,
             *wbc_settings_, mpc_settings_->friction_coef, wbc_settings_->verbose, mpc_settings_->deriv_lib_path, wbc_settings_->compile_derivs);
 
+        K_ = matrixx_t::Zero(mpc_model_->GetVelDim() - 7, mpc_model_->GetVelDim() + mpc_model_->GetConfigDim());
+
         // --------------------------------- //
         // ------------ Targets ------------ //
         // --------------------------------- //
@@ -361,7 +363,7 @@ namespace robot
         traj_out_.SetConfiguration(0, q_ic_);
         traj_out_.SetVelocity(0, v_ic_);
         traj_mpc_ = traj_out_;
-        mpc_->SetLinTraj(traj_mpc_);
+        mpc_->SetLinTraj(traj_mpc_);    // TODO: Should I maybe get rid of this and see if it makes a difference?
 
 
         // Go to initial condition
@@ -482,6 +484,7 @@ namespace robot
             // Set the initial condition x-y-z position to where the robot is
             q_ic_.head<7>() = q_.head<7>();
             q_target_.value()[0].head<7>() = q_.head<7>();
+            // z_target_ = q_[2];   // Set the z target to not prevent the height state from requesting a jump.
         }
 
         if (!recieved_first_state_ && q_.size() == mpc_model_->GetConfigDim() && v_.size() == mpc_model_->GetVelDim() && q_.segment<QUAT_VARS>(POS_VARS).norm() > 0.95) {
@@ -546,8 +549,21 @@ namespace robot
                     mpc_->SetConfigTarget(q_target_.value());
                     mpc_->SetVelTarget(v_target_.value());
 
+                    std::cout << "q: " << q.transpose() << std::endl;
+                    std::cout << "v: " << v.transpose() << std::endl;
+                    std::cout << "q target 0: " << q_target_.value()[0].transpose() << std::endl;
+                    std::cout << "v target 0: " << v_target_.value()[0].transpose() << std::endl;
+
                     for (int i = 0; i < 2; i++) {   // TODO: If i run too many iterations of this then sometimes I get a quat normilazation error in the next loop
+                        if (i == 0) {
+                            mpc_->GetTrajectory().ExportToCSV("mpc_logs/solve_0_linearization_traj.csv");
+                        }
+                        mpc_->CreateQPData();
                         mpc_->Compute(this->now().seconds() - time_offset_, q, v, traj_mpc_);
+                        if (i == 0) {
+                            traj_mpc_.ExportToCSV("mpc_logs/solve_0_result_traj.csv");
+                        }
+                        mpc_->LogMPCCompute(this->now().seconds() - time_offset_, q, v);
                     }
                     double time = this->now().seconds();
                     {
@@ -582,6 +598,9 @@ namespace robot
                 PublishTrajViz(traj_mpc_, viz_frames_);
                 viz_timer.Toc();
                 std::cout << "viz publish took " << viz_timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
+
+                // TODO: Remove
+                // throw std::runtime_error("One MPC cycle completed!");
             } else {
                 first_loop = true;
             }
@@ -678,6 +697,7 @@ namespace robot
                 v = v_;
             }
         // }
+
         q.segment<4>(3).normalize();
         if (std::abs(q.segment<4>(3).norm() - 1) > 1e-8) {
             RCLCPP_ERROR_STREAM(this->get_logger(), "q: " << q.transpose());
@@ -689,6 +709,11 @@ namespace robot
             UpdateMpcTargets(q);
             mpc_->SetConfigTarget(q_target_.value());
             mpc_->SetVelTarget(v_target_.value());
+
+            // std::cout << "q: " << q.transpose() << std::endl;
+            // std::cout << "v: " << v.transpose() << std::endl;
+            // std::cout << "q target 0: " << q_target_.value()[0].transpose() << std::endl;
+            // std::cout << "v target 0: " << v_target_.value()[0].transpose() << std::endl;
         }
 
         // Reference generation
@@ -715,9 +740,16 @@ namespace robot
 
                 // Assign start time too
                 traj_start_time_ = time;
+
+                K_ = mpc_->GetRiccatiFeedback();
             }
         }
         timer.Toc();
+
+        // TODO: Remove
+        // traj_mpc_.ExportToCSV("mpc_logs/first_fb_solve_result_traj.csv");
+
+        first_mpc_computed_ = true;
 
         torc::utils::TORCTimer prep_timer;
         prep_timer.Tic();
@@ -740,7 +772,7 @@ namespace robot
             vectorx_t q, v, tau, F(3*mpc_settings_->num_contact_locations);
             std::vector<bool> in_contact(mpc_settings_->num_contact_locations);
 
-            if (GetState() == Mpc) {
+            if (GetState() == Mpc && first_mpc_computed_) {
                 double time_into_traj = 0;
                 // Get the traj mutex to protect it
                 {
@@ -755,8 +787,10 @@ namespace robot
                     traj_out_.GetVelocityInterp(time_into_traj, v);
                     traj_out_.GetTorqueInterp(time_into_traj, tau);
 
-                    // TODO: Remove after debugging
-                    // tau = traj_out_.GetTau(0);
+                    // // TODO: Remove after debugging
+                    // tau = traj_out_.GetTau(10);
+                    // q = traj_out_.GetConfiguration(0);
+                    // v = traj_out_.GetVelocity(0);
 
                     for (int i = 0; i < mpc_settings_->num_contact_locations; i++) {
                         vector3_t f_temp;
@@ -808,7 +842,7 @@ namespace robot
                 for (int i = 0; i < in_contact.size(); i++) {
                     in_contact[i] = true;
                 }
-            } else if (ctrl_state_ == HoldInitialCond) {
+            } else if (ctrl_state_ == HoldInitialCond || !first_mpc_computed_) {
                 q = q_ic_;
                 v = v_ic_;
                 tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
@@ -826,36 +860,51 @@ namespace robot
                 in_contact[i] = true;
             }
 
+            vectorx_t tau_mpc = tau;
+
+            // // TODO: Put back in when using the WBC
+            // if (recieved_first_state_ && GetState() == Mpc) {
+            //     // Use WBC
+            //     // Get current state
+            //     vectorx_t q_est, v_est;
+            //     {
+            //         std::lock_guard<std::mutex> lock(est_state_mut_);
+            //         q_est = q_;
+            //         v_est = v_;
+            //     }
+
+            //     // TODO: Remove
+            //     // q = q_ic_; //q_target_.value()[0];
+            //     // v = v_ic_; //v_target_.value()[0];
+            //     F.setZero();
+            //     tau.setZero();
+
+            //     for (int i = 0; i < in_contact.size(); i++) {
+            //         in_contact[i] = true;
+            //     } 
+            //     tau = wbc_controller_->ComputeControl(q_est, v_est, q, v, tau, F, in_contact);     
+                
+            //     // // --------- Testing the Riccati Feedback --------- //
+            //     // vectorx_t riccati_error(q.size() + v.size());
+            //     // riccati_error << q_est - q, v_est - v;
+            //     // tau = tau + (K_*riccati_error).head(tau.size());
+
+            //     // std::cout << "ricc fedback: " << (K_*riccati_error).head(tau.size()).transpose() << std::endl;
+            //     // // std::cout << "K_:\n" << K_ << std::endl; 
+            // }
+            
+            // Cap the torques at 25
+            for (int i = 0; i < tau.size(); i++) {
+                tau(i) = std::max(std::min(tau(i), 25.), -25.);
+            }
+
             // TODO: Move the log to after the publish call
             // Log
             static unsigned long log_counter = 0;
             if (log_counter % 5 == 0) {
-                LogCurrentControl(q, v, tau, F);
+                LogCurrentControl(q, v, tau, F, tau_mpc);
             }
             log_counter++;
-
-            // TODO: Put back in when using the WBC
-            if (recieved_first_state_ && GetState() == Mpc) {
-                // Use WBC
-                // Get current state
-                vectorx_t q_est, v_est;
-                {
-                    std::lock_guard<std::mutex> lock(est_state_mut_);
-                    q_est = q_;
-                    v_est = v_;
-                }
-
-                // // TODO: Remove
-                q = q_ic_; //q_target_.value()[0];
-                v = v_ic_; //v_target_.value()[0];
-                F.setZero();
-                tau.setZero();
-
-                for (int i = 0; i < in_contact.size(); i++) {
-                    in_contact[i] = true;
-                } 
-                tau = wbc_controller_->ComputeControl(q_est, v_est, q, v, tau, F, in_contact);     
-            }
 
             // if (GetState() != Mpc) {
             //     tau.setZero();
@@ -972,12 +1021,13 @@ namespace robot
         return u;
     }
 
-    void MpcController::LogCurrentControl(const vectorx_t& q_control, const vectorx_t& v_control, const vectorx_t& tau, const vectorx_t& force) {
+    void MpcController::LogCurrentControl(const vectorx_t& q_control, const vectorx_t& v_control, const vectorx_t& tau, const vectorx_t& force, const vectorx_t& tau_mpc) {
         log_file_ << this->now().seconds() - time_offset_ << ",";
         LogEigenVec(q_control);
         LogEigenVec(v_control);
         LogEigenVec(tau);
         LogEigenVec(force);
+        LogEigenVec(tau_mpc);
         log_file_ << std::endl;
     }
 
@@ -1524,7 +1574,7 @@ namespace robot
             // double time_into_traj = 0;
 
             // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj)
-            if (GetState() == Mpc) {
+            if (first_mpc_computed_ && GetState() == Mpc) {
                 // RCLCPP_WARN_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
                 // TODO: Put back
                 traj_out_.GetConfigInterp(time_into_traj, q);

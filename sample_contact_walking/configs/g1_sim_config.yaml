@@ -23,11 +23,11 @@ onboard:
         default_stand_foot_height: 0.005 #0.01
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.01 #0.013 #0.01 # Can run closer to 8-9 ms now
+        mpc_loop_period_sec: 0.01 #0.01 #0.013 #0.01 # Can run closer to 8-9 ms now
         max_mpc_solves: 5000000 #5 #40 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.4 #0.3 #0.4 #NOTE: High frequency makes it a bit more reactive/stable
-        first_swing_time: 5000. #0.5 #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
+        first_swing_time: 500. #0.5 #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -218,8 +218,8 @@ onboard:
         use_sim_state: false #true
         use_torso_mocap: true #false
         pelvis_ang_vel_lpf_coefs: [0.05, 0.15, 0.8] # TODO: Tune these
-        joint_vel_variance: 0.0004
-        base_vel_variance: 0.0004
+        joint_vel_variance: 0. #0.0004
+        base_vel_variance: 0. #0.005 #0.0004
         log_file_name: "mpc_logs/sim_estimator_log.csv"
         base_pose_sensor: 0
       # callback_groups:

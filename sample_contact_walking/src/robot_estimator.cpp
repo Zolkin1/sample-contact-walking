@@ -336,13 +336,18 @@ namespace robot {
     void RobotEstimator::PelvisImuCallback(__attribute__((__unused__)) const obelisk_sensor_msgs::msg::ObkImu& msg) {
         static std::random_device rd;  // Seed generator
         static std::mt19937 gen(rd()); // Mersenne Twister engine
-        double stddev = std::sqrt(base_vel_var_);  // Standard deviation
+        double stddev = std::sqrt(base_vel_var_);  // Standard deviation scaled by the sampling time
         static std::normal_distribution<double> dist(0, stddev); // Normal distribution
 
         if (!use_sim_state_) {
             // Low pass filter this
             Eigen::Vector3d new_ang_vel;
-            new_ang_vel << msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z;
+            if (base_vel_var_ <= 0) {
+                new_ang_vel << msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z;
+            } else {
+                new_ang_vel << msg.angular_velocity.x + dist(gen), msg.angular_velocity.y + dist(gen), msg.angular_velocity.z + dist(gen);
+            }
+
             Eigen::Vector3d filtered_ang_vel = pelvis_ang_vel_lpf_->Filter(new_ang_vel);
 
             // TODO: Rotate into the correct frame. For the G1 this sould be an identity rotation
@@ -350,12 +355,6 @@ namespace robot {
             base_ang_vel_local_[0] = filtered_ang_vel(0);
             base_ang_vel_local_[1] = filtered_ang_vel(1);
             base_ang_vel_local_[2] = filtered_ang_vel(2);
-
-            if (base_vel_var_ > 0) {
-                base_ang_vel_local_[0] += dist(gen);
-                base_ang_vel_local_[1] += dist(gen);
-                base_ang_vel_local_[2] += dist(gen);
-            }
         }
 
         recieved_first_pelvis_imu_ = true;

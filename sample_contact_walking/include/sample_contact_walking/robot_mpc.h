@@ -67,7 +67,7 @@ namespace robot {
             void ConvertEigenToStd(const vectorx_t& eig_vec, std::vector<double>& std_vec);
             vectorx_t ConvertControlToMujocoU(const vectorx_t& pos_target, const vectorx_t& vel_target, const vectorx_t& feed_forward);
             // std::pair<vectorx_t, vectorx_t> ReduceState(const vectorx_t& q, const vectorx_t& v, torc::models::FullOrderRigidBody model);
-            void LogCurrentControl(const vectorx_t& q_control, const vectorx_t& v_control, const vectorx_t& tau, const vectorx_t& force);
+            void LogCurrentControl(const vectorx_t& q_control, const vectorx_t& v_control, const vectorx_t& tau, const vectorx_t& force, const vectorx_t& tau_mpc);
             void LogEigenVec(const vectorx_t& x);
 
             // Viz
@@ -101,7 +101,7 @@ namespace robot {
 
             // State flags
             bool recieved_first_state_;
-            bool first_mpc_computed_;
+            std::atomic<bool> first_mpc_computed_;
 
             bool viz_forces_;
             double scale_forces_;
@@ -161,6 +161,7 @@ namespace robot {
             torc::mpc::ContactSchedule contact_schedule_;
 
             std::unique_ptr<torc::controller::WbcController> wbc_controller_;
+            matrixx_t K_;
 
             // Reference Generator
             std::unique_ptr<torc::mpc::ReferenceGenerator> ref_gen_;

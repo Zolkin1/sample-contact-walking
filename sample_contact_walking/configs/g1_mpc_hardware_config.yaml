@@ -3,11 +3,11 @@ general_settings:
 # ----- Simulation Params ----- #
 # ----------------------------- #
 # NOTE: I think I can get away with less nodes all due to speed.
-  nodes: 15 #25 #32 #25 #32
+  nodes: 25 #32 #25 #32
   verbose: False 
   node_dt_type: two_groups # Even, two_groups, Adaptive
   node_group_1_n: 5
-  node_group_2_n: 10 #20
+  node_group_2_n: 20
   node_dt_1: 0.015
   node_dt_2: 0.04 #0.05
   compile_derivatives: False
@@ -15,7 +15,7 @@ general_settings:
   scale_cost: False
   max_initial_solves: 10
   initial_constraint_tol: 5e-4
-  nodes_full_dynamics: 14 #24
+  nodes_full_dynamics: 24
   delay_prediction_dt: 0
   terminal_cost_weight: 60 
   log_file_name: "mpc_logs/mpc_hardware_log.csv"
@@ -23,10 +23,10 @@ solver_settings:
 # ----------------------------- #
 # ----- Simulation Params ----- #
 # ----------------------------- #
-  mode: Speed
+  mode: Balance #Speed
   alpha_min: 1e-8
   max_iter: 10 
-  mu0: 10
+  mu0: 1 #10
   tol_stat: 1e-8
   tol_eq: 1e-8
   tol_comp: 1e-8
@@ -39,7 +39,7 @@ solver_settings:
 constraints:
   friction_coef: 0.6
   friction_margin: 2
-  max_grf: 800
+  max_grf: 300 #800
   min_grf: 10
   collisions:
     - frame1: "left_toe"
@@ -86,8 +86,9 @@ costs:
   # ------------------------------ #
   - type: ConfigurationTracking
     name: "ConfigTracking"
-    weight:  [5, 5, 5, #10, 10, 50, 
-              100, 100, 25,
+    weight:  [5, 5, 25, #10, 10, 50, 
+              50, 50, 20,
+              # 100, 100, 25,
               # 200, 200, 25,
               .01, 6, 10, .01, 1, #1,         # Left Leg  # TODO: Keep an eye on the yaw weight
               .01, 6, 10, .01, 1, #1,         # Right Leg
@@ -97,14 +98,22 @@ costs:
   - type: VelocityTracking
     name: "VelocityTracking"
     weight: [5,2,5, #10, 10, 10,
-            15, 15, 15,
-            .01, 2, 2, 0.1, 0.5, #0.1,         # Left Leg
-            .01, 2, 2, 0.1, 0.5, #0.1,         # Right Leg
+            10, 10, 10,
+            # 15, 15, 15,
+            5, 2, 2, 5, 1, #0.1,         # Left Leg
+            5, 2, 2, 5, 1, #0.1,         # Right Leg
+            # .01, 2, 2, 0.1, 0.5, #0.1,         # Left Leg
+            # .01, 2, 2, 0.1, 0.5, #0.1,         # Right Leg
             1,
             0.6, 0.7, 0.7, 0.6,
             0.6, 0.7, 0.7, 0.6,]
   - type: TorqueRegularization
     name: "TorqueReg"
+    # weight: [0.1, 0.1, 0.1, 0.01, 0.1, #0.001,            # Left Leg
+    #         0.1, 0.1, 0.1, 0.01, 0.1, #0.001,             # Right Leg
+    #         0.01,
+    #         0.01, 0.01, 0.01, 0.01,                           # Left Arm
+    #         0.01, 0.01, 0.01, 0.01,]                          # Right Arm
     weight: [0.0001, 0.0001, 0.0001, 0.00001, 0.0001, #0.001,            # Left Leg
             0.0001, 0.0001, 0.0001, 0.00001, 0.0001, #0.001,             # Right Leg
             0.01,
@@ -112,7 +121,8 @@ costs:
             0.01, 0.01, 0.01, 0.01,]                          # Right Arm
   - type: ForceRegularization
     name: "ForceReg"
-    weight: [0.0001, 0.0001, 0.001]
+    weight: [0.01, 0.01, 0.01]
+    # weight: [0.0001, 0.0001, 0.001]
   # ---------------------------------- #
   # ----- Frame Tracking Weights ----- #
   # ---------------------------------- #
@@ -219,7 +229,9 @@ wbc:
   # custom_torque_lims: [20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20]
   # custom_torque_lims: [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
   # custom_torque_lims: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
-  custom_torque_lims: [10, 5, 5, 15, 7, 10, 5, 5, 15, 7, 1, 5, 5, 5, 5, 5, 5, 5, 5]
+  # custom_torque_lims: [10, 5, 5, 15, 7, 10, 5, 5, 15, 7, 1, 5, 5, 5, 5, 5, 5, 5, 5] # THIS ONE WORKS ON HARDWARE
+  custom_torque_lims: [20, 15, 15, 25, 15, 20, 15, 15, 25, 15, 2, 10, 10, 10, 10, 10, 10, 10, 10]
+
   verbose: False
   frame_tracking:
     - frame: "left_toe"
