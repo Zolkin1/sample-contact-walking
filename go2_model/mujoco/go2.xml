@@ -154,6 +154,7 @@
       
       <site name="imu" pos="-0.02557 0 0.04232"/>
       <site name="torso_mocap_site" pos="0 0 0" euler="0 0 0" size="0.01"/>
+      <site name="tracking_camera_site" pos="-0.0635 -0.12 -0.01" euler="0.0 0.0 1.57079" size="0.01"/>
 
       <body name="FL_hip" pos="0.1934 0.0465 0">
         <inertial pos="-0.0054 0.00194 -0.000105" quat="0.497014 0.499245 0.505462 0.498237" mass="0.678"
@@ -349,6 +350,13 @@
     <!-- Mocap sensors -->
     <framepos name="base_mocap_pos_sensor" objtype="site" objname="torso_mocap_site" noise="0.01"/>
     <framequat name="base_mocap_quat_sensor" objtype="site" objname="torso_mocap_site" noise="0.01"/>
+
+    <!-- Tracking Camera -->
+    <framepos name="base_tracking_camera_pos_sensor" objtype="site" objname="tracking_camera_site"/>
+    <framequat name="base_tracking_camera_quat_sensor" objtype="site" objname="tracking_camera_site" noise="0.01"/>
+    <gyro name="base_tracking_camera_gyro" site="tracking_camera_site" noise="0.01"/>
+    <velocimeter name="base_tracking_camera_vel" site="tracking_camera_site" noise="0.01"/>
+
 
     <!--  Force sensors  -->
     <force name="FL_force_sensor" site="FL_foot_site"/>

@@ -162,7 +162,7 @@ onboard:
         joint_vel_variance: 0. #0.0004
         base_vel_variance: 0. #0.005 #0.0004
         log_file_name: "mpc_logs/go2_sim_estimator_log.csv"
-        base_pose_sensor: 2
+        base_pose_sensor: 0 #2
       callback_groups:
         debug_cbg: MutuallyExclusiveCallbackGroup 
       publishers:
@@ -182,25 +182,26 @@ onboard:
           # msg_type: ObkJointEncoders
           history_depth: 10
           callback_group: None
-          non_obelisk: False
       # ---------- Mocap ---------- #
         - ros_parameter: mocap_setting  # TODO: Rename
           topic: /obelisk/go2/torso_pose
           history_depth: 10
           callback_group: None
-          non_obelisk: False
       # ---------- Torso IMU ---------- #
         - ros_parameter: pelvis_imu_setting # TODO: Rename
           topic: /obelisk/go2/torso_imu
           history_depth: 10
           callback_group: None
-          non_obelisk: False
+      # ---------- Torso Camera ---------- #
+        - ros_parameter: torso_camera_setting
+          topic: /obelisk/go2/torso_odom
+          history_depth: 10
+          callback_group: None
       # ---------- True Sim State ---------- #
         - ros_parameter: true_sim_sub_setting
           topic: /obelisk/go2/true_sim_state
           history_depth: 10
           callback_group: None
-          non_obelisk: False
       # ----- Joystick subscriber ----- #
         - ros_parameter: joystick_sub_setting
           topic: /obelisk/g1/joy
@@ -286,6 +287,15 @@ onboard:
             sensor_names:
               base_mocap_pos_sensor: framepos
               base_mocap_quat_sensor: framequat
+          # ---------- Tracking Camera ---------- #
+          - topic: /obelisk/go2/torso_odom
+            dt: 0.005
+            msg_type: Odometry
+            sensor_names:
+              base_tracking_camera_pos_sensor: framepos
+              base_tracking_camera_quat_sensor: framequat
+              base_tracking_camera_vel: velocimeter
+              base_tracking_camera_gyro: gyro
           # ---------- Force Sensors ---------- #
           # - topic: /obelisk/go2/force_sensors
           #   dt: 0.002
