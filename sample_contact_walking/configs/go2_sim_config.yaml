@@ -8,6 +8,7 @@ onboard:
         urdf_path: /home/zolkin/sample-contact-walking/go2_model/urdf/go2_description.urdf
         robot_type: 0
         robot_name: "go2"
+        mpc_loop_log: "go2_mpc_loop_log.csv"
 # ---------- Viz ---------- #
         viz_frames: ["torso", "FR_foot", "FL_foot", "RR_foot", "RL_foot"]
         viz_forces: True
@@ -237,7 +238,7 @@ onboard:
           sensor_settings:
           # ---------- Joint Encoders ---------- #
           - topic: /obelisk/go2/joint_encoders
-            dt: 0.002
+            dt: 0.001
             msg_type: ObkJointEncoders
             sensor_names:
             # ---------- Joint Positions ---------- #
@@ -272,7 +273,7 @@ onboard:
               RR_calf_joint_vel_sensor: jointvel
           # ---------- Base IMU ---------- #
           - topic: /obelisk/go2/torso_imu
-            dt: 0.002
+            dt: 0.001
             msg_type: ObkImu
             sensor_names:
               imu_acc_sensor: accelerometer

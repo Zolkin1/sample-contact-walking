@@ -516,9 +516,10 @@ namespace robot
             perror("pthread_setaffinity_np");
         }
 
-        struct sched_param param;
-        param.sched_priority = 99;
-        pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
+        // TODO: Consider putting this back
+        // struct sched_param param;
+        // param.sched_priority = 99;
+        // pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
 
         const long mpc_loop_rate_ns = this->get_parameter("mpc_loop_period_sec").as_double()*1e9;
         RCLCPP_INFO_STREAM(this->get_logger(), "MPC loop period set to: " << mpc_loop_rate_ns << "ns.");
@@ -903,10 +904,10 @@ namespace robot
             //     // // std::cout << "K_:\n" << K_ << std::endl; 
             // }
             
-            // Cap the torques at 25
-            for (int i = 0; i < tau.size(); i++) {
-                tau(i) = std::max(std::min(tau(i), 25.), -25.);
-            }
+            // // Cap the torques at 25
+            // for (int i = 0; i < tau.size(); i++) {
+            //     tau(i) = std::max(std::min(tau(i), 25.), -25.);
+            // }
 
             // TODO: Move the log to after the publish call
             // Log

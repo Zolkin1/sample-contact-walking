@@ -12,7 +12,7 @@
 <!-- All motor control limits are handeled in the joint actuatorfrcrange field. -->
   <default>
     <default class="go2">
-      <geom friction="0.6" margin="0.001" condim="1"/>
+      <geom friction="0.9" margin="0.001" condim="6"/>
       <joint axis="0 1 0" damping="2" armature="0.01" frictionloss="0.2"/>
       <motor ctrllimited="false"/>
 
