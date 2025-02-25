@@ -174,6 +174,7 @@ namespace robot {
         recieved_first_encoders_ = true;
     }
 
+    // TODO: Renam to base mocap
     void RobotEstimator::PelvisMocapCallback(const geometry_msgs::msg::PoseStamped& msg) {
         prev_base_pos_ = base_pos_;
         prev_base_quat_ = base_quat_;
@@ -237,7 +238,7 @@ namespace robot {
             config[7 + i] = joint_pos_[i];
         }
 
-        pinocchio::SE3 base_pose = mpc_model_->TransformPose(frame_pose, "torso_mocap", "pelvis", config);
+        pinocchio::SE3 base_pose = mpc_model_->TransformPose(frame_pose, "torso_mocap", base_link_name_, config);
 
         base_pos_.at(0) = base_pose.translation()[0];
         base_pos_.at(1) = base_pose.translation()[1];
@@ -289,7 +290,7 @@ namespace robot {
             config[7 + i] = joint_pos_[i];
         }
 
-        pinocchio::SE3 base_pose = mpc_model_->TransformPose(frame_pose, "torso_tracking_camera", "pelvis", config);
+        pinocchio::SE3 base_pose = mpc_model_->TransformPose(frame_pose, "torso_tracking_camera", base_link_name_, config);
 
         // Now adjust by the default pose
         base_pose = default_pose_.inverse()*base_pose;
@@ -315,7 +316,7 @@ namespace robot {
         for (int i = 0; i < joint_vels_.size(); i++) {
             vel[6 + i] = joint_vels_[i];
         }
-        pinocchio::Motion base_twist = mpc_model_->DeduceBaseVelocity(camera_twist, pinocchio::LOCAL, "torso_tracking_camera", "pelvis", config, vel);
+        pinocchio::Motion base_twist = mpc_model_->DeduceBaseVelocity(camera_twist, pinocchio::LOCAL, "torso_tracking_camera", base_link_name_, config, vel);
 
         base_vel_local_[0] = base_twist.linear()[0];
         base_vel_local_[1] = base_twist.linear()[1];

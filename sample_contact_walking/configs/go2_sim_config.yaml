@@ -23,25 +23,13 @@ onboard:
         max_mpc_solves: 1000000 #-37 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.3 #0.2 #0.25
-        first_swing_time: 0.1 #0.1 #2.
+        first_swing_time: 2. #0.1 #0.1 #2.
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
         right_frames: ["RL_foot", "FR_foot"]
         left_frames: ["FL_foot", "RR_foot"]
 # ---------- Targets ---------- #
-        # target_config: [0, 0, 0.28,
-        #             0, 0, 0, 1,
-        #             0, 0.9, -1.8,
-        #             0, 0.9, -1.8,
-        #             0, 0.9, -1.8,
-        #             0, 0.9, -1.8]
-        # target_vel: [0., 0.0, 0.,
-        #             0, 0, 0,
-        #             0, 0.0, 0.,
-        #             0, 0.0, 0.,
-        #             0, 0.0, 0.,
-        #             0, 0.0, 0.]
         mpc_ic_config: [0, 0, 0.28,
                     0, 0, 0, 1,         # Why is the quaternion flipped here?
                     0, 0.9, -1.8,
@@ -56,6 +44,30 @@ onboard:
                     0, 0.0, 0.]
         fixed_target: True #True
         controller_target: True #True
+# --------- Control Params --------- #
+        # Note: Right now this will only be used on hardware and NOT in the sim!
+        control_joint_names: ["FL_hip_joint",
+                              "FL_thigh_joint",
+                              "FL_calf_joint",
+                              "FR_hip_joint",
+                              "FR_thigh_joint",
+                              "FR_calf_joint",
+                              "RL_hip_joint",
+                              "RL_thigh_joint",
+                              "RL_calf_joint",
+                              "RR_hip_joint",
+                              "RR_thigh_joint",
+                              "RR_calf_joint",]
+        kp: [350., 300, 300,
+             350., 300, 300,
+             350., 300, 300,
+             350., 300, 300]
+        kd: [8., 8, 8,
+             8, 8, 8,
+             8, 8, 8,
+             8, 8, 8]
+# ---------- Step Planner ---------- #
+        foot_offsets: [-0.1934, 0.142, 0.2234, -0.142, 0.2234, 0.142, -0.1934, -0.142]  # TODO: Make sure these are correct
       callback_groups: 
         control_cbg: MutuallyExclusiveCallbackGroup
         estimation_cbg: MutuallyExclusiveCallbackGroup
@@ -92,9 +104,9 @@ onboard:
         # ----- Joystick subscriber ----- #
         - ros_parameter: joystick_sub_setting
           topic: /obelisk/go2/joy
-        # ----- Contact Schedule subscriber ----- #
-        - ros_parameter: contact_schedule_sub_setting
-          topic: /obelisk/go2/contact_schedule
+        # ----- Polytope subscriber ----- #
+        - ros_parameter: polytope_sub_setting
+          topic: /obelisk/go2/contact_polytopes
       timers:
         # Low level control timer
         - ros_parameter: timer_ctrl_setting
@@ -104,64 +116,52 @@ onboard:
         - ros_parameter: state_viz_timer_setting
           timer_period_sec: 0.002
           callback_group: None
+  # ----------------------- #
+  # ----- Geom Reader ----- #
+  # ----------------------- #
     - pkg: contact_planning
-      executable: contact_planner
+      executable: mujoco_geom_reader
       params:
-        default_polytope_size: 0.4 #0.6
-        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile_scene.xml
-        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile2_scene.xml
-        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
+        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
       # ----- Tile Scene ---- #
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9"]
-      # ----- Swing Timing Paramers ---- #
-      # WARNING!! THESE MUST MATCH THE CORRESPONDING PARAMETERS ABOVE
-        swing_time: 0.3 #0.2 #0.25
-        first_swing_time: 0.1
-        right_foot_frames: ["RL_foot", "FR_foot"]
-        left_foot_frames: ["FL_foot", "RR_foot"]
-        # foot_offsets: [-0.2234, 0.142, 0.1934, -0.142, 0.1934, 0.142, -0.2234, -0.142]
-        foot_offsets: [-0.3234, 0.142, 0.03, -0.142, 0.03, 0.142, -0.3234, -0.142]
-        num_nodes: 32   # Should match the MPC
-        node_group_1_n: 5
-        node_group_2_n: 27
-        node_dt_1: 0.015 #0.015
-        node_dt_2: 0.025
-        polytope_margin: 0.01   # Should match polytope_delta
       publishers:
         # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting
-          topic: /obelisk/go2/contact_schedule
-          msg_type: ContactSchedule
+          topic: /obelisk/go2/contact_polytopes
+          msg_type: ContactPolytopeArray
           key: "contact_schedule_pub"
           history_depth: 10
+          callback_group: None
       subscribers:
         - ros_parameter: sub_est_setting
           topic: /obelisk/go2/est_state # est_state, target_state
           msg_type: EstimatedState
+          key: "est_state_sub"
           history_depth: 10
           callback_group: estimation_cbg
-          key: "est_state_sub"
-        # Joystick Sub
-        - ros_parameter: joystick_sub_setting
-          topic: /obelisk/go2/joy
-          msg_type: Joy
-          key: "joystick_sub"
-          history_depth: 10
-          callback_group: None
-        - ros_parameter: commanded_target_setting
-          topic: /obelisk/go2/commanded_target
-          msg_type: CommandedTarget
-          key: "command_sub"
       timers:
         # Contact planning timer
         - ros_parameter: timer_ctrl_setting
-          timer_period_sec: 0.01 #0.1
+          timer_period_sec: 0.05 #0.1
           callback_group: control_cbg
   estimation:
+  # --------------------------------- #
+  # ----------- Estimator ----------- #
+  # --------------------------------- #
     - pkg: sample_contact_walking
       executable: state_estimator
       params:
         base_link_name: "base_link"
+        mpc_settings_path:  "/home/zolkin/sample-contact-walking/sample_contact_walking/configs/go2_mpc_config.yaml"
+        urdf_path: "/home/zolkin/sample-contact-walking/go2_model/urdf/go2_description.urdf"
+        robot_name: "go2"
+        use_sim_state: false #true
+        pelvis_ang_vel_lpf_coefs: [0.05, 0.15, 0.8] # TODO: Tune these
+        joint_vel_variance: 0. #0.0004
+        base_vel_variance: 0. #0.005 #0.0004
+        log_file_name: "mpc_logs/go2_sim_estimator_log.csv"
+        base_pose_sensor: 2
       callback_groups:
         debug_cbg: MutuallyExclusiveCallbackGroup 
       publishers:
@@ -183,13 +183,13 @@ onboard:
           callback_group: None
           non_obelisk: False
       # ---------- Mocap ---------- #
-        - ros_parameter: mocap_setting
+        - ros_parameter: mocap_setting  # TODO: Rename
           topic: /obelisk/go2/torso_pose
           history_depth: 10
           callback_group: None
           non_obelisk: False
       # ---------- Torso IMU ---------- #
-        - ros_parameter: torso_imu_setting
+        - ros_parameter: pelvis_imu_setting # TODO: Rename
           topic: /obelisk/go2/torso_imu
           history_depth: 10
           callback_group: None
@@ -200,6 +200,9 @@ onboard:
           history_depth: 10
           callback_group: None
           non_obelisk: False
+      # ----- Joystick subscriber ----- #
+        - ros_parameter: joystick_sub_setting
+          topic: /obelisk/g1/joy
   # sensing:
   robot:
     - is_simulated: True
@@ -220,21 +223,16 @@ onboard:
           callback_group: None
       subscribers:
         - ros_parameter: sub_ctrl_setting
-          # key: sub1
           topic: /obelisk/go2/low_level_control
-          # msg_type: PD_FF
           history_depth: 10
-          # callback_key: sub_callback1
           callback_group: None
-          non_obelisk: False
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: go2_model
-          # model_xml_path: go2_scene.xml
-          model_xml_path: go2_tile_scene.xml
+          model_xml_path: go2_scene.xml
+          # model_xml_path: go2_tile_scene.xml
           # model_xml_path: go2_tile2_scene.xml
           n_u: 36
-          time_step: 0.001
           num_steps_per_viz: 16 # No longer used
           sensor_settings:
           # ---------- Joint Encoders ---------- #
@@ -283,7 +281,7 @@ onboard:
           # ---------- Mocap ---------- #
           - topic: /obelisk/go2/torso_pose
             dt: 0.002
-            msg_type: ObkFramePose
+            msg_type: PoseStamped
             sensor_names:
               base_mocap_pos_sensor: framepos
               base_mocap_quat_sensor: framequat

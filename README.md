@@ -3,7 +3,6 @@
 ## TODO for the docker:
 - Add Proxqp to the docker
 - Make obelisk pull to the uniree-interface branch
-- Add ping to the docker
 - Add the optitrack library
 - Add lshw (apt-get install -y lshw)
 - Add python3-pyqt5 (apt-get install python3-pyqt5)

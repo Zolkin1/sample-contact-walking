@@ -24,7 +24,8 @@
         <!-- Position Control -->
         <default class="hip_pos">
           <!-- <position kp="0" ctrllimited="false"/> -->
-          <position kp="350" ctrllimited="false"/>
+          <!-- <position kp="350" ctrllimited="false"/> -->
+          <position kp="50" ctrllimited="false"/>
           <!-- <position kp="800" ctrllimited="false"/> -->
         </default>
 
@@ -50,7 +51,8 @@
         <!-- Position Control -->
         <default class="thigh_pos">
           <!-- <position kp="0" ctrllimited="false"/> -->
-          <position kp="300" ctrllimited="false"/>
+          <position kp="50" ctrllimited="false"/>
+          <!-- <position kp="300" ctrllimited="false"/> -->
           <!-- <position kp="800" ctrllimited="false"/> -->
         </default>
 
@@ -70,7 +72,8 @@
         <!-- Position Control -->
         <default class="calf_pos">
           <!-- <position kp="0" ctrllimited="false"/> -->
-         <position kp="300" ctrllimited="false"/>
+         <position kp="50" ctrllimited="false"/>
+         <!-- <position kp="300" ctrllimited="false"/> -->
           <!-- <position kp="800" ctrllimited="false"/> -->
         </default>
 

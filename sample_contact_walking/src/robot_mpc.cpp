@@ -80,6 +80,8 @@ namespace robot
         std::string model_name = name + robot_name + "_model";
         model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path);
 
+        RCLCPP_INFO_STREAM(this->get_logger(), "Model created!");
+
         // ------------------------------------ //
         // ----- Create and configure MPC ----- //
         // ------------------------------------ //
@@ -291,12 +293,19 @@ namespace robot
         mpc_skipped_joint_indexes_ = this->get_parameter("skip_indexes").as_integer_array();
         if (mpc_skipped_joint_indexes_[0] == -1 && (model_->GetConfigDim() == mpc_model_->GetConfigDim())) {
             RCLCPP_INFO_STREAM(this->get_logger(), "No joint to skip.");
+            mpc_skipped_joint_indexes_.clear();
         } else if (mpc_skipped_joint_indexes_.size() != model_->GetConfigDim() - mpc_model_->GetConfigDim()) {
             RCLCPP_ERROR_STREAM(this->get_logger(), "Provided skip indexes don't match the model differences! Got size: " << mpc_skipped_joint_indexes_.size() << ", expected: " 
                 << model_->GetConfigDim() - mpc_model_->GetConfigDim());
+        } else {
+            throw std::runtime_error("Inconsistent skip joints!");
         }
         this->declare_parameter<std::vector<double>>("skip_joint_vals", {-1});
         mpc_skipped_joint_vals_ = this->get_parameter("skip_joint_vals").as_double_array();
+
+        if (mpc_skipped_joint_vals_[0] == -1) {
+            mpc_skipped_joint_vals_.clear();
+        }
 
         if (mpc_skipped_joint_vals_.size() != mpc_skipped_joint_indexes_.size()) {
             throw std::runtime_error("MPC skip joint indexes size does not match the corresponding value array!");
@@ -654,7 +663,8 @@ namespace robot
             // TODO: Look into what target to use, for now just use the old targets
             // TODO: Consider making this update at a slower rate (20-50Hz)
             step_planner_timer.Tic();
-            step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_, nom_footholds_, projected_footholds_);
+            // TODO: Put back
+            // step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_, nom_footholds_, projected_footholds_);
             step_planner_timer.Toc();
             mpc_->UpdateContactSchedule(contact_schedule_); // TODO: Need to do this at the same time as the reference generation
         }
@@ -730,9 +740,9 @@ namespace robot
         double mpc_start_time = this->now().seconds();
         if (mpc_->GetSolveCounter() < max_mpc_solves) {
             // ---- Solve MPC ----- //
-            // double time = this->now().seconds();        // NOTE: The quad uses the time here
+            double time = this->now().seconds();        // NOTE: The quad uses the time here
             mpc_->Compute(mpc_start_time - time_offset_, q, v, traj_mpc_);
-            double time = this->now().seconds();    // NOTE: The humanoid uses the time here
+            // double time = this->now().seconds();    // NOTE: The humanoid uses the time here
             {
                 // Get the traj mutex to protect it
                 std::lock_guard<std::mutex> lock(traj_out_mut_);

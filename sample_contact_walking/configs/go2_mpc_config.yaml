@@ -5,7 +5,7 @@ general_settings:
   node_group_1_n: 5
   node_group_2_n: 27
   node_dt_1: 0.015 #0.015 #0.015 
-  node_dt_2: 0.025 #0.025 #0.015 #0.015 #0.025
+  node_dt_2: 0.04 #0.025 #0.015 #0.015 #0.025
   compile_derivatives: False
   base_frame: "torso"
   scale_cost: False
@@ -14,12 +14,13 @@ general_settings:
   nodes_full_dynamics: 25 #4 #10 #30 #10 #3 #4   # Also determines how many nodes have torque constraints
   delay_prediction_dt: 0
   terminal_cost_weight: 40 #2 #10
+  log_file_name: "mpc_logs/go2_mpc_sim_log.csv"
 solver_settings:
 # HPIPM:
-  mode: Speed #Balance #Balance #Balance #Speed #Robust #Balance -- To get a success the best chance is with Robust and give more iterations
+  mode: Balance #Balance #Balance #Speed #Robust #Balance -- To get a success the best chance is with Robust and give more iterations
   alpha_min: 1e-8
   max_iter: 10 #15 #20 #20 #14 #10 #15 #15 #10
-  mu0: 1 #1 #20 #10 #100
+  mu0: 10 #1 #20 #10 #100
   tol_stat: 1e-8 #1e-8
   tol_eq: 1e-8
   tol_comp: 1e-8 #1e-8
@@ -53,7 +54,7 @@ constraints:
       radius2: 0.06
   polytope_delta: 0.04 #0.06
   polytope_shrinking_rad: 0.5 #0.2
-  swing_start_node: 2 # Note you want this set to 1 for all centroidal
+  swing_start_node: 3 # Note you want this set to 1 for all centroidal
   swing_end_node: 32
   holonomic_start_node: 1 #1 #1 # 2 #22 #2
   holonomic_end_node: 31 #32 #24 #32
@@ -61,6 +62,7 @@ constraints:
   collision_end_node: 32
   polytope_start_node: 2 #2 #2
   polytope_end_node: 32
+  polytope_frames: ["RL_foot", "FR_foot", "FL_foot", "RR_foot"]
 costs:
   - type: ConfigurationTracking
     name: "ConfigTracking"
@@ -113,26 +115,26 @@ costs:
              .0001, .0001, .0001]       # RR
   - type: ForceRegularization
     name: "ForceReg"
-    weight: [0.0001, 0.0001, 0.0001]
-    # weight: [0.001, 0.001, 0.001]
+    # weight: [0.0001, 0.0001, 0.0001]
+    weight: [0.001, 0.001, 0.001]
 
   # TODO: Why does removing this cause weird things with the MPC?
   - type: ForwardKinematics
     name: "FL_foot_fk"
     frame: "FL_foot"
     weight: [10,10,1] #[1, 1, 1] #TODO: Adding this has a minimal effect
-  - type: ForwardKinematics
-    name: "FR_foot_fk"
-    frame: "FR_foot"
-    weight: [2, 2, 3]
-  - type: ForwardKinematics
-    name: "RL_foot_fk"
-    frame: "RL_foot"
-    weight: [2, 2, 3]
-  - type: ForwardKinematics
-    name: "RR_foot_fk"
-    frame: "RR_foot"
-    weight: [2, 2, 3]
+  # - type: ForwardKinematics
+  #   name: "FR_foot_fk"
+  #   frame: "FR_foot"
+  #   weight: [2, 2, 3]
+  # - type: ForwardKinematics
+  #   name: "RL_foot_fk"
+  #   frame: "RL_foot"
+  #   weight: [2, 2, 3]
+  # - type: ForwardKinematics
+  #   name: "RR_foot_fk"
+  #   frame: "RR_foot"
+  #   weight: [2, 2, 3]
   # ------------------------------ #
   # ----- Centroidal Weights ----- #
   # ------------------------------ #
@@ -218,3 +220,61 @@ targets:
               0, 0.0, 0.,
               0, 0.0, 0.,
               0, 0.0, 0.]
+wbc:
+  base_weight: [20., 20, 20, 50, 50, 50]
+  # base_weight: [1., 1, 1, 1, 1, 1]
+  # base_weight: [200., 200, 200, 50, 50, 50]
+  # [100., 100, 100, 100, 100, 100]
+  # base_weight: [0., 0, 0, 0, 0, 0]
+  joint_weight: [.01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01]
+  # joint_weight: [.1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1, .1]
+  # joint_weight: [.0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0]
+  # joint_weight: [10., 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
+  # tau_weight: [.01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01]
+  tau_weight: [.0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0, .0]
+  # force_weight: [0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001]
+  force_weight: [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]
+                #  0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001, 0.0001, 0.0001, 0.001]
+  # kp: [750., 750, 750, 1550, 1550, 1550, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15]
+  kp: [75., 75, 75, 100, 100, 100, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,]
+  # kp: [75., 75, 75, 100, 100, 100, 750, 750, 750, 750, 750, 750, 750, 750, 750, 750, 750, 750, 750, 750, 750, 750, 750, 750, 750]
+  # kp: [7500., 7500, 7500, 1550, 1550, 1550, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15]
+  # kd: [10., 10, 10, 12, 12, 12, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, .2, 2, 2]
+  kd: [20., 20, 20, 12, 12, 12, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
+  # custom_torque_lims: [20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20]
+  # custom_torque_lims: [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
+  # custom_torque_lims: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
+  # custom_torque_lims: [10, 5, 5, 15, 7, 10, 5, 5, 15, 7, 1, 5, 5, 5, 5, 5, 5, 5, 5]
+  verbose: False
+  frame_tracking:
+    - frame: "RL_foot"
+      weight: [100, 100, 100]
+      # weight: [0, 0, 0]
+      kp: [1000, 1000, 1000]
+      # kp: [500, 500, 500]
+      kd: [15, 15, 15]
+    - frame: "FR_foot"
+      weight: [100, 100, 100]
+      # weight: [0, 0, 0]
+      kp: [1000, 1000, 1000]
+      # kp: [500, 500, 500]
+      kd: [15, 15, 15]
+    - frame: "FL_foot"
+      weight: [100, 100, 100]
+      # weight: [0, 0, 0]
+      kp: [1000, 1000, 1000]
+      # kp: [500, 500, 500]
+      kd: [15, 15, 15]
+    - frame: "RR_foot"
+      weight: [100, 100, 100]
+      # weight: [0, 0, 0]
+      kp: [1000, 1000, 1000]
+      # kp: [500, 500, 500]
+      kd: [15, 15, 15]
+  skip_joints: []
+  joint_values: []
+  contact_frames: ["RL_foot", "FR_foot", "FL_foot", "RR_foot"]
+  compile_derivs: False
+  alpha: 0 #0.1 #0.001 #TODO: Tune
+  log: True
+  log_period: 5
