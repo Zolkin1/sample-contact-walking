@@ -193,7 +193,7 @@ onboard:
         log_file_name: "mpc_logs/go2_sim_estimator_log.csv"
         base_pose_sensor: 0 #2
         foot_frames: ["RL_foot", "FR_foot", "FL_foot", "RR_foot"]
-        foot_offset: 0.012 # NOTE: This number is important
+        foot_offset: 0.032 #0.032 seems to be pretty accurate # NOTE: This number is important
       callback_groups:
         debug_cbg: MutuallyExclusiveCallbackGroup 
       publishers:
