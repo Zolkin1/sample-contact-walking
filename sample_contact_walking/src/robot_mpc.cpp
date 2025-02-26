@@ -453,8 +453,9 @@ namespace robot
 
         if ((q_.segment<4>(3).norm() - 1) > 1e-4) {
             recieved_first_state_ = false;
-            RCLCPP_ERROR_STREAM(this->get_logger(), "q floating base: " << q_.head<7>());
-            throw std::runtime_error("recieved q is not normalized!");
+            RCLCPP_ERROR_STREAM(this->get_logger(), "Quaterniong is not normalized! q floating base: " << q_.head<7>().transpose());
+            // throw std::runtime_error("received q is not normalized!");
+            q_.segment<4>(3).normalize();
         }
 
         // Only receive the joints that we use in the MPC

@@ -163,6 +163,8 @@ onboard:
         base_vel_variance: 0. #0.005 #0.0004
         log_file_name: "mpc_logs/go2_sim_estimator_log.csv"
         base_pose_sensor: 0 #2
+        foot_frames: ["RL_foot", "FR_foot", "FL_foot", "RR_foot"]
+        foot_offset: 0.012 # NOTE: This number is important
       callback_groups:
         debug_cbg: MutuallyExclusiveCallbackGroup 
       publishers:
@@ -204,7 +206,7 @@ onboard:
           callback_group: None
       # ----- Joystick subscriber ----- #
         - ros_parameter: joystick_sub_setting
-          topic: /obelisk/g1/joy
+          topic: /obelisk/go2/joy
   # sensing:
   robot:
     - is_simulated: True

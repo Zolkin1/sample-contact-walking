@@ -104,6 +104,8 @@ namespace robot {
         this->declare_parameter<double>("base_vel_variance", 0);
         this->get_parameter("base_vel_variance", base_vel_var_);
 
+        this->declare_parameter<std::vector<std::string>>("foot_frames", {""});
+        this->declare_parameter<double>("foot_offset", 0);
         // Reset values
         joint_names_.clear();
         joint_pos_.clear();
@@ -293,7 +295,10 @@ namespace robot {
         pinocchio::SE3 base_pose = mpc_model_->TransformPose(frame_pose, "torso_tracking_camera", base_link_name_, config);
 
         // Now adjust by the default pose
-        base_pose = default_pose_.inverse()*base_pose;
+        // base_pose = default_pose_.inverse()*base_pose;
+        base_pose.rotation() = default_pose_.rotation().inverse()*base_pose.rotation();
+        base_pose.translation() = base_pose.translation() - default_pose_.translation();
+
 
         base_pos_.at(0) = base_pose.translation()[0];
         base_pos_.at(1) = base_pose.translation()[1];
@@ -514,26 +519,37 @@ namespace robot {
 
         if (msg.buttons[B] && (this->now() - last_B_press).seconds() > 5e-1) {
             // Compute z height assuming the feet are on the ground
-            torc::models::vector3_t left_toe_pos = {0, 0, 0};   // Only using the z value so the x and y don't matter
+            torc::models::vector3_t foot_pos = {0, 0, this->get_parameter("foot_offset").as_double()};   // Only using the z value so the x and y don't matter
 
             torc::models::vectorx_t q = mpc_model_->GetNeutralConfig();
+            q[0] = base_pos_[0];
+            q[1] = base_pos_[1];
+            q[2] = base_pos_[2];
+
+            q.segment<4>(3) = base_quat_.coeffs();
+
             for (int i = 0; i < joint_pos_.size(); i++) {
                 q[7 + i] = joint_pos_[i];
             }
 
-            // TODO: Make this frame not hard coded
-            torc::models::vector3_t base_position = mpc_model_->DeduceBasePosition(left_toe_pos, "left_toe", q);
 
-            // NOTE: I don't adjust the z height since the feet should be on the ground!
+            // torc::models::vector3_t base_position = mpc_model_->DeduceBasePosition(left_toe_pos, "left_toe", q);
+            torc::models::vector3_t base_position = mpc_model_->DeduceBasePosition(foot_pos, this->get_parameter("foot_frames").as_string_array()[0], q);
+
+            torc::models::matrix3_t plane_rotation = mpc_model_->FitBasePose(this->get_parameter("foot_frames").as_string_array(), 0, q);
+
+            // plane_rotation.setIdentity();
+            std::cout << "Plane rotation:\n" << plane_rotation << std::endl;
+
             for (int i = 0; i < 2; i++) {
                 default_pose_.translation()[i] = base_pos_[i];
             }
-            // TODO: Check
             default_pose_.translation()[2] = -base_position[2] + base_pos_[2];
 
             // throw std::runtime_error("ACCOUNT FOR ALL 3 DOF ROATION!");
-            default_pose_.rotation() = base_quat_.toRotationMatrix();
-            // default_pose_.rotation().topLeftCorner<2,2>() = base_quat_.toRotationMatrix().topLeftCorner<2,2>();
+            default_pose_.rotation() = plane_rotation;
+            // default_pose_.rotation() = base_quat_.toRotationMatrix();
+            // default_pose_.rotation().topLeftCorner<2,2>() *= base_quat_.toRotationMatrix().topLeftCorner<2,2>();    // Rotate the yaw
 
             RCLCPP_WARN_STREAM(this->get_logger(), "SETTING DEFAULT POSE TO CURRENT STATE!");
 
