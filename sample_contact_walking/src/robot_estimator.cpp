@@ -285,34 +285,15 @@ namespace robot {
         torc::models::vector3_t pos;
         pos << msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z;
         torc::models::quat_t orientation(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z);
-        if (robot_name_ == "go2") {
-            // torc::models::quat_t y_axis_rotation(0, 0, 1, 0);
-            torc::models::matrix3_t Ry;
-            Ry << 0,0,1,
-                  0,1,0,
-                  -1,0,0;
-            // orientation = y_axis_rotation*orientation;
 
-            torc::models::matrix3_t Rx;
-            Rx << 1,0,0,
-                  0,0,1,
-                  0,-1,0;
+        // DEBUGGING -----
+        // Choose a random orientation
+        // static torc::models::quat_t rand_orientation = torc::models::quat_t::UnitRandom();
+        // torc::models::quat_t rand_orientation(0.246242, -0.314924, -0.896867, 0.189256);
+        // RCLCPP_WARN_STREAM_ONCE(this->get_logger(), "rand orientation: " << rand_orientation);
+        // orientation = rand_orientation;
+        // DEBUGGING -----
 
-            // Rotate 180 about the x axis
-            // torc::models::quat_t x_axis_rotation(0, 1, 0, 0);
-            // orientation = x_axis_rotation*orientation;
-
-            // TODO: Why is the orientation wrong?!?!
-            torc::models::matrix3_t Rz_up;
-            Rz_up << 1,0,0,
-                    0,0,-1,
-                    0,1,0;
-            // std::cout << "orientation before: " << orientation << std::endl;
-            // orientation = torc::models::quat_t(Rz_up)*orientation; //*torc::models::quat_t(Rx); //*x_axis_rotation;
-
-            // orientation = torc::models::quat_t(Ry)*orientation;
-            // std::cout << "orientation after: " << orientation << std::endl;
-        }
         pinocchio::SE3 frame_pose(orientation, pos);
 
         torc::models::vectorx_t config = mpc_model_->GetNeutralConfig();
@@ -321,14 +302,6 @@ namespace robot {
         }
 
         pinocchio::SE3 base_pose = mpc_model_->TransformPose(frame_pose, "torso_tracking_camera", base_link_name_, config);
-        // torc::models::matrix3_t Rz_up;
-        // Rz_up << 1,0,0,
-        //         0,0,-1,
-        //         0,1,0;
-        // base_pose.rotation() = Rz_up*base_pose.rotation();
-
-        // torc::models::quat_t z_axis_rotation(0, 0, 0, 1);
-        // base_pose.rotation() = z_axis_rotation*base_pose.rotation();
 
         // Now adjust by the default pose
         // base_pose = default_pose_.inverse()*base_pose;
@@ -570,8 +543,6 @@ namespace robot {
 
 
             // torc::models::vector3_t base_position = mpc_model_->DeduceBasePosition(left_toe_pos, "left_toe", q);
-            torc::models::vector3_t base_position = mpc_model_->DeduceBasePosition(foot_pos, this->get_parameter("foot_frames").as_string_array()[0], q);
-
             torc::models::matrix3_t plane_rotation = mpc_model_->FitBasePose(this->get_parameter("foot_frames").as_string_array(), 0, q);
 
             // plane_rotation.setIdentity();
@@ -580,10 +551,17 @@ namespace robot {
             for (int i = 0; i < 2; i++) {
                 default_pose_.translation()[i] = base_pos_[i];
             }
+            q.segment<4>(3) = (torc::models::quat_t(plane_rotation.inverse())*base_quat_).coeffs();
+
+            torc::models::vector3_t base_position = mpc_model_->DeduceBasePosition(foot_pos, this->get_parameter("foot_frames").as_string_array()[0], q);
+
+            std::cout << "desired base height: " << base_position[2] << std::endl;
+            std::cout << "actual base height: " << base_pos_[2] << std::endl;
+
             default_pose_.translation()[2] = -base_position[2] + base_pos_[2];
 
             // throw std::runtime_error("ACCOUNT FOR ALL 3 DOF ROATION!");
-            default_pose_.rotation() = plane_rotation;
+            default_pose_.rotation() = plane_rotation.inverse();
             // default_pose_.rotation() = base_quat_.toRotationMatrix();
             // default_pose_.rotation().topLeftCorner<2,2>() *= base_quat_.toRotationMatrix().topLeftCorner<2,2>();    // Rotate the yaw
 
