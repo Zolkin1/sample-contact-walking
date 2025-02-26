@@ -87,9 +87,9 @@ namespace robot {
 
         // Create model
         this->declare_parameter<std::string>("robot_name", "");
-        std::string robot_name = this->get_parameter("robot_name").as_string();
-        RCLCPP_INFO_STREAM(this->get_logger(), "Config yaml robot name: " << robot_name);
-        std::string model_name = name + robot_name + "_model";
+        robot_name_ = this->get_parameter("robot_name").as_string();
+        RCLCPP_INFO_STREAM(this->get_logger(), "Config yaml robot name: " << robot_name_);
+        std::string model_name = name + robot_name_ + "_model";
         mpc_model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path,  mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values);
 
         this->declare_parameter<std::string>("base_link_name");
@@ -176,7 +176,7 @@ namespace robot {
         recieved_first_encoders_ = true;
     }
 
-    // TODO: Renam to base mocap
+    // TODO: Rename to base mocap
     void RobotEstimator::PelvisMocapCallback(const geometry_msgs::msg::PoseStamped& msg) {
         prev_base_pos_ = base_pos_;
         prev_base_quat_ = base_quat_;
@@ -285,6 +285,34 @@ namespace robot {
         torc::models::vector3_t pos;
         pos << msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z;
         torc::models::quat_t orientation(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z);
+        if (robot_name_ == "go2") {
+            // torc::models::quat_t y_axis_rotation(0, 0, 1, 0);
+            torc::models::matrix3_t Ry;
+            Ry << 0,0,1,
+                  0,1,0,
+                  -1,0,0;
+            // orientation = y_axis_rotation*orientation;
+
+            torc::models::matrix3_t Rx;
+            Rx << 1,0,0,
+                  0,0,1,
+                  0,-1,0;
+
+            // Rotate 180 about the x axis
+            // torc::models::quat_t x_axis_rotation(0, 1, 0, 0);
+            // orientation = x_axis_rotation*orientation;
+
+            // TODO: Why is the orientation wrong?!?!
+            torc::models::matrix3_t Rz_up;
+            Rz_up << 1,0,0,
+                    0,0,-1,
+                    0,1,0;
+            // std::cout << "orientation before: " << orientation << std::endl;
+            // orientation = torc::models::quat_t(Rz_up)*orientation; //*torc::models::quat_t(Rx); //*x_axis_rotation;
+
+            // orientation = torc::models::quat_t(Ry)*orientation;
+            // std::cout << "orientation after: " << orientation << std::endl;
+        }
         pinocchio::SE3 frame_pose(orientation, pos);
 
         torc::models::vectorx_t config = mpc_model_->GetNeutralConfig();
@@ -293,6 +321,14 @@ namespace robot {
         }
 
         pinocchio::SE3 base_pose = mpc_model_->TransformPose(frame_pose, "torso_tracking_camera", base_link_name_, config);
+        // torc::models::matrix3_t Rz_up;
+        // Rz_up << 1,0,0,
+        //         0,0,-1,
+        //         0,1,0;
+        // base_pose.rotation() = Rz_up*base_pose.rotation();
+
+        // torc::models::quat_t z_axis_rotation(0, 0, 0, 1);
+        // base_pose.rotation() = z_axis_rotation*base_pose.rotation();
 
         // Now adjust by the default pose
         // base_pose = default_pose_.inverse()*base_pose;
@@ -550,6 +586,8 @@ namespace robot {
             default_pose_.rotation() = plane_rotation;
             // default_pose_.rotation() = base_quat_.toRotationMatrix();
             // default_pose_.rotation().topLeftCorner<2,2>() *= base_quat_.toRotationMatrix().topLeftCorner<2,2>();    // Rotate the yaw
+
+            // TODO: I should be able to verify that all the feet are very close to the same height after this
 
             RCLCPP_WARN_STREAM(this->get_logger(), "SETTING DEFAULT POSE TO CURRENT STATE!");
 

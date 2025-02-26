@@ -1368,7 +1368,7 @@ Stephen Brawner (brawner@gmail.com)
   <!-- Base Tracking Camera (t265) -->
   <link name="torso_tracking_camera"></link>
   <joint name="base_tracking_camera_joint" type="fixed">
-    <origin xyz="-0.0635 -0.12 -0.01" rpy="0.0 0.0 1.57079"/>
+    <origin xyz="-0.0635 -0.12 -0.01" rpy="0.0 3.14159 1.57079"/>
     <parent link="torso"/>
     <child link="torso_tracking_camera"/>
   </joint>

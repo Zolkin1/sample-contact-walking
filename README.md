@@ -157,6 +157,17 @@ Wait for the viz software to connect then run in a seperate terminal:
 obk-activate g1_hardware
 ```
 
+### Launch the Go2 Hardware stack:
+```
+obk-launch config_file_path=${SAMPLE_WALKING_ROOT}/sample_contact_walking/configs/go2_hardware_config.yaml device_name=onboard auto_start=configure bag=false
+```
+
+Wait for the viz software to connect then run in a seperate terminal:
+```
+obk-activate go2_hardware
+```
+
+
 ### Seting up the Mocap
 We use https://github.com/L2S-lab/natnet_ros2 which I hope to eventually add into obelisk for automatic installation.
 Make sure this is installed. For now I am installing it in `~/sample-contact-walking`
@@ -188,7 +199,12 @@ obk-activate g1_basic_ctrl_hardware
 ```
 
 
-## On the Robot
+## On the G1 Robot
 ```
 ros2 launch perception_node perception_launch_tracking_only.py
+```
+
+## On the Go2 Robot
+```
+ros2 run realsense_ros2 rs_t265_node
 ```

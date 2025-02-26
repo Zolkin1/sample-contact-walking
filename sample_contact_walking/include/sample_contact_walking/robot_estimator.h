@@ -107,5 +107,8 @@ namespace robot {
 
             // Default pose
             pinocchio::SE3 default_pose_;
+
+            // Name
+            std::string robot_name_;
     };
 } // namespace robot
