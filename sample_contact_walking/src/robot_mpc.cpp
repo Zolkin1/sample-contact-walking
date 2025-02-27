@@ -337,6 +337,15 @@ namespace robot
             throw std::runtime_error("kp, kd, or joint name sizes don't match!");
         }
 
+        RCLCPP_INFO_STREAM(this->get_logger(), "Using kp: ");
+        for (int i = 0; i < kp_.size(); i++) {
+            RCLCPP_INFO_STREAM(this->get_logger(), kp_[i]);
+        }
+
+        RCLCPP_INFO_STREAM(this->get_logger(), "Using kd: ");
+        for (int i = 0; i < kd_.size(); i++) {
+            RCLCPP_INFO_STREAM(this->get_logger(), kd_[i]);
+        }
 
         // Parse contact schedule info
         ParseContactParameters();
@@ -610,8 +619,10 @@ namespace robot
                 viz_timer.Toc();
                 std::cout << "viz publish took " << viz_timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
 
-                // TODO: Remove
-                // throw std::runtime_error("One MPC cycle completed!");
+                // // TODO: Remove
+                // if (mpc_->GetSolveCounter() >= 100) {
+                //     throw std::runtime_error("MPC cycles completed!");
+                // }
             } else {
                 first_loop = true;
             }
@@ -731,6 +742,15 @@ namespace robot
         // Reference generation
         {
             std::lock_guard<std::mutex> lock(polytope_mutex_);
+            // Update the ground heights    // TODO: Change this when I add the height patch back in
+            mpc_model_->FirstOrderFK(q);
+            for (const auto& frame : mpc_settings_->contact_frames) {
+                if (contact_schedule_.InContact(frame, 0)) {
+                    vector3_t contact_pos = mpc_model_->GetFrameState(frame).placement.translation();
+                    mpc_->SetDefaultGroundHeight(frame, contact_pos[2]);
+                }
+            }
+
             mpc_->UpdateContactSchedule(contact_schedule_);
             std::map<std::string, std::vector<torc::mpc::vector3_t>> contact_foot_pos;
             const auto [q_ref, v_ref] = ref_gen_->GenerateReference(q, v, q_target_.value(), v_target_.value(), mpc_->GetSwingTrajectory(),
@@ -984,10 +1004,10 @@ namespace robot
 
             if (ctrl_state_ == SeekInitialCond) {
                 // When going to the initial condition, use smaller gains
-                for (int i = 0; i < msg.kp.size(); i++) {
-                    msg.kp[i] *= 0.1;
-                    msg.kd[i] *= 0.1;
-                }
+                // for (int i = 0; i < msg.kp.size(); i++) {
+                //     msg.kp[i] *= 0.1;
+                //     msg.kd[i] *= 0.1;
+                // }
             } else if (ctrl_state_ == Mpc) {
                 // NOTE: This is only for use with the WBC
                 // When going to the initial condition, use smaller gains

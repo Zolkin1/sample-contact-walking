@@ -1,11 +1,11 @@
 general_settings:
-  nodes: 32
+  nodes: 25 #32
   verbose: False #True
   node_dt_type: two_groups # Even, two_groups, Adaptive
   node_group_1_n: 5
-  node_group_2_n: 27
+  node_group_2_n: 20 #27
   node_dt_1: 0.015 #0.015 #0.015 
-  node_dt_2: 0.025 #0.015 #0.015 #0.025
+  node_dt_2: 0.035 #0.025
   compile_derivatives: False
   base_frame: "torso"
   scale_cost: False

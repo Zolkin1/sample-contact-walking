@@ -8,23 +8,19 @@ onboard:
         urdf_path: /home/zolkin/sample-contact-walking/go2_model/urdf/go2_description.urdf
         robot_type: 0
         robot_name: "go2"
-        mpc_loop_log: "go2_mpc_loop_log.csv"
+        mpc_loop_log: "go2_hardware_mpc_loop_log.csv"
 # ---------- Viz ---------- #
         viz_frames: ["torso", "FR_foot", "FL_foot", "RR_foot", "RL_foot"]
         viz_forces: True
         viz_force_scale: 0.01
         force_frames: ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
         polytope_frames: ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
-# ---------- Swing trajectory ---------- #
-        default_swing_height: 0.08 # 0.1
-        default_stand_foot_height: 0.01 #0.01
-        apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
         mpc_loop_period_sec: 0.008 #0.01 #0.008 #0.01 #0.01
         max_mpc_solves: 1000000 #-37 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.3 #0.2 #0.25
-        first_swing_time: 200. #0.1 #0.1 #2.
+        first_swing_time: 2000. #0.1 #0.1 #2.
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -183,14 +179,14 @@ onboard:
       executable: state_estimator
       params:
         base_link_name: "base_link"
-        mpc_settings_path:  "/home/zolkin/sample-contact-walking/sample_contact_walking/configs/go2_mpc_config.yaml"
+        mpc_settings_path:  "/home/zolkin/sample-contact-walking/sample_contact_walking/configs/go2_mpc_hardware_config.yaml"
         urdf_path: "/home/zolkin/sample-contact-walking/go2_model/urdf/go2_description.urdf"
         robot_name: "go2"
         use_sim_state: false #true
         pelvis_ang_vel_lpf_coefs: [0.05, 0.15, 0.8] # TODO: Tune these
         joint_vel_variance: 0. #0.0004
         base_vel_variance: 0. #0.005 #0.0004
-        log_file_name: "mpc_logs/go2_sim_estimator_log.csv"
+        log_file_name: "mpc_logs/go2_hardware_estimator_log.csv"
         base_pose_sensor: 0 #2
         foot_frames: ["RL_foot", "FR_foot", "FL_foot", "RR_foot"]
         foot_offset: 0.032 #0.032 seems to be pretty accurate # NOTE: This number is important
@@ -199,9 +195,7 @@ onboard:
       publishers:
         - ros_parameter: pub_est_setting
           topic: /obelisk/go2/est_state
-          history_depth: 10
           callback_group: None
-          non_obelisk: False
       timers:
         - ros_parameter: timer_est_setting
           timer_period_sec: 0.002
@@ -211,35 +205,35 @@ onboard:
         - ros_parameter: joint_encoders_setting
           topic: /obelisk/go2/joint_encoders
           # msg_type: ObkJointEncoders
-          history_depth: 10
+          history_depth: 1
           callback_group: None
       # ---------- Mocap ---------- #
         - ros_parameter: mocap_setting  # TODO: Rename
           topic: /obelisk/go2/torso_pose
-          history_depth: 10
+          history_depth: 1
           callback_group: None
       # ---------- Torso IMU ---------- #
         - ros_parameter: pelvis_imu_setting # TODO: Rename
           topic: /obelisk/go2/torso_imu
-          history_depth: 10
+          history_depth: 1
           callback_group: None
       # ---------- Torso Camera ---------- #
         - ros_parameter: torso_camera_setting
           # topic: /obelisk/go2/torso_odom
           topic: /rs_t265/odom
-          history_depth: 10
+          history_depth: 1
           callback_group: None
       # ---------- True Sim State ---------- #
         - ros_parameter: true_sim_sub_setting
           topic: /obelisk/go2/true_sim_state
-          history_depth: 10
+          history_depth: 1
           callback_group: None
       # ----- Joystick subscriber ----- #
         - ros_parameter: joystick_sub_setting
           topic: /obelisk/go2/joy
   # sensing:
   robot:
-    - is_simulated: True
+    - is_simulated: False
       pkg: obelisk_unitree_cpp
       executable: obelisk_unitree_go2_hardware
       params:

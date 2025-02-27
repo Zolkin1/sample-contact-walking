@@ -330,12 +330,29 @@ namespace robot {
         for (int i = 0; i < joint_vels_.size(); i++) {
             vel[6 + i] = joint_vels_[i];
         }
-        pinocchio::Motion base_twist = mpc_model_->DeduceBaseVelocity(camera_twist, pinocchio::LOCAL, "torso_tracking_camera", base_link_name_, config, vel);
+        // TODO: Come back to this on the G1!!
+        // pinocchio::Motion base_twist = mpc_model_->DeduceBaseVelocity(camera_twist, pinocchio::LOCAL, "torso_tracking_camera", base_link_name_, config, vel);
+        // ----- TODO ------ //
+        // TODO: INVESTIGATE!! Why does the velocities not seem to match the transform I expect from the camera?!?!
+        // Rotate velocities by 180 about x
+
+        // TODO: Try without this!
+        // pinocchio::SE3 x_rotation(torc::models::quat_t(0, 1, 0, 0), torc::models::vector3_t(0,0,0));
+        // camera_twist = x_rotation.act(camera_twist);
+        // ----- TODO ------ //
+
+        // TODO: Why does this new velocity seem to make things worse????
+
+        // TODO: I think after these fixes the x and y velocities are still swapped, or maybe the plotting is wrong in the logging?
+
+        // TODO: Put back
+        pinocchio::Motion base_twist = mpc_model_->TransformVelocityToBase(camera_twist, "torso_tracking_camera_vel_frame", config);
 
         base_vel_local_[0] = base_twist.linear()[0];
         base_vel_local_[1] = base_twist.linear()[1];
         base_vel_local_[2] = base_twist.linear()[2];
 
+        // TODO: Consider adding this back
         base_ang_vel_local_[0] = base_twist.angular()[0];
         base_ang_vel_local_[1] = base_twist.angular()[1];
         base_ang_vel_local_[2] = base_twist.angular()[2];
