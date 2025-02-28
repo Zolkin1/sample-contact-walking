@@ -16,11 +16,11 @@ onboard:
         force_frames: ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
         polytope_frames: ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.008 #0.01 #0.008 #0.01 #0.01
+        mpc_loop_period_sec: 0.01 #0.01 # 0.008
         max_mpc_solves: 1000000 #-37 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.3 #0.2 #0.25
-        first_swing_time: 2000. #0.1 #0.1 #2.
+        first_swing_time: 5. #0.1 #0.1 #2.
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -55,14 +55,22 @@ onboard:
                               "RR_hip_joint",
                               "RR_thigh_joint",
                               "RR_calf_joint",]
-        kp: [50., 50, 50,
-             50., 50, 50,
-             50., 50, 50,
-             50., 50, 50]
-        kd: [8., 8, 8,
-             8, 8, 8,
-             8, 8, 8,
-             8, 8, 8]
+        kp: [60., 60, 50,
+             60., 60, 50,
+             60., 60, 50,
+             60., 60, 50]
+        # kp: [50., 50, 50,
+        #      50., 50, 50,
+        #      50., 50, 50,
+        #      50., 50, 50]
+        # kd: [8., 8, 8,
+        #      8, 8, 8,
+        #      8, 8, 8,
+        #      8, 8, 8]
+        kd: [4., 4, 4,
+             4, 4, 4,
+             4, 4, 4,
+             4, 4, 4]
 # ---------- Step Planner ---------- #
         foot_offsets: [-0.1934, 0.142, 0.2234, -0.142, 0.2234, 0.142, -0.1934, -0.142]  # TODO: Make sure these are correct
       callback_groups: 
@@ -198,7 +206,7 @@ onboard:
           callback_group: None
       timers:
         - ros_parameter: timer_est_setting
-          timer_period_sec: 0.002
+          timer_period_sec: 0.002 # TODO: is 0.001 better?
           callback_group: None
       subscribers:
       # ---------- Joint Encoders ---------- #
@@ -245,10 +253,10 @@ onboard:
                     50., 50., 50.,    # R knee, ankle
                     ]
         default_kd: [
-                    8., 8., 8.,       # L hip
-                    8., 8., 8.,       # L knee, ankle
-                    8., 8., 8.,       # R hip
-                    8., 8., 8.,       # R knee, ankle
+                    4., 4., 4.,       # L hip
+                    4., 4., 4.,       # L knee, ankle
+                    4., 4., 4.,       # R hip
+                    4., 4., 4.,       # R knee, ankle
                     ]
     # - is_simulated: True
     #   pkg: sample_contact_walking
