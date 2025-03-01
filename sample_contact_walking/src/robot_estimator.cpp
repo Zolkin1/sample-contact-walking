@@ -352,10 +352,11 @@ namespace robot {
         base_vel_local_[1] = base_twist.linear()[1];
         base_vel_local_[2] = base_twist.linear()[2];
 
+        // TODO: Fix! Looks like x and y are negative of what they should be!
         // TODO: Consider adding this back
-        base_ang_vel_local_[0] = base_twist.angular()[0];
-        base_ang_vel_local_[1] = base_twist.angular()[1];
-        base_ang_vel_local_[2] = base_twist.angular()[2];
+        // base_ang_vel_local_[0] = base_twist.angular()[0];
+        // base_ang_vel_local_[1] = base_twist.angular()[1];
+        // base_ang_vel_local_[2] = base_twist.angular()[2];
 
         received_first_camera_ = true;
     }
@@ -384,6 +385,7 @@ namespace robot {
 
             // TODO: Rotate into the correct frame. For the G1 this sould be an identity rotation
 
+            // TODO: Put back
             base_ang_vel_local_[0] = filtered_ang_vel(0);
             base_ang_vel_local_[1] = filtered_ang_vel(1);
             base_ang_vel_local_[2] = filtered_ang_vel(2);

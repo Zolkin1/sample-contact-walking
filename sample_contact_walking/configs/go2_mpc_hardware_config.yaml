@@ -17,7 +17,7 @@ general_settings:
   log_file_name: "mpc_logs/go2_hardware_mpc_sim_log.csv"
 solver_settings:
 # HPIPM:
-  mode: Balance #Speed
+  mode: Speed #Balance #Speed
   alpha_min: 1e-8
   max_iter: 10
   mu0: 10 #10 
@@ -31,7 +31,7 @@ solver_settings:
   ric_alg: 1
   split_step: 0
 constraints:
-  friction_coef: 0.6 #0.7 #0.5  # TODO: Tune this
+  friction_coef: 0.5 #0.4 #0.6 #0.7 #0.5  # TODO: Tune this
   friction_margin: 2
   max_grf: 250
   min_grf: 10 #5

@@ -1091,10 +1091,12 @@ namespace robot
         static torc::mpc::vector3_t q_base_target = q.head<3>();
         static torc::mpc::vector4_t q_base_quat_target = q.segment<4>(3);
 
+        // TODO: Consider putting back
         q_base_target(0) = q(0);
 
         if (v_target_.value()[0].head<2>().norm() > 0.01) { // I don't love it but its here for the drift
             q_base_target(1) = q(1);
+            // q_base_target(0) = q(0);
             q_base_quat_target = q.segment<4>(3);   // TODO: Play with this a bit
         }
 
