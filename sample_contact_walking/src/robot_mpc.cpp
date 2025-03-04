@@ -52,6 +52,12 @@ namespace robot
                     "joystick_sub_setting", "joystick_sub",
                     std::bind(&MpcController::JoystickCallback, this, std::placeholders::_1));
 
+        // ----- Force Sensor Subscriber ----- //
+        this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkForceSensor>(
+            "force_sub_setting", "force_sub",
+            std::bind(&MpcController::ForceSensorCallback, this, std::placeholders::_1));
+
+
         // ----- Target Publisher ----- //
         this->RegisterObkPublisher<sample_contact_msgs::msg::CommandedTarget>(
                     "target_pub_setting", "target_pub");
@@ -415,16 +421,25 @@ namespace robot
         this->declare_parameter<std::vector<std::string>>("polytope_frames", {""});
         this->get_parameter("polytope_frames", viz_polytope_frames_);
 
+        // ------------------------------------ //
+        // ---------- Make Log Files ---------- //
+        // ------------------------------------ //
         this->declare_parameter<std::string>("mpc_loop_log", {"mpc_loop_log.csv"});
         this->declare_parameter<std::string>("mpc_timing_log", {"mpc_timing_log.csv"});
+        this->declare_parameter<std::string>("contact_schedule_log", {"contact_schedule_log.csv"});
+        this->declare_parameter<std::string>("force_sensor_log", {"force_sensor_log.csv"});
         std::string mpc_loop_log_name = this->get_parameter("mpc_loop_log").as_string();
         std::string mpc_timing_log_name = this->get_parameter("mpc_timing_log").as_string();
+        std::string contact_schedule_log_name = this->get_parameter("contact_schedule_log").as_string();
+        std::string foot_sensor_log_name = this->get_parameter("force_sensor_log").as_string();
 
         this->get_parameter("polytope_frames", viz_polytope_frames_);
 
         time_offset_ = this->now().seconds();
         log_file_.open("mpc_logs/" + mpc_loop_log_name);
         timing_log_file_.open("mpc_logs/" + mpc_timing_log_name);
+        contact_schedule_log_file_.open("mpc_logs/" + contact_schedule_log_name);
+        force_sensor_log_file_.open("mpc_logs/" + foot_sensor_log_name);
 
         // Spin up MPC thread
         mpc_thread_ = std::thread(&MpcController::MpcThread, this);
@@ -437,6 +452,8 @@ namespace robot
     MpcController::~MpcController() {
         log_file_.close();
         timing_log_file_.close();
+        contact_schedule_log_file_.close();
+        force_sensor_log_file_.close();
 
         if (mpc_thread_.joinable()) {
             mpc_thread_.join();
@@ -773,7 +790,7 @@ namespace robot
                 // Assign start time too
                 traj_start_time_ = time;
 
-                K_ = mpc_->GetRiccatiFeedback();
+                // K_ = mpc_->GetRiccatiFeedback();
             }
         }
         timer.Toc();
@@ -787,6 +804,12 @@ namespace robot
         prep_timer.Tic();
         // Part of the preperation phase
         mpc_->LogMPCCompute(mpc_start_time - time_offset_, q, v);
+
+        // {
+        //     std::lock_guard<std::mutex> lock(polytope_mutex_);
+        //     // Log contact schedule
+        //     contact_schedule_.Log(contact_schedule_log_file_, mpc_start_time - time_offset_);
+        // }
         prep_timer.Toc();
 
         return {timer.Duration<std::chrono::microseconds>().count()/1000.0, prep_timer.Duration<std::chrono::microseconds>().count()/1000.0};
@@ -1091,11 +1114,14 @@ namespace robot
         static torc::mpc::vector3_t q_base_target = q.head<3>();
         static torc::mpc::vector4_t q_base_quat_target = q.segment<4>(3);
 
-        // TODO: Consider putting back
+        // // TODO: Consider putting back
         q_base_target(0) = q(0);
+        q_base_target(1) = q(1);
+        // q_base_quat_target = q.segment<4>(3);   // TODO: Play with this a bit
 
         if (v_target_.value()[0].head<2>().norm() > 0.01) { // I don't love it but its here for the drift
-            q_base_target(1) = q(1);
+            // // I wonder if sensor noise make this global position hard to track
+            // q_base_target(1) = q(1);
             // q_base_target(0) = q(0);
             q_base_quat_target = q.segment<4>(3);   // TODO: Play with this a bit
         }
@@ -1108,7 +1134,6 @@ namespace robot
         const quat_t q_quat(q.segment<QUAT_VARS>(POS_VARS));
         vector3_t euler_angles = q_quat.toRotationMatrix().eulerAngles(2, 1, 0);
 
-        // quat_t yaw_quaternion(Eigen::AngleAxisd(euler_angles[2], Eigen::Vector3d::UnitZ()));
         quat_t yaw_quaternion(q_quat.w(), 0, 0, q_quat.z()); 
 
         q_target_.value()[0](3) = yaw_quaternion.x();
@@ -1768,6 +1793,7 @@ namespace robot
         while (next_right_insertion_time_ < 1) {
             for (const auto& frame : right_frames_) {
                 contact_schedule_.InsertSwingByDuration(frame, next_right_insertion_time_,  swing_time_);
+                contact_schedule_log_file_ << "0," << this->now().seconds() - time_offset_ << "," << next_right_insertion_time_ << "," << next_right_insertion_time_ + swing_time_ << std::endl;
             }
 
             next_right_insertion_time_ += 2*swing_time_;
@@ -1776,6 +1802,7 @@ namespace robot
         while (next_left_insertion_time_ < 1) {
             for (const auto& frame : left_frames_) {
                 contact_schedule_.InsertSwingByDuration(frame, next_left_insertion_time_,  swing_time_);
+                contact_schedule_log_file_ << "1," << this->now().seconds() - time_offset_ << "," << next_left_insertion_time_ << "," << next_left_insertion_time_ + swing_time_ << std::endl;
             }
 
             next_left_insertion_time_ += 2*swing_time_;
@@ -1850,7 +1877,7 @@ namespace robot
         // }
     }
 
-     void MpcController::ContactPolytopeCallback(const sample_contact_msgs::msg::ContactPolytopeArray& msg) {
+    void MpcController::ContactPolytopeCallback(const sample_contact_msgs::msg::ContactPolytopeArray& msg) {
         // Extract the polytopes
         std::vector<torc::mpc::ContactInfo> polytopes;
 
@@ -1868,7 +1895,12 @@ namespace robot
         step_planner_->UpdateContactPolytopes(polytopes);
 
         recieved_polytope_ = true;
-     }
+    }
+
+    void MpcController::ForceSensorCallback(const obelisk_sensor_msgs::msg::ObkForceSensor& msg) {
+        // FR, FL, RL, RR
+        force_sensor_log_file_ << this->now().seconds() - time_offset_ << "," << msg.forces[0] << "," << msg.forces[1] << "," << msg.forces[2] << "," << msg.forces[3] << std::endl;
+    }
 
     void MpcController::JoystickCallback(const sensor_msgs::msg::Joy& msg) {
         // ----- Axes ----- //

@@ -8,7 +8,9 @@ onboard:
         urdf_path: /home/zolkin/sample-contact-walking/go2_model/urdf/go2_description.urdf
         robot_type: 0
         robot_name: "go2"
-        mpc_loop_log: "go2_mpc_loop_log.csv"
+        mpc_loop_log: "go2_sim_loop_log.csv"
+        contact_schedule_log: "go2_sim_contact_schedule_log.csv"
+        mpc_timing_log: "go2_sim_timing_log.csv"
 # ---------- Viz ---------- #
         viz_frames: ["torso", "FR_foot", "FL_foot", "RR_foot", "RL_foot"]
         viz_forces: True
@@ -30,6 +32,9 @@ onboard:
         # Diagonal pairs
         right_frames: ["RL_foot", "FR_foot"]
         left_frames: ["FL_foot", "RR_foot"]
+        # Side Pairs
+        # right_frames: ["RL_foot", "FL_foot"]
+        # left_frames: ["FR_foot", "RR_foot"]
 # ---------- Targets ---------- #
         mpc_ic_config: [0, 0, 0.28,
                     0, 0, 0, 1,         # Why is the quaternion flipped here?

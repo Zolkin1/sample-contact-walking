@@ -5,6 +5,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "obelisk_controller.h"
 
+#include "obelisk_sensor_msgs/msg/obk_force_sensor.hpp"
 #include "sensor_msgs/msg/joy.hpp"
 
 // #include "sample_contact_msgs/msg/contact_schedule.hpp"
@@ -56,6 +57,9 @@ namespace robot {
             // void ContactScheduleCallback(const sample_contact_msgs::msg::ContactSchedule& msg);
             void AddPeriodicContacts();
             void ContactPolytopeCallback(const sample_contact_msgs::msg::ContactPolytopeArray& msg);
+
+            // Feet force sensor callback
+            void ForceSensorCallback(const obelisk_sensor_msgs::msg::ObkForceSensor& msg);
 
             // Parse contact into
             void ParseContactParameters();
@@ -195,6 +199,8 @@ namespace robot {
             double time_offset_;
             std::ofstream log_file_;
             std::ofstream timing_log_file_;
+            std::ofstream contact_schedule_log_file_;
+            std::ofstream force_sensor_log_file_;
     };
 
     MpcController* MpcController::mujoco_sim_instance_ = nullptr;

@@ -8,7 +8,10 @@ onboard:
         urdf_path: /home/zolkin/sample-contact-walking/go2_model/urdf/go2_description.urdf
         robot_type: 0
         robot_name: "go2"
-        mpc_loop_log: "go2_hardware_mpc_loop_log.csv"
+        mpc_loop_log: "go2_hardware_loop_log.csv"
+        contact_schedule_log: "go2_hardware_contact_schedule_log.csv"
+        mpc_timing_log: "go2_hardware_timing_log.csv"
+        force_sensor_log: "go2_hardware_force_sensor_log.csv"
 # ---------- Viz ---------- #
         viz_frames: ["torso", "FR_foot", "FL_foot", "RR_foot", "RL_foot"]
         viz_forces: True
@@ -80,7 +83,7 @@ onboard:
         # Low level controller publisher
         - ros_parameter: pub_ctrl_setting
           topic: /obelisk/go2/low_level_control
-          history_depth: 10
+          history_depth: 1
           non_obelisk: False
         # Trajectory viz
         - ros_parameter: viz_pub_setting
@@ -103,15 +106,17 @@ onboard:
         # Estimated state subscriber
         - ros_parameter: sub_est_setting
           topic: /obelisk/go2/est_state # est_state, target_state
-          history_depth: 10
+          history_depth: 1
           callback_group: estimation_cbg
-          non_obelisk: False
         # ----- Joystick subscriber ----- #
         - ros_parameter: joystick_sub_setting
           topic: /obelisk/go2/joy
         # ----- Polytope subscriber ----- #
         - ros_parameter: polytope_sub_setting
           topic: /obelisk/go2/contact_polytopes
+        # ----- Force Sensors ----- #
+        - ros_parameter: force_sub_setting
+          topic: /obelisk/go2/feet_force
       timers:
         # Low level control timer
         - ros_parameter: timer_ctrl_setting
@@ -143,7 +148,7 @@ onboard:
           topic: /obelisk/go2/est_state # est_state, target_state
           msg_type: EstimatedState
           key: "est_state_sub"
-          history_depth: 10
+          history_depth: 1
           callback_group: estimation_cbg
       timers:
         # Contact planning timer
@@ -268,11 +273,14 @@ onboard:
        # ----- Joints ----- #
         - ros_parameter: pub_sensor_setting
           topic: /obelisk/go2/joint_encoders
-          history_depth: 10
+          history_depth: 1
         # ----- IMU ----- #
         - ros_parameter: pub_imu_setting
           topic: /obelisk/go2/torso_imu
-          history_depth: 10
+          history_depth: 1
+        # ----- Force Sensors ----- #
+        - ros_parameter: pub_force_sensor_setting
+          topic: /obelisk/go2/feet_force
           # Sim state
         - ros_parameter: pub_true_sim_state_setting
           topic: /obelisk/go2/true_sim_state
@@ -280,14 +288,13 @@ onboard:
           callback_group: None
       timers:
         - ros_parameter: timer_true_sim_state_setting
-          history_depth: 10
           timer_period_sec: 0.002
           callback_group: None
       subscribers:
       # ----- Control ----- #
         - ros_parameter: sub_ctrl_setting
           topic: /obelisk/go2/low_level_control
-          history_depth: 10
+          history_depth: 1
           callback_group: None
       # ----- Execution FSM ----- #
         - ros_parameter: sub_fsm_setting
