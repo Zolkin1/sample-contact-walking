@@ -98,6 +98,9 @@ namespace robot {
         this->declare_parameter<std::vector<double>>("pelvis_ang_vel_lpf_coefs");
         pelvis_ang_vel_lpf_ = std::make_unique<torc::state_est::LowPassFilter>(this->get_parameter("pelvis_ang_vel_lpf_coefs").as_double_array());
 
+        this->declare_parameter<std::vector<double>>("camera_pos_lpf_coefs");
+        camera_pos_lpf_ = std::make_unique<torc::state_est::LowPassFilter>(this->get_parameter("camera_pos_lpf_coefs").as_double_array());
+
         this->declare_parameter<double>("joint_vel_variance", 0);
         this->get_parameter("joint_vel_variance", jnt_vel_var_);
 
@@ -308,10 +311,12 @@ namespace robot {
         base_pose.rotation() = default_pose_.rotation().inverse()*base_pose.rotation();
         base_pose.translation() = base_pose.translation() - default_pose_.translation();
 
+        // Low pass filter
+        Eigen::Vector3d filtered_pos = camera_pos_lpf_->Filter(base_pose.translation());
 
-        base_pos_.at(0) = base_pose.translation()[0];
-        base_pos_.at(1) = base_pose.translation()[1];
-        base_pos_.at(2) = base_pose.translation()[2];
+        base_pos_.at(0) = filtered_pos[0];
+        base_pos_.at(1) = filtered_pos[1];
+        base_pos_.at(2) = filtered_pos[2];
 
         torc::models::quat_t fb_quat(base_pose.rotation());
 

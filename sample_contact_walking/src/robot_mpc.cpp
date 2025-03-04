@@ -626,15 +626,15 @@ namespace robot
                 // Log timing
                 timing_log_file_ << this->now().seconds() - time_offset_ << "," << prep_time + fb_prep_time << "," << fb_time << std::endl;
 
-                std::cout << "Prep time took " << prep_time + fb_prep_time << " ms" << std::endl;
-                std::cout << "Feedback time took " << fb_time << " ms" << std::endl;
+                // std::cout << "Prep time took " << prep_time + fb_prep_time << " ms" << std::endl;
+                // std::cout << "Feedback time took " << fb_time << " ms" << std::endl;
 
                 // TODO: If this is slow, then I need to move it
                 torc::utils::TORCTimer viz_timer;
                 viz_timer.Tic();
                 PublishTrajViz(traj_mpc_, viz_frames_);
                 viz_timer.Toc();
-                std::cout << "viz publish took " << viz_timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
+                // std::cout << "viz publish took " << viz_timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
 
                 // // TODO: Remove
                 // if (mpc_->GetSolveCounter() >= 100) {
@@ -706,7 +706,7 @@ namespace robot
 
         timer.Toc();
 
-        std::cout << "step planner took " << step_planner_timer.Duration<std::chrono::microseconds>().count()/1000.0 << " ms" << std::endl;
+        // std::cout << "step planner took " << step_planner_timer.Duration<std::chrono::microseconds>().count()/1000.0 << " ms" << std::endl;
 
         return timer.Duration<std::chrono::microseconds>().count()/1000.0;
     }
@@ -744,29 +744,46 @@ namespace robot
             throw std::runtime_error("quat has zero norm!");
         }
 
-        // ----- No Reference ----- //
-        if (!fixed_target_ || controller_target_) {
-            UpdateMpcTargets(q);
-            mpc_->SetConfigTarget(q_target_.value());
-            mpc_->SetVelTarget(v_target_.value());
+        // // ----- No Reference ----- //
+        // if (!fixed_target_ || controller_target_) {
+        //     UpdateMpcTargets(q);
+        //     mpc_->SetConfigTarget(q_target_.value());
+        //     mpc_->SetVelTarget(v_target_.value());
 
-            // std::cout << "q: " << q.transpose() << std::endl;
-            // std::cout << "v: " << v.transpose() << std::endl;
-            // std::cout << "q target 0: " << q_target_.value()[0].transpose() << std::endl;
-            // std::cout << "v target 0: " << v_target_.value()[0].transpose() << std::endl;
-        }
+        //     // std::cout << "q: " << q.transpose() << std::endl;
+        //     // std::cout << "v: " << v.transpose() << std::endl;
+        //     // std::cout << "q target 0: " << q_target_.value()[0].transpose() << std::endl;
+        //     // std::cout << "v target 0: " << v_target_.value()[0].transpose() << std::endl;
+        // }
 
         // Reference generation
         {
             std::lock_guard<std::mutex> lock(polytope_mutex_);
             // Update the ground heights    // TODO: Change this when I add the height patch back in
+            UpdateMpcTargets(q);
             mpc_model_->FirstOrderFK(q);
+            double mean_contact_height = 0;
+            float num_in_contact = 0;
             for (const auto& frame : mpc_settings_->contact_frames) {
                 if (contact_schedule_.InContact(frame, 0)) {
                     vector3_t contact_pos = mpc_model_->GetFrameState(frame).placement.translation();
                     mpc_->SetDefaultGroundHeight(frame, contact_pos[2]);
+                    mean_contact_height += contact_pos[2];
+                    num_in_contact++;
                 }
             }
+            
+            // Compute mean contact height // TODO: Adjust/change for varying heights
+            mean_contact_height /= num_in_contact;
+
+            // Adjust the target height to be relative to the foot height
+            for (int i = 0; i < q_target_.value().GetNumNodes(); i++) {
+                q_target_.value()[i][2] = mean_contact_height + z_target_;
+            }
+
+            // Update the target base height relative to the foot
+            mpc_->SetConfigTarget(q_target_.value());
+            mpc_->SetVelTarget(v_target_.value());
 
             mpc_->UpdateContactSchedule(contact_schedule_);
             std::map<std::string, std::vector<torc::mpc::vector3_t>> contact_foot_pos;
@@ -1115,14 +1132,14 @@ namespace robot
         static torc::mpc::vector4_t q_base_quat_target = q.segment<4>(3);
 
         // // TODO: Consider putting back
-        q_base_target(0) = q(0);
-        q_base_target(1) = q(1);
+        // q_base_target(0) = q(0);
+        // q_base_target(1) = q(1);
         // q_base_quat_target = q.segment<4>(3);   // TODO: Play with this a bit
 
         if (v_target_.value()[0].head<2>().norm() > 0.01) { // I don't love it but its here for the drift
             // // I wonder if sensor noise make this global position hard to track
-            // q_base_target(1) = q(1);
-            // q_base_target(0) = q(0);
+            q_base_target(1) = q(1);
+            q_base_target(0) = q(0);
             q_base_quat_target = q.segment<4>(3);   // TODO: Play with this a bit
         }
 
@@ -1202,9 +1219,9 @@ namespace robot
 
         visualization_msgs::msg::MarkerArray msg;
         msg.markers.resize(viz_frames.size() + force_frames_.size() + num_nom_footholds + num_proj_footholds);
-        std::cerr << "marker size: " << msg.markers.size() << std::endl;
-        std::cerr << "num nom footholds: " << num_nom_footholds << std::endl;
-        std::cerr << "num proj footholds: " << num_proj_footholds << std::endl;
+        // std::cerr << "marker size: " << msg.markers.size() << std::endl;
+        // std::cerr << "num nom footholds: " << num_nom_footholds << std::endl;
+        // std::cerr << "num proj footholds: " << num_proj_footholds << std::endl;
         for (int i = 0; i < viz_frames.size(); i++) {
             msg.markers[i].type = visualization_msgs::msg::Marker::LINE_STRIP;
             msg.markers[i].header.frame_id = "world";
@@ -1988,7 +2005,7 @@ namespace robot
             // In the future we may want to cap the speed above or below 1 and/or we may want a different curve to map them (i.e. log or quadratic)
             for (int i = 0; i < v_target_.value().GetNumNodes(); i++) {
                 // TODO: Add some kind of "damping" so the target velocity doesnt change too much
-                v_target_.value()[i](0) = msg.axes[LEFT_JOY_VERT];
+                v_target_.value()[i](0) = msg.axes[LEFT_JOY_VERT] * 1;
                 v_target_.value()[i](1) = msg.axes[LEFT_JOY_HORZ] * 0; //0.1;
             }
             

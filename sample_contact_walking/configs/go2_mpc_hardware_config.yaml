@@ -5,7 +5,7 @@ general_settings:
   node_group_1_n: 5
   node_group_2_n: 20 #27
   node_dt_1: 0.015 #0.015 #0.015 
-  node_dt_2: 0.035 #0.025
+  node_dt_2: 0.035 #0.05 #0.025
   compile_derivatives: False
   base_frame: "torso"
   scale_cost: False
@@ -17,7 +17,7 @@ general_settings:
   log_file_name: "mpc_logs/go2_hardware_mpc_log.csv"
 solver_settings:
 # HPIPM:
-  mode: Balance #Speed #Balance #Speed
+  mode: Speed #Speed #Balance #Speed  # Seems like speed perfoms better than balance on hardware
   alpha_min: 1e-8
   max_iter: 10
   mu0: 10 #10 
@@ -75,7 +75,7 @@ costs:
       .1, .1, .001,]          # RR
   - type: VelocityTracking
     name: "VelocityTracking"
-    weight: [5, 5, 5, #2, 2, 2,   # Going too high on the x-y tracking can make it go unstable. This means that it is trying to correct but it is making it worse. I need to investigate.
+    weight: [2,2,2, #5, 5, 5, #2, 2, 2,   # Going too high on the x-y tracking can make it go unstable. This means that it is trying to correct but it is making it worse. I need to investigate.
         5, 5, 5,
         #8, 8, 8,
         0.2, 0.2, 0.0001,         # FL

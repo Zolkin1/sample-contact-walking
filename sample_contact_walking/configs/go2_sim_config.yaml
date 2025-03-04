@@ -32,7 +32,7 @@ onboard:
         # Diagonal pairs
         right_frames: ["RL_foot", "FR_foot"]
         left_frames: ["FL_foot", "RR_foot"]
-        # Side Pairs
+        # # Side Pairs
         # right_frames: ["RL_foot", "FL_foot"]
         # left_frames: ["FR_foot", "RR_foot"]
 # ---------- Targets ---------- #

@@ -92,6 +92,7 @@ namespace robot {
 
             // Filters
             std::unique_ptr<torc::state_est::LowPassFilter> pelvis_ang_vel_lpf_;
+            std::unique_ptr<torc::state_est::LowPassFilter> camera_pos_lpf_;
 
             // Robot model
             std::unique_ptr<torc::models::FullOrderRigidBody> mpc_model_; // Reduced model
