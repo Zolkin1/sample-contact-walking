@@ -182,6 +182,12 @@ line_search:
   alpha_step: 0.5 # Since the line search is high variance, lowering this helps
   armijo_constant: 1e-4
 targets:
+  # q_target: [0, 0, 0.33,
+  #            0, 0, 0, 1,         
+  #            0, 0.8, -1.55,
+  #            0, 0.8, -1.55,
+  #            0, 0.8, -1.55,
+  #            0, 0.8, -1.55]
   q_target: [0, 0, 0.28,
               0, 0, 0, 1,
               0, 0.9, -1.8,
