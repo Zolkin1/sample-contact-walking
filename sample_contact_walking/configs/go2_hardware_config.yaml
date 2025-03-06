@@ -14,6 +14,7 @@ onboard:
         force_sensor_log: "go2_hardware_force_sensor_log.csv"
         state_vel_no_step_threshold: 0.8 #0.4 # Make it large to effectively ignore this condition
         command_vel_no_step_threshold: 0.01
+        constant_vel: 0.2
 # ---------- Viz ---------- #
         viz_frames: ["torso", "FR_foot", "FL_foot", "RR_foot", "RL_foot"]
         viz_forces: True
@@ -25,7 +26,7 @@ onboard:
         max_mpc_solves: 1000000 #-37 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.3 #0.3 #0.3 #0.2 #0.25
-        first_swing_time: 5. #0.1 #0.1 #2.
+        first_swing_time: 2. #0.1 #0.1 #2.
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -144,7 +145,10 @@ onboard:
     - pkg: contact_planning
       executable: mujoco_geom_reader
       params:
-        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile_scene.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_2_basic_stones.xml
+        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_3_multiple_stones.xml
       # ----- Tile Scene ---- #
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9"]
       publishers:
@@ -152,9 +156,13 @@ onboard:
         - ros_parameter: pub_ctrl_setting
           topic: /obelisk/go2/contact_polytopes
           msg_type: ContactPolytopeArray
-          key: "contact_schedule_pub"
           history_depth: 10
           callback_group: None
+        # Terrain viz
+        - ros_parameter: viz_pub_setting
+          topic: /obelisk/terrain_viz
+          msg_type: MarkerArray
+          history_depth: 10
       subscribers:
         - ros_parameter: sub_est_setting
           topic: /obelisk/go2/est_state # est_state, target_state
@@ -167,6 +175,9 @@ onboard:
         - ros_parameter: timer_ctrl_setting
           timer_period_sec: 0.05 #0.1
           callback_group: control_cbg
+        # Terrain viz
+        - ros_parameter: viz_timer_setting
+          timer_period_sec: 1.
  # ----------------------------------------------- #
  # ----- High Level/Execution FSM Controller ----- #
  # ----------------------------------------------- #
@@ -285,7 +296,7 @@ onboard:
     #   executable: simulation
     #   params:
     #     ic_keyframe: home #testing
-      # callback_groups:
+    #   # callback_groups:
       publishers:
        # ----- Joints ----- #
         - ros_parameter: pub_sensor_setting
@@ -326,9 +337,11 @@ onboard:
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: go2_model
-          model_xml_path: go2_scene.xml
+          # model_xml_path: go2_scene.xml
           # model_xml_path: go2_tile_scene.xml
           # model_xml_path: go2_tile2_scene.xml
+          # model_xml_path: go2_lab_space_2_basic_stones.xml
+          model_xml_path: go2_lab_space_3_multiple_stones.xml
           n_u: 36
           num_steps_per_viz: 16 # No longer used
           sensor_settings:

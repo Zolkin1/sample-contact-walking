@@ -52,7 +52,7 @@ constraints:
       frame2: "RL_foot"
       radius1: 0.06
       radius2: 0.06
-  polytope_delta: 0.04 #0.06
+  polytope_delta: 0.06 #0.04 #0.06
   polytope_shrinking_rad: 0.5 #0.2
   swing_start_node: 2 #3 # Note you want this set to 1 for all centroidal
   swing_end_node: 32

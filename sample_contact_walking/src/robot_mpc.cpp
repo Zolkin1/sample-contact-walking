@@ -31,7 +31,7 @@ namespace robot
 {
     MpcController::MpcController(const std::string& name) 
     : obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState>(name), 
-        recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(-1), recieved_polytope_(false) {
+        recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(-1), recieved_polytope_(false), constant_vel_(0) {
 
         mujoco_sim_instance_ = this;
 
@@ -98,10 +98,17 @@ namespace robot
 
         // Make the polytope frame associations
         std::vector<std::pair<std::string, std::string>> poly_contact_frames;
-        poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[0], mpc_settings_->contact_frames[0]);
-        poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[0], mpc_settings_->contact_frames[1]);
-        poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[1], mpc_settings_->contact_frames[2]);
-        poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[1], mpc_settings_->contact_frames[3]);
+        if (robot_name == "g1") {
+            poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[0], mpc_settings_->contact_frames[0]);
+            poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[0], mpc_settings_->contact_frames[1]);
+            poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[1], mpc_settings_->contact_frames[2]);
+            poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[1], mpc_settings_->contact_frames[3]);
+        } else if (robot_name == "go2") {
+            poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[0], mpc_settings_->contact_frames[0]);
+            poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[1], mpc_settings_->contact_frames[1]);
+            poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[2], mpc_settings_->contact_frames[2]);
+            poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[3], mpc_settings_->contact_frames[3]);
+        }
         mpc_settings_->poly_contact_pairs = poly_contact_frames;
 
         mpc_model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path, mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values);
@@ -356,6 +363,7 @@ namespace robot
         // Parse contact schedule info
         ParseContactParameters();
 
+        // ------------------------------------------------ //
         // Step Planning
         std::vector<torc::mpc::ContactInfo> contact_polytopes;
         torc::mpc::vector4_t b;
@@ -365,8 +373,24 @@ namespace robot
         std::vector<double> contact_offsets = this->get_parameter("foot_offsets").as_double_array();
         step_planner_ = std::make_unique<torc::step_planning::StepPlanner>(contact_polytopes, mpc_settings_->contact_frames, contact_offsets,
             0.4, mpc_settings_->polytope_delta);
+        // ------------------------------------------------ //
 
-        
+        // ------------------------------------------------ //
+        // No-step settings
+        this->declare_parameter<double>("state_vel_no_step_threshold");
+        this->declare_parameter<double>("command_vel_no_step_threshold");
+        state_no_step_threshold_ = this->get_parameter("state_vel_no_step_threshold").as_double();
+        command_no_step_threshold_ = this->get_parameter("command_vel_no_step_threshold").as_double();
+        // ------------------------------------------------ //
+
+        // ------------------------------------------------ //
+        // Constant velocity mode
+        this->declare_parameter<double>("constant_vel", 0.);
+        constant_vel_ = this->get_parameter("constant_vel").as_double();
+        // ------------------------------------------------ //
+
+
+        // ------------------------------------------------ //
         // Set initial conditions
         this->declare_parameter<std::vector<double>>("mpc_ic_config");
         this->declare_parameter<std::vector<double>>("mpc_ic_vel");
@@ -388,6 +412,7 @@ namespace robot
         traj_out_.SetVelocity(0, v_ic_);
         traj_mpc_ = traj_out_;
         mpc_->SetLinTraj(traj_mpc_);    // TODO: Should I maybe get rid of this and see if it makes a difference?
+        // ------------------------------------------------ //
 
 
         // Go to initial condition
@@ -694,11 +719,13 @@ namespace robot
             // TODO: Consider making this update at a slower rate (20-50Hz)
             step_planner_timer.Tic();
             // TODO: Put back
-            // step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_, nom_footholds_, projected_footholds_);
+            step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_, nom_footholds_, projected_footholds_);
             step_planner_timer.Toc();
             mpc_->UpdateContactSchedule(contact_schedule_); // TODO: Need to do this at the same time as the reference generation
         }
-        AddPeriodicContacts();   // Don't use when getting CS from the other node
+        // if (v_target_.value()[0].head<6>().norm() > 0.001) {
+        //     AddPeriodicContacts();   // Don't use when getting CS from the other node
+        // }
                 
 
         // Linearize around current trajectory
@@ -785,7 +812,7 @@ namespace robot
             mpc_->SetConfigTarget(q_target_.value());
             mpc_->SetVelTarget(v_target_.value());
 
-            mpc_->UpdateContactSchedule(contact_schedule_);
+            // mpc_->UpdateContactSchedule(contact_schedule_); // TODO: Why do I do this here?
             std::map<std::string, std::vector<torc::mpc::vector3_t>> contact_foot_pos;
             const auto [q_ref, v_ref] = ref_gen_->GenerateReference(q, v, q_target_.value(), v_target_.value(), mpc_->GetSwingTrajectory(),
                 mpc_settings_->hip_offsets, contact_schedule_, contact_foot_pos);
@@ -822,11 +849,10 @@ namespace robot
         // Part of the preperation phase
         mpc_->LogMPCCompute(mpc_start_time - time_offset_, q, v);
 
-        // {
-        //     std::lock_guard<std::mutex> lock(polytope_mutex_);
-        //     // Log contact schedule
-        //     contact_schedule_.Log(contact_schedule_log_file_, mpc_start_time - time_offset_);
-        // }
+
+        if (v_target_.value()[0].head<6>().norm() > command_no_step_threshold_ || v.head<6>().norm() > state_no_step_threshold_) {
+            AddPeriodicContacts();   // Don't use when getting CS from the other node
+        }
         prep_timer.Toc();
 
         return {timer.Duration<std::chrono::microseconds>().count()/1000.0, prep_timer.Duration<std::chrono::microseconds>().count()/1000.0};
@@ -1131,12 +1157,21 @@ namespace robot
         static torc::mpc::vector3_t q_base_target = q.head<3>();
         static torc::mpc::vector4_t q_base_quat_target = q.segment<4>(3);
 
+        if (constant_vel_mode_) {
+            for (int i = 0; i < v_target_.value().GetNumNodes(); i++) {
+                // Set a constant velocity in the x direction
+                v_target_.value()[i][0] = constant_vel_;
+                v_target_.value()[i][1] = 0;
+                v_target_.value()[i][5] = 0;
+            }
+        }
+
         // // TODO: Consider putting back
         // q_base_target(0) = q(0);
         // q_base_target(1) = q(1);
         // q_base_quat_target = q.segment<4>(3);   // TODO: Play with this a bit
 
-        if (v_target_.value()[0].head<2>().norm() > 0.01) { // I don't love it but its here for the drift
+        if (v_target_.value()[0].head<6>().norm() > 0.01) { // I don't love it but its here for the drift
             // // I wonder if sensor noise make this global position hard to track
             q_base_target(1) = q(1);
             q_base_target(0) = q(0);
@@ -1950,13 +1985,17 @@ namespace robot
         static rclcpp::Time last_X_press = this->now();
         static rclcpp::Time last_B_press = this->now();
         static rclcpp::Time last_target_update = this->now();
+        static rclcpp::Time last_LT_press = this->now();
+        static rclcpp::Time last_RT_press = this->now();
 
         if (msg.buttons[MENU] && (this->now() - last_menu_press).seconds() > 1e-1) {
             RCLCPP_INFO_STREAM(this->get_logger(), "Press the menu button (three horizontal lines) to recieve this message.\n"
                 "Press (X) to toggle between MPC and PD to the initial condition.\n"
-                "Press (A) to print the current settings.\n"
+                "Press (A) to start a constant forward walk.\n"
                 "Press (Y) to cycle through gaits.\n"
                 "Press (B) to print the MPC timing statistics.\n"
+                "Press Left Trigger to increase the constant velocity value.\n"
+                "Press Right Trigger to decrease the constant velocity value.\n"
                 "Press the vertical DPAD to adjust the nominal standing height.\n"
                 "Right joystick to change the target angle.\n"
                 "Left joystick to adjust the desired velocity.");
@@ -1982,12 +2021,21 @@ namespace robot
             print_timings_ = true;
         }
 
-        if (msg.buttons[A] && (this->now() - last_A_press).seconds() > 1e-1) {
-            std::lock_guard<std::mutex> lock(target_state_mut_);
-            RCLCPP_INFO_STREAM(this->get_logger(), "Current state: " << GetStateString(GetState())
-                    << "\nz target: " << z_target_ 
-                    << "\nx vel target: " << v_target_.value()[0](0)
-                    << "\ny vel target: " << v_target_.value()[0](1));
+        if (msg.buttons[A] && (this->now() - last_A_press).seconds() > 3e-1) {
+            // std::lock_guard<std::mutex> lock(target_state_mut_);
+            // RCLCPP_INFO_STREAM(this->get_logger(), "Current state: " << GetStateString(GetState())
+            //         << "\nz target: " << z_target_ 
+            //         << "\nx vel target: " << v_target_.value()[0](0)
+            //         << "\ny vel target: " << v_target_.value()[0](1));
+
+            if (!constant_vel_mode_) {
+                constant_vel_mode_ = true;
+                RCLCPP_INFO_STREAM(this->get_logger(), "Entering constant velocity mode with v = " << constant_vel_ << "m/s! Press (A) again to exit.");
+            } else {
+                constant_vel_mode_ = false;
+                RCLCPP_INFO_STREAM(this->get_logger(), "Exiting constant velocity mode!");
+            }
+
             last_A_press = this->now();
         }
 
@@ -2006,7 +2054,7 @@ namespace robot
             for (int i = 0; i < v_target_.value().GetNumNodes(); i++) {
                 // TODO: Add some kind of "damping" so the target velocity doesnt change too much
                 v_target_.value()[i](0) = msg.axes[LEFT_JOY_VERT] * 1;
-                v_target_.value()[i](1) = msg.axes[LEFT_JOY_HORZ] * 0; //0.1;
+                v_target_.value()[i](1) = msg.axes[LEFT_JOY_HORZ] * 0; //0. 0.1;
             }
             
             // TODO: Add a angular velocity target too using the right joystick
@@ -2014,7 +2062,19 @@ namespace robot
                 v_target_.value()[i](5) = 1*msg.axes[RIGHT_JOY_HORZ];
             }
         }
-        
+
+        if (msg.axes[LEFT_TRIGGER] < 0.25 && (this->now() - last_LT_press).seconds() > 5e-1) {
+            constant_vel_ += 0.05;
+            RCLCPP_INFO_STREAM(this->get_logger(), "Increasing constant vel by 0.05m/s. Current value: " << constant_vel_ << " m/s.");
+            last_LT_press = this->now();
+        }
+    
+        if (msg.axes[RIGHT_TRIGGER] < 0.25 && (this->now() - last_RT_press).seconds() > 5e-1) {
+            constant_vel_ -= 0.05;
+            RCLCPP_INFO_STREAM(this->get_logger(), "Decreasing constant vel by 0.05m/s. Current value: " << constant_vel_ << " m/s.");
+            last_RT_press = this->now();
+        }
+
         sample_contact_msgs::msg::CommandedTarget target_msg;
         target_msg.z_target = z_target_;
         for (int i = 0; i < v_target_.value()[0].size(); i++) {
@@ -2022,7 +2082,6 @@ namespace robot
         }
 
         this->GetPublisher<sample_contact_msgs::msg::CommandedTarget>("target_pub")->publish(target_msg);
-
     }
 
 } // namespace robot

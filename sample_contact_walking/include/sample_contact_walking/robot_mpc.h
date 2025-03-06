@@ -106,7 +106,12 @@ namespace robot {
             // State flags
             bool recieved_first_state_;
             std::atomic<bool> first_mpc_computed_;
+            std::atomic<bool> constant_vel_mode_;
 
+            // Contact vel mode info
+            double constant_vel_;
+
+            // Viz info
             bool viz_forces_;
             double scale_forces_;
             std::vector<std::string> force_frames_;
@@ -195,6 +200,10 @@ namespace robot {
             std::vector<std::string> control_joint_names_;
             std::vector<double> kp_;
             std::vector<double> kd_;
+
+            // No stepping settings
+            double state_no_step_threshold_;
+            double command_no_step_threshold_;
 
             double time_offset_;
             std::ofstream log_file_;
