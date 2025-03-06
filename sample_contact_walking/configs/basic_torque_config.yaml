@@ -1,87 +1,16 @@
-config: g1_sim
+config: g1_basic_ctrl_hardware
 onboard:
   control:
     - pkg: sample_contact_walking
-      executable: ll_controller
-      params_path: /home/zolkin/sample-contact-walking/sample_contact_walking/configs/g1_mpc_config.yaml
+      executable: basic_torque_control
       params:
-        urdf_path: /home/zolkin/sample-contact-walking/g1_model/urdf/g1_hand.urdf
-        robot_type: 1
-        robot_name: "g1"
-# ---------- Viz ---------- #
-        viz_frames: ["pelvis", "left_toe", "left_heel", "right_toe", "right_heel"]
-        viz_forces: True
-        viz_force_scale: 0.01
-        force_frames: ["left_toe", "left_heel", "right_toe", "right_heel"]
-        polytope_frames: ["left_toe", "right_toe", "left_heel", "right_heel"]
-        # polytope_frames: ["left_heel", "right_heel"]
-# --------- Logging --------- #
-        mpc_loop_log: "sim_mpc_loop_log.csv"
-        mpc_timing_log: "sim_mpc_timing_log.csv"
-# ---------- Swing trajectory ---------- #
-        default_swing_height: 0.08 # 0.1
-        default_stand_foot_height: 0.005 #0.01
-        apex_time: 0.75 # 0.7
-# ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.01 #0.01 #0.013 #0.01 # Can run closer to 8-9 ms now
-        max_mpc_solves: 5000000 #5 #40 #125 
-# ---------- Contact schedule ---------- #
-        swing_time: 0.4 #0.3 #0.4 #NOTE: High frequency makes it a bit more reactive/stable
-        first_swing_time: 500. #0.5 #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
-        double_stance_time: 0.0
-        right_foot_first: True
-        # Diagonal pairs
-        right_frames: ["right_toe", "right_heel"]
-        left_frames: ["left_toe", "left_heel"]
-# ---------- Targets ---------- #
-        # TODO: Remove these
-        mpc_ic_config: [0, 0, 0.75, 
-                        0, 0, 0, 1,
-                        # 0, 0, 0.707106781, 0.707106781, # TODO: Fix the frame issue
-                        -0.42, 0, 0, 0.81, -0.4, #0,
-                        -0.42, 0, 0, 0.81, -0.4, #0,
-                        0,
-                        0, 0.27, 0, 0.5,
-                        0, -0.27, 0, 0.5]
-        mpc_ic_vel: [0., 0, 0, 
-                    0, 0, 0,
-                    0, 0, 0, 0, 0, #0,
-                    0, 0, 0, 0, 0, #0,
-                    0,
-                    0, 0, 0, 0,
-                    0, 0, 0, 0]
-        fixed_target: True #True
-        controller_target: True #True
-# ---------- Skip Indexes ---------- #
-        # Corresponds to Mujoco/hardware, NOT the urdf.
-        # TODO: Check values
-        skip_indexes: [5,   # Left ankle roll
-                       11,  # Right ankle roll
-                      #  16,  # Left wrist roll
-                      #  17,  # Left wrist pitch
-                      #  18,  # Left wrist yaw
-                      #  23,  # Right wrist roll
-                      #  24,  # Right wrist pitch
-                      #  25,] # Right wrist yaw
-                      #  12,  # Waist yaw
-                       17,  # Left wrist roll
-                       18,  # Left wrist pitch
-                       19,  # Left wrist yaw
-                       24,  # Right wrist roll
-                       25,  # Right wrist pitch
-                       26,] # Right wrist yaw
-        skip_joint_vals: [0.,  # Left ankle roll
-                          0,  # Right ankle roll
-                          # 0,  # Waist yaw
-                          0,  # Left wrist roll
-                          0,  # Left wrist pitch
-                          0,  # Left wrist yaw
-                          0,  # Right wrist roll
-                          0,  # Right wrist pitch
-                          0,] # Right wrist yaw
+        num_ctrl_joints: 27
+        log_file_name: "mpc_logs/basic_torque_control_log.csv"
+        # log_file_name: "mpc_logs/basic_torque_control_log_hardware.csv"
+        torque_scalar: 5.
 # --------- Control Params --------- #
         # Note: Right now this will only be used on hardware and NOT in the sim!
-        control_joint_names: ["left_hip_pitch_joint",
+        ctrl_joint_names: ["left_hip_pitch_joint",
             "left_hip_roll_joint",
             "left_hip_yaw_joint",
             "left_knee_joint",
@@ -110,104 +39,78 @@ onboard:
             "right_wrist_roll_joint",
             "right_wrist_pitch_joint",
             "right_wrist_yaw_joint",]
-        kp: [240., 260, 220, 270, 200, 40,
-             240., 260, 220, 270, 200, 40,
-             40,
-             100, 100, 100, 100, 40, 40, 40,
-             100, 100, 100, 100, 40, 40, 40]
-        kd: [4., 4, 4, 4, 4, 2,
-             4, 4, 4, 4, 4, 2,
-             2,
-             2, 2, 2, 2, 5, 5, 5,
-             2, 2, 2, 2, 5, 5, 5,]
+        kp: [0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0.,
+             0.,
+             0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0.,]
+          # [240., 260, 220, 270, 200, 40,
+          #    240., 260, 220, 270, 200, 40,
+          #    40,
+          #    100, 100, 100, 100, 40, 40, 40,
+          #    100, 100, 100, 100, 40, 40, 40]
+        kd: [0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0.,
+             0.,
+             0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0.,]
+        # [4., 4, 4, 4, 4, 2,
+        #      4, 4, 4, 4, 4, 2,
+        #      2,
+        #      2, 2, 2, 2, 5, 5, 5,
+        #      2, 2, 2, 2, 5, 5, 5,]
 # ---------- Step Planner ---------- #
         foot_offsets: [0.025, 0.1164, 0.025, 0.1164, 0.025, -0.1164, 0.025, -0.1164]  # Making the offsets the same so the feet are always projected to the same place
-      callback_groups: 
-        control_cbg: MutuallyExclusiveCallbackGroup
-        estimation_cbg: MutuallyExclusiveCallbackGroup
       publishers:
         # Low level controller publisher
         - ros_parameter: pub_ctrl_setting
           topic: /obelisk/g1/low_level_control
           history_depth: 10
-          non_obelisk: False
-        # Trajectory viz
-        - ros_parameter: viz_pub_setting
-          topic: /obelisk/g1/traj_viz
-          history_depth: 10
-          non_obelisk: True
-        # --- Debug Viz --- #
-        - ros_parameter: state_viz_pub_setting
-          topic: /obelisk/g1/target_state
-          history_depth: 10
-          callback_group: None
-          non_obelisk: False
-        # ----- Joystick publisher ----- #
-        - ros_parameter: joystick_feedback_setting
-          topic: /obelisk/g1/joy_feedback
-        # ----- Target publisher ----- #
-        - ros_parameter: target_pub_setting
-          topic: /obelisk/g1/commanded_target
       subscribers:
         # Estimated state subscriber
         - ros_parameter: sub_est_setting
           topic: /obelisk/g1/est_state # est_state, target_state
           history_depth: 10
-          callback_group: estimation_cbg
-          non_obelisk: False
         # ----- Joystick subscriber ----- #
         - ros_parameter: joystick_sub_setting
           topic: /obelisk/g1/joy
-        # ----- Contact Schedule subscriber ----- #
-        # - ros_parameter: contact_schedule_sub_setting
-        #   topic: /obelisk/g1/contact_schedule
-        # ----- Polytope subscriber ----- #
-        - ros_parameter: polytope_sub_setting
-          topic: /obelisk/g1/contact_polytopes
       timers:
         # Low level control timer
         - ros_parameter: timer_ctrl_setting
           timer_period_sec: 0.001
-          callback_group: control_cbg
-        # --- Debug Viz --- #
-        - ros_parameter: state_viz_timer_setting
-          timer_period_sec: 0.002
-          callback_group: None
-  # ----------------------- #
-  # ----- Geom Reader ----- #
-  # ----------------------- #
-    - pkg: contact_planning
-      executable: mujoco_geom_reader
+ # ----------------------------------------------- #
+ # ----- High Level/Execution FSM Controller ----- #
+ # ----------------------------------------------- #
+    - pkg: obelisk_unitree_cpp
+      executable: obelisk_unitree_joystick
+      # callback_groups:
       params:
-        mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/basic_scene.xml
-        # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
-        # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/g1_tile2_scene.xml
-      # ----- Tile Scene ---- #
-        foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9"]
+        low_level_ctrl_button: 4    # Enter low level control mode with the LEFT_BUMPER
+        high_level_ctrl_button: 5   # Enter high level control mode with the RIGHT_BUMPER
+        # Other controls: Damping on right DPAD, Home on left DPAD, user pose at squares
       publishers:
-        # Contact schedule publisher
+      # ----- Execution FSM ----- #
+        - ros_parameter: pub_exec_fsm_setting
+          topic: /obelisk/g1/exec_fsm
+          history_depth: 10
+          callback_group: None
+      # ----- High Level Control ----- #
         - ros_parameter: pub_ctrl_setting
-          topic: /obelisk/g1/contact_polytopes
-          msg_type: ContactPolytopeArray
-          key: "contact_schedule_pub"
+          topic: /obelisk/g1/high_level_ctrl
           history_depth: 10
           callback_group: None
       subscribers:
+      # ----- Joystick subscriber ----- #
         - ros_parameter: sub_est_setting
-          topic: /obelisk/g1/est_state # est_state, target_state
-          msg_type: EstimatedState
-          key: "est_state_sub"
-          history_depth: 10
-          callback_group: estimation_cbg
+          topic: /obelisk/g1/joy
       timers:
-        # Contact planning timer
         - ros_parameter: timer_ctrl_setting
-          timer_period_sec: 0.05 #0.1
-          callback_group: control_cbg
+          timer_period_sec: 100  # Control callback is not being used
+          callback_group: None
   estimation:
-  # --------------------------------- #
-  # ----------- Estimator ----------- #
-  # --------------------------------- #
+ # ----------------------------------------------- #
+ # ------------------ Estimator ------------------ #
+ # ----------------------------------------------- #
     - pkg: sample_contact_walking
       executable: state_estimator
       params:
@@ -218,11 +121,8 @@ onboard:
         use_sim_state: false #true
         use_torso_mocap: true #false
         pelvis_ang_vel_lpf_coefs: [0.05, 0.15, 0.8] # TODO: Tune these
-        joint_vel_variance: 0. #0.0004
-        base_vel_variance: 0. #0.005 #0.0004
-        log_file_name: "mpc_logs/sim_estimator_log.csv"
-        base_pose_sensor: 0
-      # callback_groups:
+      callback_groups:
+        debug_cbg: MutuallyExclusiveCallbackGroup 
       publishers:
         - ros_parameter: pub_est_setting
           topic: /obelisk/g1/est_state
@@ -246,6 +146,7 @@ onboard:
           callback_group: None
       # ---------- Torso Mocap ---------- #
         - ros_parameter: torso_mocap_setting
+          # topic: G1_torso/pose
           topic: /obelisk/g1/torso_pose
           history_depth: 10
           callback_group: None
@@ -259,24 +160,40 @@ onboard:
           topic: /obelisk/g1/pelvis_imu
           history_depth: 10
           callback_group: None
-      # ---------- Torso Camera ---------- #
-        - ros_parameter: torso_camera_setting
-          topic: /obelisk/g1/torso_odom
-          history_depth: 10
-          callback_group: None
-      # ----- Joystick subscriber ----- #
-        - ros_parameter: joystick_sub_setting
-          topic: /obelisk/g1/joy
       # ---------- True Sim State ---------- #
         - ros_parameter: true_sim_sub_setting
           topic: /obelisk/g1/true_sim_state
           history_depth: 10
           callback_group: None
   # sensing:
-  # --------------------------------- #
-  # ------------- Robot ------------- #
-  # --------------------------------- #
   robot:
+    # - is_simulated: False
+    #   pkg: obelisk_unitree_cpp
+    #   executable: obelisk_unitree_g1_hardware
+    #   params:
+    #     network_interface_name: enp4s0
+    #     default_kp: [
+    #                 10., 10., 10.,    # L hip
+    #                 10., 10., 10.,    # L knee, ankle
+    #                 10., 10., 10.,    # R hip
+    #                 10., 10., 10.,    # R knee, ankle
+    #                 10., #10., 10.,    # Waist
+    #                 5., 5., 5.,       # L shoulder
+    #                 5., 5., 5., 5.,   # L elbow, wrist
+    #                 5., 5., 5.,       # R shoulder
+    #                 5., 5., 5., 5.,   # R elbow, wrist
+    #                 ]
+    #     default_kd: [
+    #                 1., 1., 1.,       # L hip
+    #                 1., 1., 1.,       # L knee, ankle
+    #                 1., 1., 1.,       # R hip
+    #                 1., 1., 1.,       # R knee, ankle
+    #                 1., #1., 1.,       # Waist
+    #                 1., 1., 1.,       # L shoulder
+    #                 1., 1., 1., 1.,   # L elbow, wrist
+    #                 1., 1., 1.,       # R shoulder
+    #                 1., 1., 1., 1.,   # R elbow, wrist
+    #     ]
     - is_simulated: True
       pkg: sample_contact_walking
       executable: simulation
@@ -284,33 +201,44 @@ onboard:
         ic_keyframe: standing
       # callback_groups:
       publishers:
-        - ros_parameter: pub_true_sim_state_setting
-          topic: /obelisk/g1/true_sim_state
+        # ----- Joints ----- #
+        - ros_parameter: pub_sensor_setting
+          topic: /obelisk/g1/joint_encoders
           history_depth: 10
-          callback_group: None
+        # ----- IMU ----- #
+        - ros_parameter: pub_imu_setting
+          topic: /obelisk/g1/pelvis_imu
+          history_depth: 10
+        # ----- Odom ----- #
+        - ros_parameter: pub_odom_setting
+          topic: /obelisk/g1/odom
+          history_depth: 10
       timers:
-        - ros_parameter: timer_true_sim_state_setting
-          history_depth: 10
-          timer_period_sec: 0.002
+        - ros_parameter: timer_sensor_setting
+          timer_period_sec: 0.02  # TODO: Tune the timing (?)
           callback_group: None
       subscribers:
+      # ----- Control ----- #
         - ros_parameter: sub_ctrl_setting
-          # key: sub1
           topic: /obelisk/g1/low_level_control
-          # msg_type: PD_FF
           history_depth: 10
-          # callback_key: sub_callback1
           callback_group: None
-          non_obelisk: False
+      # ----- Execution FSM ----- #
+        - ros_parameter: sub_fsm_setting
+          topic: /obelisk/g1/exec_fsm
+          history_depth: 10
+          callback_group: None
+      # ----- High Level Control ----- #
+        - ros_parameter: sub_high_level_ctrl_setting
+          topic: /obelisk/g1/high_level_ctrl
+          history_depth: 10
+          callback_group: None
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model
           # model_xml_path: g1_29dof_with_hand_fixed_base.xml
-          # model_xml_path: tile_scene.xml
-          # model_xml_path: g1_tile2_scene.xml
-          model_xml_path: basic_scene.xml
-          # model_xml_path: stairs_scene.xml
-          # model_xml_path: g1_29dof_with_hand.xml
+          model_xml_path: g1_27dof_fixed_base.xml
+          # model_xml_path: basic_scene.xml
           num_steps_per_viz: 32 #16 # No longer used
           sensor_settings:
           # ---------- Joint Encoders ---------- #
@@ -436,43 +364,34 @@ onboard:
               pelvis_imu_quat_sensor: framequat
           # ---------- Pelvis Mocap ---------- #
           - topic: /obelisk/g1/pelvis_pose
-            dt: 0.00416   # 240 Hz
+            dt: 0.002   # 500 Hz
             msg_type: PoseStamped
             sensor_names:
               base_mocap_pos_sensor: framepos
               base_mocap_quat_sensor: framequat
           # ---------- Torso Mocap ---------- #
           - topic: /obelisk/g1/torso_pose
-            dt: 0.00416   # 240 Hz
+            dt: 0.002   # 500 Hz
             msg_type: PoseStamped
             sensor_names:
               torso_mocap_pos_sensor: framepos
               torso_mocap_quat_sensor: framequat
-          # ---------- Torso Camera Odometry ---------- #
-          - topic: /obelisk/g1/torso_odom
-            dt: 0.005
-            msg_type: Odometry
-            sensor_names:
-              torso_camera_pos_sensor: framepos
-              torso_camera_orientation_sensor: framequat
-              torso_camera_velocimeter: velocimeter
-              torso_camera_gyro: gyro
-          viz_geoms:
-            dt: 1
-            # ----- Stair scene ----- #
-            # stair_1: box
-            # stair_2: box
-            # stair_3: box
-            # ----- Tile scene ----- #
-            tile1: box
-            tile2: box
-            tile3: box
-            tile4: box
-            tile5: box
-            tile6: box
-            tile7: box
-            tile8: box
-            tile9: box
+          # viz_geoms:
+          #   dt: 1
+          #   # ----- Stair scene ----- #
+          #   # stair_1: box
+          #   # stair_2: box
+          #   # stair_3: box
+          #   # ----- Tile scene ----- #
+          #   tile1: box
+          #   tile2: box
+          #   tile3: box
+          #   tile4: box
+          #   tile5: box
+          #   tile6: box
+          #   tile7: box
+          #   tile8: box
+          #   tile9: box
   viz:
     on: True
     viz_tool: foxglove
@@ -482,7 +401,7 @@ onboard:
       - pkg: obelisk_viz_cpp
         executable: default_robot_viz
         robot_pkg: g1_model
-        urdf: g1_hand.urdf
+        urdf: g1_viz.urdf
         robot_topic: robot_description
         subscribers:
           - ros_parameter: sub_viz_est_setting
@@ -493,27 +412,6 @@ onboard:
         publishers:
           - ros_parameter: pub_viz_joint_setting
             topic: joint_states
-            history_depth: 10
-            callback_group: None
-        timers:
-          - ros_parameter: timer_viz_joint_setting
-            timer_period_sec: 0.01
-            callback_group: None
-      - pkg: obelisk_viz_cpp
-        executable: default_robot_viz
-        robot_pkg: g1_model
-        urdf: g1_hand.urdf
-        robot_topic: robot_description_target
-        tf_prefix: target
-        subscribers:
-          - ros_parameter: sub_viz_est_setting
-            topic: /obelisk/g1/target_state
-            history_depth: 10
-            callback_group: None
-            non_obelisk: False
-        publishers:
-          - ros_parameter: pub_viz_joint_setting
-            topic: target/joint_states
             history_depth: 10
             callback_group: None
         timers:

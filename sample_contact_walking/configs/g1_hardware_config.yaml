@@ -1,9 +1,9 @@
-config: g1_sim
+config: g1_hardware
 onboard:
   control:
     - pkg: sample_contact_walking
       executable: ll_controller
-      params_path: /home/zolkin/sample-contact-walking/sample_contact_walking/configs/g1_mpc_config.yaml
+      params_path: /home/zolkin/sample-contact-walking/sample_contact_walking/configs/g1_mpc_hardware_config.yaml
       params:
         urdf_path: /home/zolkin/sample-contact-walking/g1_model/urdf/g1_hand.urdf
         robot_type: 1
@@ -16,18 +16,18 @@ onboard:
         polytope_frames: ["left_toe", "right_toe", "left_heel", "right_heel"]
         # polytope_frames: ["left_heel", "right_heel"]
 # --------- Logging --------- #
-        mpc_loop_log: "sim_mpc_loop_log.csv"
-        mpc_timing_log: "sim_mpc_timing_log.csv"
+        mpc_loop_log: "hardware_mpc_loop_log.csv"
+        mpc_timing_log: "hardware_mpc_timing_log.csv"
 # ---------- Swing trajectory ---------- #
         default_swing_height: 0.08 # 0.1
         default_stand_foot_height: 0.005 #0.01
         apex_time: 0.75 # 0.7
 # ---------- MPC Loop ---------- #
-        mpc_loop_period_sec: 0.01 #0.01 #0.013 #0.01 # Can run closer to 8-9 ms now
+        mpc_loop_period_sec: 0.01 #0.013 #0.01 # Can run closer to 8-9 ms now
         max_mpc_solves: 5000000 #5 #40 #125 
 # ---------- Contact schedule ---------- #
         swing_time: 0.4 #0.3 #0.4 #NOTE: High frequency makes it a bit more reactive/stable
-        first_swing_time: 500. #0.5 #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
+        first_swing_time: 5000. #0.5 #0.1 #2.0 #0.5 #2. #0.5 #5.0 #0.5
         double_stance_time: 0.0
         right_foot_first: True
         # Diagonal pairs
@@ -38,8 +38,8 @@ onboard:
         mpc_ic_config: [0, 0, 0.75, 
                         0, 0, 0, 1,
                         # 0, 0, 0.707106781, 0.707106781, # TODO: Fix the frame issue
-                        -0.42, 0, 0, 0.81, -0.4, #0,
-                        -0.42, 0, 0, 0.81, -0.4, #0,
+                        -0.42, 0, 0, 0.81, -0.3, #0,
+                        -0.42, 0, 0, 0.81, -0.3, #0,
                         0,
                         0, 0.27, 0, 0.5,
                         0, -0.27, 0, 0.5]
@@ -173,9 +173,9 @@ onboard:
         - ros_parameter: state_viz_timer_setting
           timer_period_sec: 0.002
           callback_group: None
-  # ----------------------- #
-  # ----- Geom Reader ----- #
-  # ----------------------- #
+ # ----------------------------------------------- #
+ # -------------- Mujoco Geom Reader ------------- #
+ # ----------------------------------------------- #
     - pkg: contact_planning
       executable: mujoco_geom_reader
       params:
@@ -189,25 +189,52 @@ onboard:
         - ros_parameter: pub_ctrl_setting
           topic: /obelisk/g1/contact_polytopes
           msg_type: ContactPolytopeArray
-          key: "contact_schedule_pub"
           history_depth: 10
           callback_group: None
       subscribers:
         - ros_parameter: sub_est_setting
           topic: /obelisk/g1/est_state # est_state, target_state
           msg_type: EstimatedState
-          key: "est_state_sub"
           history_depth: 10
-          callback_group: estimation_cbg
+          callback_group: None
       timers:
         # Contact planning timer
         - ros_parameter: timer_ctrl_setting
           timer_period_sec: 0.05 #0.1
           callback_group: control_cbg
+ # ----------------------------------------------- #
+ # ----- High Level/Execution FSM Controller ----- #
+ # ----------------------------------------------- #
+    - pkg: obelisk_unitree_cpp
+      executable: obelisk_unitree_joystick
+      # callback_groups:
+      params:
+        low_level_ctrl_button: 4    # Enter low level control mode with the LEFT_BUMPER
+        high_level_ctrl_button: 5   # Enter high level control mode with the RIGHT_BUMPER
+        # Other controls: Damping on right DPAD, Home on left DPAD, user pose at squares
+      publishers:
+      # ----- Execution FSM ----- #
+        - ros_parameter: pub_exec_fsm_setting
+          topic: /obelisk/g1/exec_fsm
+          history_depth: 10
+          callback_group: None
+      # ----- High Level Control ----- #
+        - ros_parameter: pub_ctrl_setting
+          topic: /obelisk/g1/high_level_ctrl
+          history_depth: 10
+          callback_group: None
+      subscribers:
+      # ----- Joystick subscriber ----- #
+        - ros_parameter: sub_est_setting
+          topic: /obelisk/g1/joy
+      timers:
+        - ros_parameter: timer_ctrl_setting
+          timer_period_sec: 100  # Control callback is not being used
+          callback_group: None
   estimation:
-  # --------------------------------- #
-  # ----------- Estimator ----------- #
-  # --------------------------------- #
+ # ----------------------------------------------- #
+ # ------------------ Estimator ------------------ #
+ # ----------------------------------------------- #
     - pkg: sample_contact_walking
       executable: state_estimator
       params:
@@ -216,13 +243,10 @@ onboard:
         robot_name: "g1"
         base_link_name: "pelvis"
         use_sim_state: false #true
-        use_torso_mocap: true #false
         pelvis_ang_vel_lpf_coefs: [0.05, 0.15, 0.8] # TODO: Tune these
-        joint_vel_variance: 0. #0.0004
-        base_vel_variance: 0. #0.005 #0.0004
-        log_file_name: "mpc_logs/sim_estimator_log.csv"
-        base_pose_sensor: 0
-      # callback_groups:
+        log_file_name: "mpc_logs/hardware_estimator_log.csv"
+      callback_groups:
+        debug_cbg: MutuallyExclusiveCallbackGroup 
       publishers:
         - ros_parameter: pub_est_setting
           topic: /obelisk/g1/est_state
@@ -246,7 +270,8 @@ onboard:
           callback_group: None
       # ---------- Torso Mocap ---------- #
         - ros_parameter: torso_mocap_setting
-          topic: /obelisk/g1/torso_pose
+          topic: G1_torso/pose
+          # topic: /obelisk/g1/torso_pose
           history_depth: 10
           callback_group: None
       # ---------- Torso IMU ---------- #
@@ -261,7 +286,8 @@ onboard:
           callback_group: None
       # ---------- Torso Camera ---------- #
         - ros_parameter: torso_camera_setting
-          topic: /obelisk/g1/torso_odom
+          # topic: /obelisk/g1/torso_odom
+          topic: /rs_t265/odom
           history_depth: 10
           callback_group: None
       # ----- Joystick subscriber ----- #
@@ -273,35 +299,73 @@ onboard:
           history_depth: 10
           callback_group: None
   # sensing:
-  # --------------------------------- #
-  # ------------- Robot ------------- #
-  # --------------------------------- #
   robot:
-    - is_simulated: True
-      pkg: sample_contact_walking
-      executable: simulation
+    - is_simulated: False
+      pkg: obelisk_unitree_cpp
+      executable: obelisk_unitree_g1_hardware
       params:
-        ic_keyframe: standing
+        network_interface_name: enp4s0
+        default_kp: [
+                    10., 10., 10.,    # L hip
+                    10., 10., 10.,    # L knee, ankle
+                    10., 10., 10.,    # R hip
+                    10., 10., 10.,    # R knee, ankle
+                    10., #10., 10.,    # Waist
+                    5., 5., 5.,       # L shoulder
+                    5., 5., 5., 5.,   # L elbow, wrist
+                    5., 5., 5.,       # R shoulder
+                    5., 5., 5., 5.,   # R elbow, wrist
+                    ]
+        default_kd: [
+                    1., 1., 1.,       # L hip
+                    1., 1., 1.,       # L knee, ankle
+                    1., 1., 1.,       # R hip
+                    1., 1., 1.,       # R knee, ankle
+                    1., #1., 1.,       # Waist
+                    1., 1., 1.,       # L shoulder
+                    1., 1., 1., 1.,   # L elbow, wrist
+                    1., 1., 1.,       # R shoulder
+                    1., 1., 1., 1.,   # R elbow, wrist
+        ]
+    # - is_simulated: True
+    #   pkg: sample_contact_walking
+    #   executable: simulation
+    #   params:
+    #     ic_keyframe: standing
       # callback_groups:
       publishers:
-        - ros_parameter: pub_true_sim_state_setting
-          topic: /obelisk/g1/true_sim_state
+        # ----- Joints ----- #
+        - ros_parameter: pub_sensor_setting
+          topic: /obelisk/g1/joint_encoders
           history_depth: 10
-          callback_group: None
+        # ----- IMU ----- #
+        - ros_parameter: pub_imu_setting
+          topic: /obelisk/g1/pelvis_imu
+          history_depth: 10
+        # ----- Odom ----- #
+        - ros_parameter: pub_odom_setting
+          topic: /obelisk/g1/odom
+          history_depth: 10
       timers:
-        - ros_parameter: timer_true_sim_state_setting
-          history_depth: 10
-          timer_period_sec: 0.002
+        - ros_parameter: timer_sensor_setting
+          timer_period_sec: 0.02  # TODO: Tune the timing (?)
           callback_group: None
       subscribers:
+      # ----- Control ----- #
         - ros_parameter: sub_ctrl_setting
-          # key: sub1
           topic: /obelisk/g1/low_level_control
-          # msg_type: PD_FF
           history_depth: 10
-          # callback_key: sub_callback1
           callback_group: None
-          non_obelisk: False
+      # ----- Execution FSM ----- #
+        - ros_parameter: sub_fsm_setting
+          topic: /obelisk/g1/exec_fsm
+          history_depth: 10
+          callback_group: None
+      # ----- High Level Control ----- #
+        - ros_parameter: sub_high_level_ctrl_setting
+          topic: /obelisk/g1/high_level_ctrl
+          history_depth: 10
+          callback_group: None
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: g1_model
@@ -436,14 +500,14 @@ onboard:
               pelvis_imu_quat_sensor: framequat
           # ---------- Pelvis Mocap ---------- #
           - topic: /obelisk/g1/pelvis_pose
-            dt: 0.00416   # 240 Hz
+            dt: 0.002   # 500 Hz
             msg_type: PoseStamped
             sensor_names:
               base_mocap_pos_sensor: framepos
               base_mocap_quat_sensor: framequat
           # ---------- Torso Mocap ---------- #
           - topic: /obelisk/g1/torso_pose
-            dt: 0.00416   # 240 Hz
+            dt: 0.002   # 500 Hz
             msg_type: PoseStamped
             sensor_names:
               torso_mocap_pos_sensor: framepos
@@ -482,7 +546,7 @@ onboard:
       - pkg: obelisk_viz_cpp
         executable: default_robot_viz
         robot_pkg: g1_model
-        urdf: g1_hand.urdf
+        urdf: g1_viz.urdf
         robot_topic: robot_description
         subscribers:
           - ros_parameter: sub_viz_est_setting

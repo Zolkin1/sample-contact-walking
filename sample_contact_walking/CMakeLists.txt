@@ -17,6 +17,7 @@ find_package(tf2_ros REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(sample_contact_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 # find_package(obelisk_estimator_msgs REQUIRED)
 
 # ------- Fetch the Obelisk library ------- #
@@ -48,9 +49,21 @@ ament_export_include_directories(include)
 
 # ------- Controller ------- #
 add_executable(ll_controller src/robot_mpc.cpp)
-target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo Mpc StepPlanning) # Wbc
+target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo Mpc StepPlanning Wbc) # Wbc
 
 ament_target_dependencies(ll_controller
+    PUBLIC
+    visualization_msgs
+    tf2_ros
+    tf2
+    sample_contact_msgs
+    sensor_msgs)
+
+# ------- Basic Test Controller ------- #
+add_executable(basic_torque_control src/torque_control_test.cpp)
+target_link_libraries(basic_torque_control PUBLIC Obelisk::Core Obelisk::Zoo) # Wbc
+
+ament_target_dependencies(basic_torque_control
     PUBLIC
     visualization_msgs
     tf2_ros
@@ -62,12 +75,13 @@ ament_target_dependencies(ll_controller
 add_executable(state_estimator 
     src/robot_estimator.cpp
     )
-target_link_libraries(state_estimator PUBLIC Obelisk::Core pinocchio::pinocchio)
+target_link_libraries(state_estimator PUBLIC Obelisk::Core pinocchio::pinocchio StateEstimation Mpc Models)
 
 ament_target_dependencies(
     state_estimator PUBLIC
     tf2_ros
     tf2
+    nav_msgs
 )
 
 # ------- Simulation ------- #
@@ -77,6 +91,7 @@ target_link_libraries(simulation PUBLIC Obelisk::Core)
 # ------- Install ------- #
 install(TARGETS
     ll_controller
+    basic_torque_control
     state_estimator
     simulation
     DESTINATION lib/${PROJECT_NAME})

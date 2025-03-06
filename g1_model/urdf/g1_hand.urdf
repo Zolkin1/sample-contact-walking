@@ -708,11 +708,43 @@
   </joint>
 
   <!-- IMU -->
-  <link name="imu_link"></link>
+  <link name="imu_in_torso"></link>
+  <joint name="imu_in_torso_joint" type="fixed">
+    <origin xyz="-0.03959 -0.00224 0.13792" rpy="0 0 0"/>
+    <parent link="torso_link"/>
+    <child link="imu_in_torso"/>
+  </joint>
+
+  <link name="imu_in_pelvis"></link>
+  <joint name="imu_in_pelvis_joint" type="fixed">
+    <origin xyz="0.04525 0 -0.08339" rpy="0 0 0"/>
+    <parent link="pelvis"/>
+    <child link="imu_in_pelvis"/>
+  </joint>
+
+  <!-- IMU -->
+  <!-- <link name="imu_link"></link>
   <joint name="imu_joint" type="fixed">
     <origin xyz="-0.03959 -0.00224 0.13792" rpy="0 0 0"/>
     <parent link="torso_link"/>
     <child link="imu_link"/>
+  </joint> -->
+
+  <!-- Torso Mocap -->
+  <link name="torso_mocap"></link>
+  <joint name="torso_mocap_joint" type="fixed">
+    <origin xyz="0 0 0.1" rpy="0 0 0"/>
+    <parent link="torso_link"/>
+    <child link="torso_mocap"/>
+  </joint>
+
+  <!-- TODO: Determine exact location! -->
+  <!-- Torso Tracking Camera -->
+  <link name="torso_tracking_camera"></link>
+  <joint name="torso_tracking_camera_joint" type="fixed">
+    <origin xyz="0.085725 0 0.2413" rpy="0.02 -0.08 0"/>
+    <parent link="torso_link"/>
+    <child link="torso_tracking_camera"/>
   </joint>
 
   <!-- d435 -->
