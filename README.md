@@ -1,8 +1,11 @@
 # sample-contact-walking
 
-## TODO:
+## TODO for the docker:
 - Add Proxqp to the docker
 - Make obelisk pull to the uniree-interface branch
+- Add the optitrack library
+- Add lshw (apt-get install -y lshw)
+- Add python3-pyqt5 (apt-get install python3-pyqt5)
 
 ## Useful commands
 Setup:
@@ -78,7 +81,7 @@ obk-activate go2_sim
 ```
 obk-launch config_file_path=${SAMPLE_WALKING_ROOT}/sample_contact_walking/configs/g1_sim_config.yaml device_name=onboard auto_start=configure bag=false
 ```
-
+ 
 Wait for the viz software to connect then run in a seperate terminal:
 ```
 obk-activate g1_sim
@@ -116,7 +119,92 @@ to see what devices are found.
 - OSQP (pip) -->
 
 - Remember that the topics in the contact planner need to updated in the source code until Obelisk is updated
+- If all the ros commands are hanging try:
+```
+ps aux | grep ros2
+```
+```
+pkill -9 -f ros2
+```
+To see then kill all the poosible processes
 
 ## Running the Unitree Interface
 - Need to set the local enivornment variable: OBELISK_BUILD_UNITREE=true
 - Need to change the ROS_DOMAIN_ID to be different (going to 5 works)
+```
+export ROS_DOMAIN_ID=5
+```
+Be sure to change the `ROS_DOMAIN_ID` in all terminals!
+```
+export OBELISK_BUILD_UNITREE=true
+```
+
+### Connecting to the robot
+- Make sure you can run `ping 192.168.123.161` and see the robot
+- Run the basic G1 obelisk example
+```
+obk-launch config_file_path=g1_cpp.yaml device_name=onboard bag=false
+```
+Make sure the joints move and that you can cycle through them.
+
+### Launch the G1 Hardware stack:
+```
+obk-launch config_file_path=${SAMPLE_WALKING_ROOT}/sample_contact_walking/configs/g1_hardware_config.yaml device_name=onboard auto_start=configure bag=false
+```
+
+Wait for the viz software to connect then run in a seperate terminal:
+```
+obk-activate g1_hardware
+```
+
+### Launch the Go2 Hardware stack:
+```
+obk-launch config_file_path=${SAMPLE_WALKING_ROOT}/sample_contact_walking/configs/go2_hardware_config.yaml device_name=onboard auto_start=configure bag=false
+```
+
+Wait for the viz software to connect then run in a seperate terminal:
+```
+obk-activate go2_hardware
+```
+
+
+### Seting up the Mocap
+We use https://github.com/L2S-lab/natnet_ros2 which I hope to eventually add into obelisk for automatic installation.
+Make sure this is installed. For now I am installing it in `~/sample-contact-walking`
+
+Note that you should be connected to the network with the optitrack computer via ethernet.
+You should set the `Server IP` as the opti track computer's IP (normally `192.168.1.2`).
+`Client IP` should be your IP.
+
+Launch with 
+```
+ros2 launch natnet_ros2 gui_natnet_ros2.launch.py
+```
+I had to run
+```
+mkdir -p /tmp/runtime-$USER
+chmod 700 /tmp/runtime-$USER
+export XDG_RUNTIME_DIR=/tmp/runtime-$USER
+```
+To make a temp directory that I had permissions to write to first otherwise the nat net driver complains.
+
+
+## Torque Testing
+Run the stack
+```
+obk-launch config_file_path=${SAMPLE_WALKING_ROOT}/sample_contact_walking/configs/basic_torque_config.yaml device_name=onboard auto_start=configure bag=false
+```
+```
+obk-activate g1_basic_ctrl_hardware
+```
+
+
+## On the G1 Robot
+```
+ros2 launch perception_node perception_launch_tracking_only.py
+```
+
+## On the Go2 Robot
+```
+ros2 run realsense_ros2 rs_t265_node
+```

@@ -31,7 +31,7 @@ namespace robot
 {
     MpcController::MpcController(const std::string& name) 
     : obelisk::ObeliskController<obelisk_control_msgs::msg::PDFeedForward, obelisk_estimator_msgs::msg::EstimatedState>(name), 
-        recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(-1), recieved_polytope_(false) {
+        recieved_first_state_(false), first_mpc_computed_(false), ctrl_state_(NoOutput), traj_start_time_(-1), recieved_polytope_(false), constant_vel_(0) {
 
         mujoco_sim_instance_ = this;
 
@@ -51,6 +51,12 @@ namespace robot
         this->RegisterObkSubscription<sensor_msgs::msg::Joy>(
                     "joystick_sub_setting", "joystick_sub",
                     std::bind(&MpcController::JoystickCallback, this, std::placeholders::_1));
+
+        // ----- Force Sensor Subscriber ----- //
+        this->RegisterObkSubscription<obelisk_sensor_msgs::msg::ObkForceSensor>(
+            "force_sub_setting", "force_sub",
+            std::bind(&MpcController::ForceSensorCallback, this, std::placeholders::_1));
+
 
         // ----- Target Publisher ----- //
         this->RegisterObkPublisher<sample_contact_msgs::msg::CommandedTarget>(
@@ -80,6 +86,8 @@ namespace robot
         std::string model_name = name + robot_name + "_model";
         model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path);
 
+        RCLCPP_INFO_STREAM(this->get_logger(), "Model created!");
+
         // ------------------------------------ //
         // ----- Create and configure MPC ----- //
         // ------------------------------------ //
@@ -90,10 +98,17 @@ namespace robot
 
         // Make the polytope frame associations
         std::vector<std::pair<std::string, std::string>> poly_contact_frames;
-        poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[0], mpc_settings_->contact_frames[0]);
-        poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[0], mpc_settings_->contact_frames[1]);
-        poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[1], mpc_settings_->contact_frames[2]);
-        poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[1], mpc_settings_->contact_frames[3]);
+        if (robot_name == "g1") {
+            poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[0], mpc_settings_->contact_frames[0]);
+            poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[0], mpc_settings_->contact_frames[1]);
+            poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[1], mpc_settings_->contact_frames[2]);
+            poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[1], mpc_settings_->contact_frames[3]);
+        } else if (robot_name == "go2") {
+            poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[0], mpc_settings_->contact_frames[0]);
+            poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[1], mpc_settings_->contact_frames[1]);
+            poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[2], mpc_settings_->contact_frames[2]);
+            poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[3], mpc_settings_->contact_frames[3]);
+        }
         mpc_settings_->poly_contact_pairs = poly_contact_frames;
 
         mpc_model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path, mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values);
@@ -112,11 +127,11 @@ namespace robot
         // Dynamics //
         // ---------- Full Order Dynamics ---------- //
         torc::mpc::DynamicsConstraint dynamics_constraint(mpc_model_temp, mpc_settings_->contact_frames, model_name + "_robot_full_order",
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, 0, mpc_settings_->nodes_full_dynamics);
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, 0, mpc_settings_->nodes_full_dynamics + 100);
 
         // ---------- Centroidal Dynamics ---------- //
         torc::mpc::CentroidalDynamicsConstraint centroidal_dynamics(mpc_model_temp, mpc_settings_->contact_frames, model_name + "_robot_centroidal",
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->nodes_full_dynamics, mpc_settings_->nodes); // 0, mpc_settings_->nodes
+            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->nodes_full_dynamics - 100, mpc_settings_->nodes - 100); // 0, mpc_settings_->nodes
         // ---------- SRB Dynamics ---------- //
         torc::mpc::SRBConstraint srb_dynamics(mpc_settings_->nodes_full_dynamics - 100, mpc_settings_->nodes - 100, // 0 - 100, mpc_settings_->nodes - 100,
              model_name + "_robot_srb",
@@ -263,33 +278,12 @@ namespace robot
         // --------------------------------- //
         // -------------- WBC -------------- //
         // --------------------------------- //
-        // wbc_settings_ = std::make_shared<torc::controller::WbcSettings>(this->get_parameter("params_path").as_string());
-        // wbc_model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path, wbc_settings_->skip_joints, wbc_settings_->joint_values);
-        // wbc_controller_ = std::make_unique<torc::controller::WbcController>(mpc_model_temp, mpc_settings_->contact_frames,
-        //     *wbc_settings_, mpc_settings_->friction_coef, wbc_settings_->verbose, mpc_settings_->deriv_lib_path, wbc_settings_->compile_derivs);
+        wbc_settings_ = std::make_shared<torc::controller::WbcSettings>(this->get_parameter("params_path").as_string());
+        wbc_model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path, mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values); //wbc_settings_->skip_joints, wbc_settings_->joint_values);
+        wbc_controller_ = std::make_unique<torc::controller::WbcController>(mpc_model_temp, mpc_settings_->contact_frames,
+            *wbc_settings_, mpc_settings_->friction_coef, wbc_settings_->verbose, mpc_settings_->deriv_lib_path, wbc_settings_->compile_derivs);
 
-        // torc::mpc::SimpleTrajectory q_target(mpc_model_->GetConfigDim(), mpc_settings_->nodes);
-        // q_target.SetAllData(mpc_settings_->q_target);
-        // mpc_->SetConfigTarget(q_target);
-
-        // torc::mpc::SimpleTrajectory v_target(mpc_model_->GetVelDim(), mpc_settings_->nodes);
-        // v_target.SetAllData(mpc_settings_->v_target);
-        // mpc_->SetVelTarget(v_target);
-
-        // mpc_->SetLinTrajConfig(q_target);
-        // mpc_->SetLinTrajVel(v_target);
-
-        // torc::mpc::ContactSchedule cs(mpc_settings_->contact_frames);
-        // cs.InsertSwing("right_toe", 0.1, 0.4);
-        // cs.InsertSwing("right_heel", 0.1, 0.4);
-        // cs.InsertSwing("left_toe", 0.4, 0.8);   // TODO: Why does making it swing past the end of the traj hurt it?
-        // cs.InsertSwing("left_heel", 0.4, 0.8);
-        // mpc_->UpdateContactSchedule(cs);
-
-        // vectorx_t q = mpc_settings_->q_target;
-
-        // mpc_->Compute(q, vectorx_t::Zero(mpc_model_->GetVelDim()), traj_mpc_);
-        // traj_mpc_.ExportToCSV(std::filesystem::current_path() / "trajectory_output.csv");
+        K_ = matrixx_t::Zero(mpc_model_->GetVelDim() - 7, mpc_model_->GetVelDim() + mpc_model_->GetConfigDim());
 
         // --------------------------------- //
         // ------------ Targets ------------ //
@@ -314,12 +308,19 @@ namespace robot
         mpc_skipped_joint_indexes_ = this->get_parameter("skip_indexes").as_integer_array();
         if (mpc_skipped_joint_indexes_[0] == -1 && (model_->GetConfigDim() == mpc_model_->GetConfigDim())) {
             RCLCPP_INFO_STREAM(this->get_logger(), "No joint to skip.");
+            mpc_skipped_joint_indexes_.clear();
         } else if (mpc_skipped_joint_indexes_.size() != model_->GetConfigDim() - mpc_model_->GetConfigDim()) {
             RCLCPP_ERROR_STREAM(this->get_logger(), "Provided skip indexes don't match the model differences! Got size: " << mpc_skipped_joint_indexes_.size() << ", expected: " 
                 << model_->GetConfigDim() - mpc_model_->GetConfigDim());
+        } else {
+            throw std::runtime_error("Inconsistent skip joints!");
         }
         this->declare_parameter<std::vector<double>>("skip_joint_vals", {-1});
         mpc_skipped_joint_vals_ = this->get_parameter("skip_joint_vals").as_double_array();
+
+        if (mpc_skipped_joint_vals_[0] == -1) {
+            mpc_skipped_joint_vals_.clear();
+        }
 
         if (mpc_skipped_joint_vals_.size() != mpc_skipped_joint_indexes_.size()) {
             throw std::runtime_error("MPC skip joint indexes size does not match the corresponding value array!");
@@ -351,10 +352,20 @@ namespace robot
             throw std::runtime_error("kp, kd, or joint name sizes don't match!");
         }
 
+        RCLCPP_INFO_STREAM(this->get_logger(), "Using kp: ");
+        for (int i = 0; i < kp_.size(); i++) {
+            RCLCPP_INFO_STREAM(this->get_logger(), kp_[i]);
+        }
+
+        RCLCPP_INFO_STREAM(this->get_logger(), "Using kd: ");
+        for (int i = 0; i < kd_.size(); i++) {
+            RCLCPP_INFO_STREAM(this->get_logger(), kd_[i]);
+        }
 
         // Parse contact schedule info
         ParseContactParameters();
 
+        // ------------------------------------------------ //
         // Step Planning
         std::vector<torc::mpc::ContactInfo> contact_polytopes;
         torc::mpc::vector4_t b;
@@ -364,8 +375,24 @@ namespace robot
         std::vector<double> contact_offsets = this->get_parameter("foot_offsets").as_double_array();
         step_planner_ = std::make_unique<torc::step_planning::StepPlanner>(contact_polytopes, mpc_settings_->contact_frames, contact_offsets,
             0.4, mpc_settings_->polytope_delta);
+        // ------------------------------------------------ //
 
-        
+        // ------------------------------------------------ //
+        // No-step settings
+        this->declare_parameter<double>("state_vel_no_step_threshold");
+        this->declare_parameter<double>("command_vel_no_step_threshold");
+        state_no_step_threshold_ = this->get_parameter("state_vel_no_step_threshold").as_double();
+        command_no_step_threshold_ = this->get_parameter("command_vel_no_step_threshold").as_double();
+        // ------------------------------------------------ //
+
+        // ------------------------------------------------ //
+        // Constant velocity mode
+        this->declare_parameter<double>("constant_vel", 0.);
+        constant_vel_ = this->get_parameter("constant_vel").as_double();
+        // ------------------------------------------------ //
+
+
+        // ------------------------------------------------ //
         // Set initial conditions
         this->declare_parameter<std::vector<double>>("mpc_ic_config");
         this->declare_parameter<std::vector<double>>("mpc_ic_vel");
@@ -386,7 +413,8 @@ namespace robot
         traj_out_.SetConfiguration(0, q_ic_);
         traj_out_.SetVelocity(0, v_ic_);
         traj_mpc_ = traj_out_;
-        mpc_->SetLinTraj(traj_mpc_);
+        mpc_->SetLinTraj(traj_mpc_);    // TODO: Should I maybe get rid of this and see if it makes a difference?
+        // ------------------------------------------------ //
 
 
         // Go to initial condition
@@ -414,15 +442,31 @@ namespace robot
         this->get_parameter("force_frames", force_frames_);
 
         for (const auto& frame : force_frames_) {
-            std::cout << "Force frame: " << frame << std::endl;
+            RCLCPP_INFO_STREAM(this->get_logger(), "Viz force frame: " << frame);
         }
 
         this->declare_parameter<std::vector<std::string>>("polytope_frames", {""});
         this->get_parameter("polytope_frames", viz_polytope_frames_);
 
+        // ------------------------------------ //
+        // ---------- Make Log Files ---------- //
+        // ------------------------------------ //
+        this->declare_parameter<std::string>("mpc_loop_log", {"mpc_loop_log.csv"});
+        this->declare_parameter<std::string>("mpc_timing_log", {"mpc_timing_log.csv"});
+        this->declare_parameter<std::string>("contact_schedule_log", {"contact_schedule_log.csv"});
+        this->declare_parameter<std::string>("force_sensor_log", {"force_sensor_log.csv"});
+        std::string mpc_loop_log_name = this->get_parameter("mpc_loop_log").as_string();
+        std::string mpc_timing_log_name = this->get_parameter("mpc_timing_log").as_string();
+        std::string contact_schedule_log_name = this->get_parameter("contact_schedule_log").as_string();
+        std::string foot_sensor_log_name = this->get_parameter("force_sensor_log").as_string();
+
+        this->get_parameter("polytope_frames", viz_polytope_frames_);
+
         time_offset_ = this->now().seconds();
-        log_file_.open("mpc_loop_log.csv");
-        timing_log_file_.open("mpc_timing_log.csv");
+        log_file_.open("mpc_logs/" + mpc_loop_log_name);
+        timing_log_file_.open("mpc_logs/" + mpc_timing_log_name);
+        contact_schedule_log_file_.open("mpc_logs/" + contact_schedule_log_name);
+        force_sensor_log_file_.open("mpc_logs/" + foot_sensor_log_name);
 
         // Spin up MPC thread
         mpc_thread_ = std::thread(&MpcController::MpcThread, this);
@@ -435,6 +479,12 @@ namespace robot
     MpcController::~MpcController() {
         log_file_.close();
         timing_log_file_.close();
+        contact_schedule_log_file_.close();
+        force_sensor_log_file_.close();
+
+        if (mpc_thread_.joinable()) {
+            mpc_thread_.join();
+        }
     }
 
     void MpcController::UpdateXHat(const obelisk_estimator_msgs::msg::EstimatedState& msg) {
@@ -454,9 +504,11 @@ namespace robot
             q_(i) = msg.q_base.at(i);
         }
 
-        if ((q_.segment<4>(3).norm() - 1) > 1e-8) {
+        if ((q_.segment<4>(3).norm() - 1) > 1e-4) {
             recieved_first_state_ = false;
-            throw std::runtime_error("recieved q is not normalized!");
+            RCLCPP_ERROR_STREAM(this->get_logger(), "Quaterniong is not normalized! q floating base: " << q_.head<7>().transpose());
+            // throw std::runtime_error("received q is not normalized!");
+            q_.segment<4>(3).normalize();
         }
 
         // Only receive the joints that we use in the MPC
@@ -491,6 +543,13 @@ namespace robot
             }
         }
 
+        if (GetState() != Mpc) {
+            // Set the initial condition x-y-z position to where the robot is
+            q_ic_.head<7>() = q_.head<7>();
+            q_target_.value()[0].head<7>() = q_.head<7>();
+            // z_target_ = q_[2];   // Set the z target to not prevent the height state from requesting a jump.
+        }
+
         if (!recieved_first_state_ && q_.size() == mpc_model_->GetConfigDim() && v_.size() == mpc_model_->GetVelDim() && q_.segment<QUAT_VARS>(POS_VARS).norm() > 0.95) {
             RCLCPP_INFO_STREAM(this->get_logger(), "Recieved first message! q: " << q_.transpose());
             recieved_first_state_ = true;
@@ -511,9 +570,10 @@ namespace robot
             perror("pthread_setaffinity_np");
         }
 
-        struct sched_param param;
-        param.sched_priority = 99;
-        pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
+        // TODO: Consider putting this back
+        // struct sched_param param;
+        // param.sched_priority = 99;
+        // pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
 
         const long mpc_loop_rate_ns = this->get_parameter("mpc_loop_period_sec").as_double()*1e9;
         RCLCPP_INFO_STREAM(this->get_logger(), "MPC loop period set to: " << mpc_loop_rate_ns << "ns.");
@@ -549,9 +609,25 @@ namespace robot
                         mpc_->UpdateContactSchedule(contact_schedule_);  // TODO: There is an issue with polytopes here
                     }
 
+                    UpdateMpcTargets(q);
+                    mpc_->SetConfigTarget(q_target_.value());
+                    mpc_->SetVelTarget(v_target_.value());
+
+                    std::cout << "q: " << q.transpose() << std::endl;
+                    std::cout << "v: " << v.transpose() << std::endl;
+                    std::cout << "q target 0: " << q_target_.value()[0].transpose() << std::endl;
+                    std::cout << "v target 0: " << v_target_.value()[0].transpose() << std::endl;
 
                     for (int i = 0; i < 2; i++) {   // TODO: If i run too many iterations of this then sometimes I get a quat normilazation error in the next loop
+                        if (i == 0) {
+                            mpc_->GetTrajectory().ExportToCSV("mpc_logs/solve_0_linearization_traj.csv");
+                        }
+                        mpc_->CreateQPData();
                         mpc_->Compute(this->now().seconds() - time_offset_, q, v, traj_mpc_);
+                        if (i == 0) {
+                            traj_mpc_.ExportToCSV("mpc_logs/solve_0_result_traj.csv");
+                        }
+                        mpc_->LogMPCCompute(this->now().seconds() - time_offset_, q, v);
                     }
                     double time = this->now().seconds();
                     {
@@ -577,15 +653,20 @@ namespace robot
                 // Log timing
                 timing_log_file_ << this->now().seconds() - time_offset_ << "," << prep_time + fb_prep_time << "," << fb_time << std::endl;
 
-                std::cout << "Prep time took " << prep_time + fb_prep_time << " ms" << std::endl;
-                std::cout << "Feedback time took " << fb_time << " ms" << std::endl;
+                // std::cout << "Prep time took " << prep_time + fb_prep_time << " ms" << std::endl;
+                // std::cout << "Feedback time took " << fb_time << " ms" << std::endl;
 
                 // TODO: If this is slow, then I need to move it
                 torc::utils::TORCTimer viz_timer;
                 viz_timer.Tic();
                 PublishTrajViz(traj_mpc_, viz_frames_);
                 viz_timer.Toc();
-                std::cout << "viz publish took " << viz_timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
+                // std::cout << "viz publish took " << viz_timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
+
+                // // TODO: Remove
+                // if (mpc_->GetSolveCounter() >= 100) {
+                //     throw std::runtime_error("MPC cycles completed!");
+                // }
             } else {
                 first_loop = true;
             }
@@ -639,11 +720,14 @@ namespace robot
             // TODO: Look into what target to use, for now just use the old targets
             // TODO: Consider making this update at a slower rate (20-50Hz)
             step_planner_timer.Tic();
+            // TODO: Put back
             step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_, nom_footholds_, projected_footholds_);
             step_planner_timer.Toc();
             mpc_->UpdateContactSchedule(contact_schedule_); // TODO: Need to do this at the same time as the reference generation
         }
-        AddPeriodicContacts();   // Don't use when getting CS from the other node
+        // if (v_target_.value()[0].head<6>().norm() > 0.001) {
+        //     AddPeriodicContacts();   // Don't use when getting CS from the other node
+        // }
                 
 
         // Linearize around current trajectory
@@ -651,7 +735,7 @@ namespace robot
 
         timer.Toc();
 
-        std::cout << "step planner took " << step_planner_timer.Duration<std::chrono::microseconds>().count()/1000.0 << " ms" << std::endl;
+        // std::cout << "step planner took " << step_planner_timer.Duration<std::chrono::microseconds>().count()/1000.0 << " ms" << std::endl;
 
         return timer.Duration<std::chrono::microseconds>().count()/1000.0;
     }
@@ -682,23 +766,55 @@ namespace robot
                 v = v_;
             }
         // }
+
         q.segment<4>(3).normalize();
         if (std::abs(q.segment<4>(3).norm() - 1) > 1e-8) {
             RCLCPP_ERROR_STREAM(this->get_logger(), "q: " << q.transpose());
             throw std::runtime_error("quat has zero norm!");
         }
 
-        // ----- No Reference ----- //
-        if (!fixed_target_ || controller_target_) {
-            UpdateMpcTargets(q);
-            mpc_->SetConfigTarget(q_target_.value());
-            mpc_->SetVelTarget(v_target_.value());
-        }
+        // // ----- No Reference ----- //
+        // if (!fixed_target_ || controller_target_) {
+        //     UpdateMpcTargets(q);
+        //     mpc_->SetConfigTarget(q_target_.value());
+        //     mpc_->SetVelTarget(v_target_.value());
+
+        //     // std::cout << "q: " << q.transpose() << std::endl;
+        //     // std::cout << "v: " << v.transpose() << std::endl;
+        //     // std::cout << "q target 0: " << q_target_.value()[0].transpose() << std::endl;
+        //     // std::cout << "v target 0: " << v_target_.value()[0].transpose() << std::endl;
+        // }
 
         // Reference generation
         {
             std::lock_guard<std::mutex> lock(polytope_mutex_);
-            mpc_->UpdateContactSchedule(contact_schedule_);
+            // Update the ground heights    // TODO: Change this when I add the height patch back in
+            UpdateMpcTargets(q);
+            mpc_model_->FirstOrderFK(q);
+            double mean_contact_height = 0;
+            float num_in_contact = 0;
+            for (const auto& frame : mpc_settings_->contact_frames) {
+                if (contact_schedule_.InContact(frame, 0)) {
+                    vector3_t contact_pos = mpc_model_->GetFrameState(frame).placement.translation();
+                    mpc_->SetDefaultGroundHeight(frame, contact_pos[2]);
+                    mean_contact_height += contact_pos[2];
+                    num_in_contact++;
+                }
+            }
+            
+            // Compute mean contact height // TODO: Adjust/change for varying heights
+            mean_contact_height /= num_in_contact;
+
+            // Adjust the target height to be relative to the foot height
+            for (int i = 0; i < q_target_.value().GetNumNodes(); i++) {
+                q_target_.value()[i][2] = mean_contact_height + z_target_;
+            }
+
+            // Update the target base height relative to the foot
+            mpc_->SetConfigTarget(q_target_.value());
+            mpc_->SetVelTarget(v_target_.value());
+
+            // mpc_->UpdateContactSchedule(contact_schedule_); // TODO: Why do I do this here?
             std::map<std::string, std::vector<torc::mpc::vector3_t>> contact_foot_pos;
             const auto [q_ref, v_ref] = ref_gen_->GenerateReference(q, v, q_target_.value(), v_target_.value(), mpc_->GetSwingTrajectory(),
                 mpc_settings_->hip_offsets, contact_schedule_, contact_foot_pos, *q_base_target_, *v_base_target_);
@@ -713,9 +829,9 @@ namespace robot
         double mpc_start_time = this->now().seconds();
         if (mpc_->GetSolveCounter() < max_mpc_solves) {
             // ---- Solve MPC ----- //
-            // double time = this->now().seconds();        // NOTE: The quad uses the time here
+            double time = this->now().seconds();        // NOTE: The quad uses the time here
             mpc_->Compute(mpc_start_time - time_offset_, q, v, traj_mpc_);
-            double time = this->now().seconds();    // NOTE: The humanoid uses the time here
+            // double time = this->now().seconds();    // NOTE: The humanoid uses the time here
             {
                 // Get the traj mutex to protect it
                 std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -723,14 +839,26 @@ namespace robot
 
                 // Assign start time too
                 traj_start_time_ = time;
+
+                // K_ = mpc_->GetRiccatiFeedback();
             }
         }
         timer.Toc();
+
+        // TODO: Remove
+        // traj_mpc_.ExportToCSV("mpc_logs/first_fb_solve_result_traj.csv");
+
+        first_mpc_computed_ = true;
 
         torc::utils::TORCTimer prep_timer;
         prep_timer.Tic();
         // Part of the preperation phase
         mpc_->LogMPCCompute(mpc_start_time - time_offset_, q, v);
+
+
+        if (v_target_.value()[0].head<6>().norm() > command_no_step_threshold_ || v.head<6>().norm() > state_no_step_threshold_) {
+            AddPeriodicContacts();   // Don't use when getting CS from the other node
+        }
         prep_timer.Toc();
 
         return {timer.Duration<std::chrono::microseconds>().count()/1000.0, prep_timer.Duration<std::chrono::microseconds>().count()/1000.0};
@@ -746,9 +874,9 @@ namespace robot
             RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Publishing first control.");
             
             vectorx_t q, v, tau, F(3*mpc_settings_->num_contact_locations);
-            // std::vector<bool> in_contact(mpc_settings_->num_contact_locations);
+            std::vector<bool> in_contact(mpc_settings_->num_contact_locations);
 
-            if (GetState() == Mpc) {
+            if (GetState() == Mpc && first_mpc_computed_) {
                 double time_into_traj = 0;
                 // Get the traj mutex to protect it
                 {
@@ -762,6 +890,11 @@ namespace robot
                     traj_out_.GetConfigInterp(time_into_traj, q);
                     traj_out_.GetVelocityInterp(time_into_traj, v);
                     traj_out_.GetTorqueInterp(time_into_traj, tau);
+
+                    // // TODO: Remove after debugging
+                    // tau = traj_out_.GetTau(10);
+                    // q = traj_out_.GetConfiguration(0);
+                    // v = traj_out_.GetVelocity(0);
 
                     for (int i = 0; i < mpc_settings_->num_contact_locations; i++) {
                         vector3_t f_temp;
@@ -810,22 +943,31 @@ namespace robot
                 F(8) = 80;
                 F(11) = 80;
 
-                // for (int i = 0; i < in_contact.size(); i++) {
-                //     in_contact[i] = true;
-                // }
+                for (int i = 0; i < in_contact.size(); i++) {
+                    in_contact[i] = true;
+                }
+            } else if (ctrl_state_ == HoldInitialCond || !first_mpc_computed_) {
+                q = q_ic_;
+                v = v_ic_;
+                tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
+                F = vectorx_t::Zero(mpc_settings_->contact_frames.size()*3);
+
+                for (int i = 0; i < in_contact.size(); i++) {
+                    in_contact[i] = true;
+                }
             } else {
                 throw std::runtime_error("Not a valid state!");
             }
 
-            // TODO: Move the log to after the publish call
-            // Log
-            static unsigned long log_counter = 0;
-            if (log_counter % 5 == 0) {
-                LogCurrentControl(q, v, tau, F);
+            // TODO: Remove!
+            for (int i = 0; i < in_contact.size(); i++) {
+                in_contact[i] = true;
             }
-            log_counter++;
 
-            // if (recieved_first_state_) {
+            vectorx_t tau_mpc = tau;
+
+            // // TODO: Put back in when using the WBC
+            // if (recieved_first_state_ && GetState() == Mpc) {
             //     // Use WBC
             //     // Get current state
             //     vectorx_t q_est, v_est;
@@ -834,15 +976,54 @@ namespace robot
             //         q_est = q_;
             //         v_est = v_;
             //     }
-            //     // RCLCPP_WARN_STREAM(this->get_logger(), "Before control");
+
+            //     // TODO: Remove
+            //     // q = q_ic_; //q_target_.value()[0];
+            //     // v = v_ic_; //v_target_.value()[0];
+            //     F.setZero();
+            //     tau.setZero();
+
+            //     for (int i = 0; i < in_contact.size(); i++) {
+            //         in_contact[i] = true;
+            //     } 
             //     tau = wbc_controller_->ComputeControl(q_est, v_est, q, v, tau, F, in_contact);     
-            //     // RCLCPP_WARN_STREAM(this->get_logger(), "After control");           
+                
+            //     // // --------- Testing the Riccati Feedback --------- //
+            //     // vectorx_t riccati_error(q.size() + v.size());
+            //     // riccati_error << q_est - q, v_est - v;
+            //     // tau = tau + (K_*riccati_error).head(tau.size());
+
+            //     // std::cout << "ricc fedback: " << (K_*riccati_error).head(tau.size()).transpose() << std::endl;
+            //     // // std::cout << "K_:\n" << K_ << std::endl; 
             // }
             
-            // TODO: Remove
+            // // Cap the torques at 25
+            // for (int i = 0; i < tau.size(); i++) {
+            //     tau(i) = std::max(std::min(tau(i), 25.), -25.);
+            // }
+
+            // TODO: Move the log to after the publish call
+            // Log
+            static unsigned long log_counter = 0;
+            if (log_counter % 5 == 0) {
+                LogCurrentControl(q, v, tau, F, tau_mpc);
+            }
+            log_counter++;
+
+            // if (GetState() != Mpc) {
+            //     tau.setZero();
+            // }
+            
+            // // TODO: Remove
             // q = q_ic_;
             // v = v_ic_;
             // tau = vectorx_t::Zero(mpc_model_->GetNumInputs());
+            // tau = vectorx_t::Ones(mpc_model_->GetNumInputs());
+
+            // Only actuate legs
+            // q.tail(8) = q_ic_.tail(8);
+            // v.tail(8) = v_ic_.tail(8);
+            // tau.tail(8).setZero();
 
             // TODO: Only use this when the mujoco model does not match!
             // Check if we need to insert other elements into the targets
@@ -892,6 +1073,22 @@ namespace robot
 
             msg.kp = kp_;
             msg.kd = kd_;
+
+            if (ctrl_state_ == SeekInitialCond) {
+                // When going to the initial condition, use smaller gains
+                // for (int i = 0; i < msg.kp.size(); i++) {
+                //     msg.kp[i] *= 0.1;
+                //     msg.kd[i] *= 0.1;
+                // }
+            } else if (ctrl_state_ == Mpc) {
+                // NOTE: This is only for use with the WBC
+                // When going to the initial condition, use smaller gains
+                // for (int i = 0; i < msg.kp.size(); i++) {
+                //     msg.kp[i] *= 0;
+                //     msg.kd[i] *= 0;
+                // }
+            }
+
             msg.joint_names = control_joint_names_;
 
             // TODO: Use only when the mujoco model doesn't match the MPC
@@ -928,12 +1125,13 @@ namespace robot
         return u;
     }
 
-    void MpcController::LogCurrentControl(const vectorx_t& q_control, const vectorx_t& v_control, const vectorx_t& tau, const vectorx_t& force) {
+    void MpcController::LogCurrentControl(const vectorx_t& q_control, const vectorx_t& v_control, const vectorx_t& tau, const vectorx_t& force, const vectorx_t& tau_mpc) {
         log_file_ << this->now().seconds() - time_offset_ << ",";
         LogEigenVec(q_control);
         LogEigenVec(v_control);
         LogEigenVec(tau);
         LogEigenVec(force);
+        LogEigenVec(tau_mpc);
         log_file_ << std::endl;
     }
 
@@ -949,7 +1147,7 @@ namespace robot
         ctrl_state_ = new_state;
         std::string new_state_str = GetStateString(new_state);
 
-        RCLCPP_INFO_STREAM(this->get_logger(), "Transitioning to state: " << new_state_str);
+        RCLCPP_INFO_STREAM(this->get_logger(), "[MPC] Transitioning to state: " << new_state_str);
     }
 
     MpcController::ControllerState MpcController::GetState() {
@@ -965,10 +1163,24 @@ namespace robot
         static torc::mpc::vector3_t q_base_target = q.head<3>();
         static torc::mpc::vector4_t q_base_quat_target = q.segment<4>(3);
 
-        q_base_target(0) = q(0);
+        if (constant_vel_mode_) {
+            for (int i = 0; i < v_target_.value().GetNumNodes(); i++) {
+                // Set a constant velocity in the x direction
+                v_target_.value()[i][0] = constant_vel_;
+                v_target_.value()[i][1] = 0;
+                v_target_.value()[i][5] = 0;
+            }
+        }
 
-        if (v_target_.value()[0].head<2>().norm() > 0.01) { // I don't love it but its here for the drift
+        // // TODO: Consider putting back
+        // q_base_target(0) = q(0);
+        // q_base_target(1) = q(1);
+        // q_base_quat_target = q.segment<4>(3);   // TODO: Play with this a bit
+
+        if (v_target_.value()[0].head<6>().norm() > 0.01) { // I don't love it but its here for the drift
+            // // I wonder if sensor noise make this global position hard to track
             q_base_target(1) = q(1);
+            q_base_target(0) = q(0);
             q_base_quat_target = q.segment<4>(3);   // TODO: Play with this a bit
         }
 
@@ -980,7 +1192,6 @@ namespace robot
         const quat_t q_quat(q.segment<QUAT_VARS>(POS_VARS));
         vector3_t euler_angles = q_quat.toRotationMatrix().eulerAngles(2, 1, 0);
 
-        // quat_t yaw_quaternion(Eigen::AngleAxisd(euler_angles[2], Eigen::Vector3d::UnitZ()));
         quat_t yaw_quaternion(q_quat.w(), 0, 0, q_quat.z()); 
 
         q_target_.value()[0](3) = yaw_quaternion.x();
@@ -1026,7 +1237,8 @@ namespace robot
         switch (state) {
         case SeekInitialCond:
             return "Seek Initial Condition";
-            break;
+        case HoldInitialCond:
+            return "Hold Initial Condition";
         case Mpc:
             return "MPC";
         case NoOutput:
@@ -1053,7 +1265,11 @@ namespace robot
         int num_markers = viz_frames.size() + force_frames_.size() + num_nom_footholds + num_proj_footholds + mpc_settings_->nodes;
 
         visualization_msgs::msg::MarkerArray msg;
+<<<<<<< HEAD
         msg.markers.resize(num_markers);
+=======
+        msg.markers.resize(viz_frames.size() + force_frames_.size() + num_nom_footholds + num_proj_footholds);
+>>>>>>> main
         // std::cerr << "marker size: " << msg.markers.size() << std::endl;
         // std::cerr << "num nom footholds: " << num_nom_footholds << std::endl;
         // std::cerr << "num proj footholds: " << num_proj_footholds << std::endl;
@@ -1561,7 +1777,7 @@ namespace robot
             // double time_into_traj = 0;
 
             // RCLCPP_INFO_STREAM(this->get_logger(), "Time into traj: " << time_into_traj)
-            if (GetState() == Mpc) {
+            if (first_mpc_computed_ && GetState() == Mpc) {
                 // RCLCPP_WARN_STREAM(this->get_logger(), "Time into traj: " << time_into_traj);
                 // TODO: Put back
                 traj_out_.GetConfigInterp(time_into_traj, q);
@@ -1721,6 +1937,7 @@ namespace robot
         while (next_right_insertion_time_ < 1) {
             for (const auto& frame : right_frames_) {
                 contact_schedule_.InsertSwingByDuration(frame, next_right_insertion_time_,  swing_time_);
+                contact_schedule_log_file_ << "0," << this->now().seconds() - time_offset_ << "," << next_right_insertion_time_ << "," << next_right_insertion_time_ + swing_time_ << std::endl;
             }
 
             next_right_insertion_time_ += 2*swing_time_;
@@ -1729,6 +1946,7 @@ namespace robot
         while (next_left_insertion_time_ < 1) {
             for (const auto& frame : left_frames_) {
                 contact_schedule_.InsertSwingByDuration(frame, next_left_insertion_time_,  swing_time_);
+                contact_schedule_log_file_ << "1," << this->now().seconds() - time_offset_ << "," << next_left_insertion_time_ << "," << next_left_insertion_time_ + swing_time_ << std::endl;
             }
 
             next_left_insertion_time_ += 2*swing_time_;
@@ -1803,7 +2021,7 @@ namespace robot
         // }
     }
 
-     void MpcController::ContactPolytopeCallback(const sample_contact_msgs::msg::ContactPolytopeArray& msg) {
+    void MpcController::ContactPolytopeCallback(const sample_contact_msgs::msg::ContactPolytopeArray& msg) {
         // Extract the polytopes
         std::vector<torc::mpc::ContactInfo> polytopes;
 
@@ -1821,7 +2039,12 @@ namespace robot
         step_planner_->UpdateContactPolytopes(polytopes);
 
         recieved_polytope_ = true;
-     }
+    }
+
+    void MpcController::ForceSensorCallback(const obelisk_sensor_msgs::msg::ObkForceSensor& msg) {
+        // FR, FL, RL, RR
+        force_sensor_log_file_ << this->now().seconds() - time_offset_ << "," << msg.forces[0] << "," << msg.forces[1] << "," << msg.forces[2] << "," << msg.forces[3] << std::endl;
+    }
 
     void MpcController::JoystickCallback(const sensor_msgs::msg::Joy& msg) {
         // ----- Axes ----- //
@@ -1854,13 +2077,17 @@ namespace robot
         static rclcpp::Time last_X_press = this->now();
         static rclcpp::Time last_B_press = this->now();
         static rclcpp::Time last_target_update = this->now();
+        static rclcpp::Time last_LT_press = this->now();
+        static rclcpp::Time last_RT_press = this->now();
 
         if (msg.buttons[MENU] && (this->now() - last_menu_press).seconds() > 1e-1) {
             RCLCPP_INFO_STREAM(this->get_logger(), "Press the menu button (three horizontal lines) to recieve this message.\n"
                 "Press (X) to toggle between MPC and PD to the initial condition.\n"
-                "Press (A) to print the current settings.\n"
+                "Press (A) to start a constant forward walk.\n"
                 "Press (Y) to cycle through gaits.\n"
                 "Press (B) to print the MPC timing statistics.\n"
+                "Press Left Trigger to increase the constant velocity value.\n"
+                "Press Right Trigger to decrease the constant velocity value.\n"
                 "Press the vertical DPAD to adjust the nominal standing height.\n"
                 "Right joystick to change the target angle.\n"
                 "Left joystick to adjust the desired velocity.");
@@ -1870,9 +2097,11 @@ namespace robot
 
         if (msg.buttons[X] && (this->now() - last_X_press).seconds() > 9e-1) {
             if (GetState() == SeekInitialCond) {
+                TransitionState(HoldInitialCond);
+            } else if (GetState() == HoldInitialCond) {
                 TransitionState(Mpc);
             } else if (GetState() == NoOutput) {
-                TransitionState(Mpc);
+                TransitionState(SeekInitialCond);
             } else if (GetState() == Mpc) {
                 TransitionState(SeekInitialCond);
             }
@@ -1884,12 +2113,21 @@ namespace robot
             print_timings_ = true;
         }
 
-        if (msg.buttons[A] && (this->now() - last_A_press).seconds() > 1e-1) {
-            std::lock_guard<std::mutex> lock(target_state_mut_);
-            RCLCPP_INFO_STREAM(this->get_logger(), "Current state: " << GetStateString(GetState())
-                    << "\nz target: " << z_target_ 
-                    << "\nx vel target: " << v_target_.value()[0](0)
-                    << "\ny vel target: " << v_target_.value()[0](1));
+        if (msg.buttons[A] && (this->now() - last_A_press).seconds() > 3e-1) {
+            // std::lock_guard<std::mutex> lock(target_state_mut_);
+            // RCLCPP_INFO_STREAM(this->get_logger(), "Current state: " << GetStateString(GetState())
+            //         << "\nz target: " << z_target_ 
+            //         << "\nx vel target: " << v_target_.value()[0](0)
+            //         << "\ny vel target: " << v_target_.value()[0](1));
+
+            if (!constant_vel_mode_) {
+                constant_vel_mode_ = true;
+                RCLCPP_INFO_STREAM(this->get_logger(), "Entering constant velocity mode with v = " << constant_vel_ << "m/s! Press (A) again to exit.");
+            } else {
+                constant_vel_mode_ = false;
+                RCLCPP_INFO_STREAM(this->get_logger(), "Exiting constant velocity mode!");
+            }
+
             last_A_press = this->now();
         }
 
@@ -1907,8 +2145,8 @@ namespace robot
             // In the future we may want to cap the speed above or below 1 and/or we may want a different curve to map them (i.e. log or quadratic)
             for (int i = 0; i < v_target_.value().GetNumNodes(); i++) {
                 // TODO: Add some kind of "damping" so the target velocity doesnt change too much
-                v_target_.value()[i](0) = msg.axes[LEFT_JOY_VERT];
-                v_target_.value()[i](1) = msg.axes[LEFT_JOY_HORZ] * 0; //0.1;
+                v_target_.value()[i](0) = msg.axes[LEFT_JOY_VERT] * 1;
+                v_target_.value()[i](1) = msg.axes[LEFT_JOY_HORZ] * 0; //0. 0.1;
             }
             
             // TODO: Add a angular velocity target too using the right joystick
@@ -1916,7 +2154,19 @@ namespace robot
                 v_target_.value()[i](5) = 1*msg.axes[RIGHT_JOY_HORZ];
             }
         }
-        
+
+        if (msg.axes[LEFT_TRIGGER] < 0.25 && (this->now() - last_LT_press).seconds() > 5e-1) {
+            constant_vel_ += 0.05;
+            RCLCPP_INFO_STREAM(this->get_logger(), "Increasing constant vel by 0.05m/s. Current value: " << constant_vel_ << " m/s.");
+            last_LT_press = this->now();
+        }
+    
+        if (msg.axes[RIGHT_TRIGGER] < 0.25 && (this->now() - last_RT_press).seconds() > 5e-1) {
+            constant_vel_ -= 0.05;
+            RCLCPP_INFO_STREAM(this->get_logger(), "Decreasing constant vel by 0.05m/s. Current value: " << constant_vel_ << " m/s.");
+            last_RT_press = this->now();
+        }
+
         sample_contact_msgs::msg::CommandedTarget target_msg;
         target_msg.z_target = z_target_;
         for (int i = 0; i < v_target_.value()[0].size(); i++) {
@@ -1924,7 +2174,6 @@ namespace robot
         }
 
         this->GetPublisher<sample_contact_msgs::msg::CommandedTarget>("target_pub")->publish(target_msg);
-
     }
 
 } // namespace robot

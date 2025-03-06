@@ -30,6 +30,7 @@ RUN apt-get update && apt-get install -y \
     libeigen3-dev \
     x11-apps \
     locales \
+    iputils-ping \
     evtest \
     sudo && \
     rm -rf /var/lib/apt/lists/* && \
@@ -87,6 +88,11 @@ RUN cd /home/${USER} && git clone https://github.com/giaf/blasfeo && git clone h
     make -j8 && sudo make install -j && cd /home/${USER} && \
     git clone https://github.com/Zolkin1/hpipm-cpp.git && cd /home/${USER}/hpipm-cpp && mkdir build && \
     cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j8 && sudo make install -j 
+
+# ProxQP
+RUN cd /home/${USER} && git clone https://github.com/Simple-Robotics/proxsuite.git --recursive && \
+    cd proxsuite && mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DBUILD_WITH_VECTORIZATION_SUPPORT=OFF && \
+    make && sudo make install
 
 # you must run the setup script from a directory where the user has permissions
 # run docker setup script in Dockerfile

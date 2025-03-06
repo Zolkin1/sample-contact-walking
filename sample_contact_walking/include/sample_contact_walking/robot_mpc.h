@@ -5,6 +5,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "obelisk_controller.h"
 
+#include "obelisk_sensor_msgs/msg/obk_force_sensor.hpp"
 #include "sensor_msgs/msg/joy.hpp"
 
 // #include "sample_contact_msgs/msg/contact_schedule.hpp"
@@ -14,7 +15,7 @@
 #include "hpipm_mpc.h"
 #include "reference_generator.h"
 #include "step_planner.h"
-// #include "wbc_controller.h"
+#include "wbc_controller.h"
 // #include "cross_entropy.h"
 
 namespace robot {
@@ -57,6 +58,9 @@ namespace robot {
             void AddPeriodicContacts();
             void ContactPolytopeCallback(const sample_contact_msgs::msg::ContactPolytopeArray& msg);
 
+            // Feet force sensor callback
+            void ForceSensorCallback(const obelisk_sensor_msgs::msg::ObkForceSensor& msg);
+
             // Parse contact into
             void ParseContactParameters();
 
@@ -67,7 +71,7 @@ namespace robot {
             void ConvertEigenToStd(const vectorx_t& eig_vec, std::vector<double>& std_vec);
             vectorx_t ConvertControlToMujocoU(const vectorx_t& pos_target, const vectorx_t& vel_target, const vectorx_t& feed_forward);
             // std::pair<vectorx_t, vectorx_t> ReduceState(const vectorx_t& q, const vectorx_t& v, torc::models::FullOrderRigidBody model);
-            void LogCurrentControl(const vectorx_t& q_control, const vectorx_t& v_control, const vectorx_t& tau, const vectorx_t& force);
+            void LogCurrentControl(const vectorx_t& q_control, const vectorx_t& v_control, const vectorx_t& tau, const vectorx_t& force, const vectorx_t& tau_mpc);
             void LogEigenVec(const vectorx_t& x);
 
             // Viz
@@ -81,9 +85,9 @@ namespace robot {
             // States
             enum ControllerState {
                 SeekInitialCond,
+                HoldInitialCond,
                 Mpc,
                 NoOutput
-                // TODO: Add a state for changing contact schedule
             };
             void TransitionState(const ControllerState& new_state);
             ControllerState GetState();
@@ -101,8 +105,13 @@ namespace robot {
 
             // State flags
             bool recieved_first_state_;
-            bool first_mpc_computed_;
+            std::atomic<bool> first_mpc_computed_;
+            std::atomic<bool> constant_vel_mode_;
 
+            // Contact vel mode info
+            double constant_vel_;
+
+            // Viz info
             bool viz_forces_;
             double scale_forces_;
             std::vector<std::string> force_frames_;
@@ -160,7 +169,8 @@ namespace robot {
             std::unique_ptr<torc::models::FullOrderRigidBody> wbc_model_;           // Potentially reduced model for the MPC
             torc::mpc::ContactSchedule contact_schedule_;
 
-            // std::unique_ptr<torc::controller::WbcController> wbc_controller_;
+            std::unique_ptr<torc::controller::WbcController> wbc_controller_;
+            matrixx_t K_;
 
             // Reference Generator
             std::unique_ptr<torc::mpc::ReferenceGenerator> ref_gen_;
@@ -172,7 +182,7 @@ namespace robot {
             std::map<std::string, std::vector<torc::step_planning::vector2_t>> nom_footholds_, projected_footholds_;   // For visualization
 
             std::shared_ptr<torc::mpc::MpcSettings> mpc_settings_;
-            // std::shared_ptr<torc::controller::WbcSettings> wbc_settings_;
+            std::shared_ptr<torc::controller::WbcSettings> wbc_settings_;
             std::shared_ptr<torc::mpc::HpipmMpc> mpc_;
 
             // MPC Skipped joint indexes
@@ -193,9 +203,15 @@ namespace robot {
             std::vector<double> kp_;
             std::vector<double> kd_;
 
+            // No stepping settings
+            double state_no_step_threshold_;
+            double command_no_step_threshold_;
+
             double time_offset_;
             std::ofstream log_file_;
             std::ofstream timing_log_file_;
+            std::ofstream contact_schedule_log_file_;
+            std::ofstream force_sensor_log_file_;
     };
 
     MpcController* MpcController::mujoco_sim_instance_ = nullptr;

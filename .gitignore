@@ -53,3 +53,6 @@ wbc_log_file.csv
 hpipm_mpc_log.csv
 mpc_loop_log.csv
 *.csv
+
+natnet_ros2/
+mpc_logs/

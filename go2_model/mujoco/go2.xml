@@ -4,7 +4,7 @@
 - Added PD controllers on the joints
 - Added sensors and sensor sites -->
 <mujoco model="go2">
-  <compiler angle="radian" meshdir="../meshes" autolimits="true"/>
+  <compiler angle="radian" meshdir="../meshes" autolimits="true" eulerseq="XYZ"/>
 
   <!-- <option cone="pyramidal" integrator="implicitfast" timestep="0.001"/> -->
   <option cone="elliptic" impratio="100" integrator="implicitfast" timestep="0.0005"/>
@@ -12,7 +12,7 @@
 <!-- All motor control limits are handeled in the joint actuatorfrcrange field. -->
   <default>
     <default class="go2">
-      <geom friction="0.6" margin="0.001" condim="1"/>
+      <geom friction="0.9" margin="0.001" condim="6"/>
       <joint axis="0 1 0" damping="2" armature="0.01" frictionloss="0.2"/>
       <motor ctrllimited="false"/>
 
@@ -24,7 +24,8 @@
         <!-- Position Control -->
         <default class="hip_pos">
           <!-- <position kp="0" ctrllimited="false"/> -->
-          <position kp="350" ctrllimited="false"/>
+          <!-- <position kp="350" ctrllimited="false"/> -->
+          <position kp="50" ctrllimited="false"/>
           <!-- <position kp="800" ctrllimited="false"/> -->
         </default>
 
@@ -50,7 +51,8 @@
         <!-- Position Control -->
         <default class="thigh_pos">
           <!-- <position kp="0" ctrllimited="false"/> -->
-          <position kp="300" ctrllimited="false"/>
+          <position kp="50" ctrllimited="false"/>
+          <!-- <position kp="300" ctrllimited="false"/> -->
           <!-- <position kp="800" ctrllimited="false"/> -->
         </default>
 
@@ -70,7 +72,8 @@
         <!-- Position Control -->
         <default class="calf_pos">
           <!-- <position kp="0" ctrllimited="false"/> -->
-         <position kp="300" ctrllimited="false"/>
+         <position kp="50" ctrllimited="false"/>
+         <!-- <position kp="300" ctrllimited="false"/> -->
           <!-- <position kp="800" ctrllimited="false"/> -->
         </default>
 
@@ -151,6 +154,8 @@
       
       <site name="imu" pos="-0.02557 0 0.04232"/>
       <site name="torso_mocap_site" pos="0 0 0" euler="0 0 0" size="0.01"/>
+      <site name="tracking_camera_site" pos="-0.0635 -0.12 -0.01" euler="0.0 3.14159 1.57079" size="0.01"/>
+      <site name="tracking_camera_site_vel" pos="-0.0635 -0.12 -0.01" euler="0.0 0 -1.57079" size="0.01"/>
 
       <body name="FL_hip" pos="0.1934 0.0465 0">
         <inertial pos="-0.0054 0.00194 -0.000105" quat="0.497014 0.499245 0.505462 0.498237" mass="0.678"
@@ -347,6 +352,13 @@
     <framepos name="base_mocap_pos_sensor" objtype="site" objname="torso_mocap_site" noise="0.01"/>
     <framequat name="base_mocap_quat_sensor" objtype="site" objname="torso_mocap_site" noise="0.01"/>
 
+    <!-- Tracking Camera -->
+    <framepos name="base_tracking_camera_pos_sensor" objtype="site" objname="tracking_camera_site"/>
+    <framequat name="base_tracking_camera_quat_sensor" objtype="site" objname="tracking_camera_site" noise="0.01"/>
+    <gyro name="base_tracking_camera_gyro" site="tracking_camera_site_vel" noise="0.01"/>
+    <velocimeter name="base_tracking_camera_vel" site="tracking_camera_site_vel" noise="0.01"/>
+
+
     <!--  Force sensors  -->
     <force name="FL_force_sensor" site="FL_foot_site"/>
     <force name="FR_force_sensor" site="FR_foot_site"/>
@@ -400,10 +412,14 @@
   </actuator>
 
   <keyframe>
-    <key name="home" qpos="0 0 0.29 0 0 0 0 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8"
-      ctrl="0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8
+    <key name="home" qpos="0 0 0.29 0 0 0 0 0 1.1 -1.2 0 1.1 -1.2 0 0.9 -1.8 0 0.9 -1.8"
+      ctrl="0 1.1 -2 0 1.1 -2 0 0.9 -1.8 0 0.9 -1.8
             0 0 0 0 0 0 0 0 0 0 0 0
             0 0 0 0 0 0 0 0 0 0 0 0"/>
+    <!-- <key name="home" qpos="0.25 -0.125 0.29 0.707106781 0 0 -0.707106781 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8"
+      ctrl="0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8
+            0 0 0 0 0 0 0 0 0 0 0 0
+            0 0 0 0 0 0 0 0 0 0 0 0"/> -->
     <!-- <key name="home" qpos="0 0 0.27 1 0 0 0 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8"
       ctrl="0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8"/> -->
   </keyframe>
