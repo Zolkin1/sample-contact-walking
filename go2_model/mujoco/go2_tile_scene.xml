@@ -20,22 +20,22 @@
     <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
 
     <body>
-        <geom name="tile1" pos="0.25 0 -0.095" type="box" contype="4" conaffinity="1" size="1 1 0.095" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
-        <geom name="tile2" pos="4.5 0 -0.095" type="box" contype="4" conaffinity="1" size="2 1 0.095" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <geom name="tile1" pos="0.25 0 -0.1" type="box" contype="4" conaffinity="1" size="1 1 0.1" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <geom name="tile2" pos="4.5 0 -0.1" type="box" contype="4" conaffinity="1" size="2 1 0.1" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
         <!-- 2.1 -->
         <!-- 1.5 -->
-        <geom name="tile3" pos="1.0 2.1 -0.195" type="box" contype="4" conaffinity="1" size="2 1 0.095" friction="0.8" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
-        <geom name="tile4" pos="1.0 -2.2 0" type="box" contype="4" conaffinity="1" size="2 1 0.095" friction="0.8" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
-        <geom name="tile5" pos="-1.0 0 -0.095" type="box" contype="4" conaffinity="1" size="0.2 0.75 0.095" friction="0.8" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
-        <geom name="tile6" pos="-1.5 0 -0.095" type="box" contype="4" conaffinity="1" size="0.2 0.75 0.095" friction="0.8" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
-        <geom name="tile7" pos="-2.1 0 -0.095" type="box" contype="4" conaffinity="1" size="0.2 0.75 0.095" friction="0.8" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
-        <geom name="tile8" pos="-2.6 0 -0.095" type="box" contype="4" conaffinity="1" size="0.2 0.75 0.095" friction="0.8" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
-        <geom name="tile9" pos="-4.05 0 -0.095" type="box" contype="4" conaffinity="1" size="1 1 0.095" friction="0.8" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <geom name="tile3" pos="1.0 2.1 -0.2" type="box" contype="4" conaffinity="1" size="2 1 0.1" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <geom name="tile4" pos="1.0 -2.2 0" type="box" contype="4" conaffinity="1" size="2 1 0.1" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <geom name="tile5" pos="-1.0 0 -0.13" type="box" contype="4" conaffinity="1" size="0.2 0.75 0.1" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <geom name="tile6" pos="-1.5 0 -0.07" type="box" contype="4" conaffinity="1" size="0.2 0.75 0.1" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <geom name="tile7" pos="-2.1 0 -0.11" type="box" contype="4" conaffinity="1" size="0.2 0.75 0.1" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <geom name="tile8" pos="-2.6 0 -0.09" type="box" contype="4" conaffinity="1" size="0.2 0.75 0.1" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+        <geom name="tile9" pos="-4.05 0 -0.1" type="box" contype="4" conaffinity="1" size="1 1 0.1" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
         
         <!-- <geom name="stair1" pos="1.45 0 0.105" type="box" size="0.2 1 0.095" material="box_material" rgba="0.96 0.36 0.259 1.0"/> -->
-        <geom name="stair1" pos="1.45 0 -0.005" type="box" size="0.2 1 0.095" material="box_material" rgba="0.96 0.36 0.259 1.0"/>
-        <geom name="stair2" pos="1.85 0 0.105" type="box" size="0.2 1 0.095" material="box_material" rgba="0.96 0.36 0.259 1.0"/>
-        <geom name="stair3" pos="2.25 0 0.005" type="box" size="0.2 1 0.095" material="box_material" rgba="0.96 0.36 0.259 1.0"/>
+        <geom name="stair1" pos="1.45 0 0.0" type="box" size="0.2 1 0.1" material="box_material" rgba="0.96 0.36 0.259 1.0"/>
+        <geom name="stair2" pos="1.85 0 0.10" type="box" size="0.2 1 0.1" material="box_material" rgba="0.96 0.36 0.259 1.0"/>
+        <geom name="stair3" pos="2.25 0 0.0" type="box" size="0.2 1 0.1" material="box_material" rgba="0.96 0.36 0.259 1.0"/>
     </body>
 
   </worldbody>

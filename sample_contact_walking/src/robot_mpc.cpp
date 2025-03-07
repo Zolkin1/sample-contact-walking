@@ -722,14 +722,10 @@ namespace robot
             // TODO: Look into what target to use, for now just use the old targets
             // TODO: Consider making this update at a slower rate (20-50Hz)
             step_planner_timer.Tic();
-            // TODO: Put back
             step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_, nom_footholds_, projected_footholds_);
             step_planner_timer.Toc();
             mpc_->UpdateContactSchedule(contact_schedule_); // TODO: Need to do this at the same time as the reference generation
         }
-        // if (v_target_.value()[0].head<6>().norm() > 0.001) {
-        //     AddPeriodicContacts();   // Don't use when getting CS from the other node
-        // }
                 
 
         // Linearize around current trajectory
@@ -775,18 +771,6 @@ namespace robot
             throw std::runtime_error("quat has zero norm!");
         }
 
-        // // ----- No Reference ----- //
-        // if (!fixed_target_ || controller_target_) {
-        //     UpdateMpcTargets(q);
-        //     mpc_->SetConfigTarget(q_target_.value());
-        //     mpc_->SetVelTarget(v_target_.value());
-
-        //     // std::cout << "q: " << q.transpose() << std::endl;
-        //     // std::cout << "v: " << v.transpose() << std::endl;
-        //     // std::cout << "q target 0: " << q_target_.value()[0].transpose() << std::endl;
-        //     // std::cout << "v target 0: " << v_target_.value()[0].transpose() << std::endl;
-        // }
-
         // Reference generation
         {
             std::lock_guard<std::mutex> lock(polytope_mutex_);
@@ -798,15 +782,7 @@ namespace robot
             for (const auto& frame : mpc_settings_->contact_frames) {
                 if (contact_schedule_.InContact(frame, 0)) {
                     vector3_t contact_pos = mpc_model_->GetFrameState(frame).placement.translation();
-                    // std::cout << "contact pos[2]: " << contact_pos[2] << std::endl;
-                    // std::cout << "height: " << contact_schedule_.GetPolytopes(frame)[contact_schedule_.GetContactIndex(frame, 0)].height_ << std::endl;
                     mpc_->SetFootOffset(frame, contact_pos[2] - contact_schedule_.GetPolytopes(frame)[contact_schedule_.GetContactIndex(frame, 0)].height_);
-                    // std::cout << "poly height: " << contact_schedule_.GetPolytopes(frame)[contact_schedule_.GetContactIndex(frame, 0)].height_ << std::endl;
-                    // TODO: Remove after debugging
-                    // if (contact_schedule_.GetPolytopes(frame)[contact_schedule_.GetContactIndex(frame, 0)].height_ != -1) {
-                    //     std::cerr << "height: " << contact_schedule_.GetPolytopes(frame)[contact_schedule_.GetContactIndex(frame, 0)].height_ << std::endl;
-                    //     throw std::runtime_error("Wrong polytope height when gathering the foot offset!");
-                    // }
                     mean_contact_height += contact_pos[2];
                     num_in_contact++;
                 }
@@ -819,7 +795,6 @@ namespace robot
             for (int i = 0; i < q_target_.value().GetNumNodes(); i++) {
                 // TODO: Remove this if the refernce generator continues to generate floating base references! ---------------
                 q_target_.value()[i][2] = mean_contact_height + z_target_;
-                // std::cout << "Mean contact height: " << mean_contact_height << ", z target: " << z_target_ << ", q target: " <<  q_target_.value()[i][2] << std::endl;
             }
 
             // Update the target base height relative to the foot
@@ -837,11 +812,11 @@ namespace robot
         // std::cout << "q_target_ z: " << q_target_.value()[0][2] << std::endl;
         // std::cout << "q_base_target z: " << (*q_base_target_)[0][2] << std::endl;   // TODO: Need to fix this
 
-        // TODO: Put back after debugging -------------
-        // TODO: Need to make sure this works as expected
+
+        // TODO: I'm not sure these really improve anything. If anything they almost look like they make it worse
         // Set base targets
-        // mpc_->SetConfigBaseTarget(*q_base_target_);
-        // mpc_->SetVelBaseTarget(*v_base_target_);
+        mpc_->SetConfigBaseTarget(*q_base_target_);
+        mpc_->SetVelBaseTarget(*v_base_target_);
 
         double mpc_start_time = this->now().seconds();
         if (mpc_->GetSolveCounter() < max_mpc_solves) {
@@ -856,14 +831,9 @@ namespace robot
 
                 // Assign start time too
                 traj_start_time_ = time;
-
-                // K_ = mpc_->GetRiccatiFeedback();
             }
         }
         timer.Toc();
-
-        // TODO: Remove
-        // traj_mpc_.ExportToCSV("mpc_logs/first_fb_solve_result_traj.csv");
 
         first_mpc_computed_ = true;
 

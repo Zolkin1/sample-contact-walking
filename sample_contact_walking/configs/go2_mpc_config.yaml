@@ -122,7 +122,7 @@ costs:
   - type: ForwardKinematics
     name: "FL_foot_fk"
     frame: "FL_foot"
-    weight: [10, 10, 0] #[10,10,1] #[1, 1, 1] #TODO: Adding this has a minimal effect
+    weight: [10,10,1] #[1, 1, 1] #TODO: Adding this has a minimal effect
   # - type: ForwardKinematics
   #   name: "FR_foot_fk"
   #   frame: "FR_foot"
