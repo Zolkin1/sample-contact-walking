@@ -712,6 +712,7 @@ namespace robot
 
         if (!recieved_polytope_) {
             UpdateContactPolytopes();
+            std::cout << "No polytope received yet!" << std::endl;
         } 
         
         // ----- No Reference ----- //
@@ -798,21 +799,27 @@ namespace robot
                 if (contact_schedule_.InContact(frame, 0)) {
                     vector3_t contact_pos = mpc_model_->GetFrameState(frame).placement.translation();
                     // std::cout << "contact pos[2]: " << contact_pos[2] << std::endl;
+                    // std::cout << "height: " << contact_schedule_.GetPolytopes(frame)[contact_schedule_.GetContactIndex(frame, 0)].height_ << std::endl;
                     mpc_->SetFootOffset(frame, contact_pos[2] - contact_schedule_.GetPolytopes(frame)[contact_schedule_.GetContactIndex(frame, 0)].height_);
+                    // std::cout << "poly height: " << contact_schedule_.GetPolytopes(frame)[contact_schedule_.GetContactIndex(frame, 0)].height_ << std::endl;
+                    // TODO: Remove after debugging
+                    // if (contact_schedule_.GetPolytopes(frame)[contact_schedule_.GetContactIndex(frame, 0)].height_ != -1) {
+                    //     std::cerr << "height: " << contact_schedule_.GetPolytopes(frame)[contact_schedule_.GetContactIndex(frame, 0)].height_ << std::endl;
+                    //     throw std::runtime_error("Wrong polytope height when gathering the foot offset!");
+                    // }
                     mean_contact_height += contact_pos[2];
                     num_in_contact++;
                 }
             }
             
-            // Compute mean contact height // TODO: Adjust/change for varying heights
+            // Compute mean contact height
             mean_contact_height /= num_in_contact;
 
             // Adjust the target height to be relative to the foot height
             for (int i = 0; i < q_target_.value().GetNumNodes(); i++) {
-                // TODO: Put back
+                // TODO: Remove this if the refernce generator continues to generate floating base references! ---------------
                 q_target_.value()[i][2] = mean_contact_height + z_target_;
-                std::cout << "Mean contact height: " << mean_contact_height << ", z target: " << z_target_ << ", q target: " <<  q_target_.value()[i][2] << std::endl;
-                // TODO: Adjust this for the height over the length of the horizon
+                // std::cout << "Mean contact height: " << mean_contact_height << ", z target: " << z_target_ << ", q target: " <<  q_target_.value()[i][2] << std::endl;
             }
 
             // Update the target base height relative to the foot
@@ -827,10 +834,10 @@ namespace robot
             mpc_->SetForwardKinematicsTarget(contact_foot_pos);
         }
 
-        std::cout << "q_target_ z: " << q_target_.value()[0][2] << std::endl;
-        std::cout << "q_base_target z: " << (*q_base_target_)[0][2] << std::endl;   // TODO: Need to fix this
+        // std::cout << "q_target_ z: " << q_target_.value()[0][2] << std::endl;
+        // std::cout << "q_base_target z: " << (*q_base_target_)[0][2] << std::endl;   // TODO: Need to fix this
 
-        // TODO: Put back after debugging
+        // TODO: Put back after debugging -------------
         // TODO: Need to make sure this works as expected
         // Set base targets
         // mpc_->SetConfigBaseTarget(*q_base_target_);
@@ -867,7 +874,7 @@ namespace robot
 
 
         if (v_target_.value()[0].head<6>().norm() > command_no_step_threshold_ || v.head<6>().norm() > state_no_step_threshold_) {
-            AddPeriodicContacts();   // Don't use when getting CS from the other node
+            AddPeriodicContacts();
         }
         prep_timer.Toc();
 
@@ -1958,21 +1965,7 @@ namespace robot
             next_left_insertion_time_ += 2*swing_time_;
         }
 
-        // Set polytopes for newly created contacts
-        for (const auto& frame : mpc_settings_->contact_frames) {
-            if (contact_schedule_.GetNumContacts(frame) > 0 && contact_schedule_.GetPolytopes(frame).back().A_.size() == 0) {
-                torc::mpc::ContactInfo polytope = contact_schedule_.GetDefaultContactInfo();
-                if (contact_schedule_.GetNumContacts(frame) > 1) {
-                    polytope = contact_schedule_.GetPolytopes(frame).at(contact_schedule_.GetPolytopes(frame).size() - 2);
-                }
-                contact_schedule_.SetPolytope(frame, contact_schedule_.GetNumContacts(frame) - 1, polytope);
-            }
-        }
-
-        contact_schedule_.CleanContacts(-1); //-0.1);
-        // for (const auto& frame : mpc_->GetContactFrames()) {
-        //     std::cout << frame << " num Contacts: " << contact_schedule_.GetNumContacts(frame) << std::endl;
-        // }
+        contact_schedule_.CleanContacts(-1);
     }
 
     void MpcController::ParseContactParameters() {
