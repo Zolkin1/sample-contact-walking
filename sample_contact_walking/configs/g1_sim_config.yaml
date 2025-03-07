@@ -183,7 +183,7 @@ onboard:
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/tile_scene.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/g1_model/mujoco/g1_tile2_scene.xml
       # ----- Tile Scene ---- #
-        foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9"]
+        foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9", "stair1", "stair2", "stair3"]
       publishers:
         # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting
@@ -200,9 +200,8 @@ onboard:
           history_depth: 10
           callback_group: estimation_cbg
       timers:
-        # Contact planning timer
         - ros_parameter: timer_ctrl_setting
-          timer_period_sec: 0.05 #0.1
+          timer_period_sec: 0.1 #0.1
           callback_group: control_cbg
   estimation:
   # --------------------------------- #
@@ -460,9 +459,9 @@ onboard:
           viz_geoms:
             dt: 1
             # ----- Stair scene ----- #
-            # stair_1: box
-            # stair_2: box
-            # stair_3: box
+            stair1: box
+            stair2: box
+            stair3: box
             # ----- Tile scene ----- #
             tile1: box
             tile2: box

@@ -119,6 +119,8 @@ namespace robot
         // Reference Generator
         ref_gen_ = std::make_unique<torc::mpc::ReferenceGenerator>(mpc_settings_->nodes, mpc_settings_->contact_frames, mpc_settings_->dt,
             mpc_model_temp, mpc_settings_->polytope_delta);
+        q_base_target_ = std::make_unique<torc::mpc::SimpleTrajectory>(FLOATING_POS_SIZE, mpc_settings_->nodes);
+        v_base_target_ = std::make_unique<torc::mpc::SimpleTrajectory>(FLOATING_VEL_SIZE, mpc_settings_->nodes);
 
         // ---------- Constraints ---------- //
         // torc::models::FullOrderRigidBody mpc_model_temp(model_name, "/home/zolkin/torc/tests/test_data/g1_hand.urdf", mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values);
@@ -604,6 +606,7 @@ namespace robot
                     // TODO: Fix the state for when we re-enter this loop
                     {
                         std::lock_guard<std::mutex> lock(polytope_mutex_);
+                        step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_, nom_footholds_, projected_footholds_, true);
                         mpc_->UpdateContactSchedule(contact_schedule_);  // TODO: There is an issue with polytopes here
                     }
 
@@ -709,6 +712,7 @@ namespace robot
 
         if (!recieved_polytope_) {
             UpdateContactPolytopes();
+            std::cout << "No polytope received yet!" << std::endl;
         } 
         
         // ----- No Reference ----- //
@@ -718,14 +722,10 @@ namespace robot
             // TODO: Look into what target to use, for now just use the old targets
             // TODO: Consider making this update at a slower rate (20-50Hz)
             step_planner_timer.Tic();
-            // TODO: Put back
             step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_, nom_footholds_, projected_footholds_);
             step_planner_timer.Toc();
             mpc_->UpdateContactSchedule(contact_schedule_); // TODO: Need to do this at the same time as the reference generation
         }
-        // if (v_target_.value()[0].head<6>().norm() > 0.001) {
-        //     AddPeriodicContacts();   // Don't use when getting CS from the other node
-        // }
                 
 
         // Linearize around current trajectory
@@ -771,18 +771,6 @@ namespace robot
             throw std::runtime_error("quat has zero norm!");
         }
 
-        // // ----- No Reference ----- //
-        // if (!fixed_target_ || controller_target_) {
-        //     UpdateMpcTargets(q);
-        //     mpc_->SetConfigTarget(q_target_.value());
-        //     mpc_->SetVelTarget(v_target_.value());
-
-        //     // std::cout << "q: " << q.transpose() << std::endl;
-        //     // std::cout << "v: " << v.transpose() << std::endl;
-        //     // std::cout << "q target 0: " << q_target_.value()[0].transpose() << std::endl;
-        //     // std::cout << "v target 0: " << v_target_.value()[0].transpose() << std::endl;
-        // }
-
         // Reference generation
         {
             std::lock_guard<std::mutex> lock(polytope_mutex_);
@@ -794,17 +782,18 @@ namespace robot
             for (const auto& frame : mpc_settings_->contact_frames) {
                 if (contact_schedule_.InContact(frame, 0)) {
                     vector3_t contact_pos = mpc_model_->GetFrameState(frame).placement.translation();
-                    mpc_->SetDefaultGroundHeight(frame, contact_pos[2]);
+                    mpc_->SetFootOffset(frame, contact_pos[2] - contact_schedule_.GetPolytopes(frame)[contact_schedule_.GetContactIndex(frame, 0)].height_);
                     mean_contact_height += contact_pos[2];
                     num_in_contact++;
                 }
             }
             
-            // Compute mean contact height // TODO: Adjust/change for varying heights
+            // Compute mean contact height
             mean_contact_height /= num_in_contact;
 
             // Adjust the target height to be relative to the foot height
             for (int i = 0; i < q_target_.value().GetNumNodes(); i++) {
+                // TODO: Remove this if the refernce generator continues to generate floating base references! ---------------
                 q_target_.value()[i][2] = mean_contact_height + z_target_;
             }
 
@@ -815,10 +804,18 @@ namespace robot
             // mpc_->UpdateContactSchedule(contact_schedule_); // TODO: Why do I do this here?
             std::map<std::string, std::vector<torc::mpc::vector3_t>> contact_foot_pos;
             const auto [q_ref, v_ref] = ref_gen_->GenerateReference(q, v, q_target_.value(), v_target_.value(), mpc_->GetSwingTrajectory(),
-                mpc_settings_->hip_offsets, contact_schedule_, contact_foot_pos);
+                mpc_settings_->hip_offsets, contact_schedule_, z_target_, mean_contact_height, contact_foot_pos, *q_base_target_, *v_base_target_);
 
             mpc_->SetForwardKinematicsTarget(contact_foot_pos);
         }
+
+        // std::cout << "q_target_ z: " << q_target_.value()[0][2] << std::endl;
+        // std::cout << "q_base_target z: " << (*q_base_target_)[0][2] << std::endl;   // TODO: Need to fix this
+
+        // TODO: I'm not sure these really improve anything. If anything they almost look like they make it worse
+        // Set base targets
+        mpc_->SetConfigBaseTarget(*q_base_target_);
+        mpc_->SetVelBaseTarget(*v_base_target_);
 
         double mpc_start_time = this->now().seconds();
         if (mpc_->GetSolveCounter() < max_mpc_solves) {
@@ -833,14 +830,9 @@ namespace robot
 
                 // Assign start time too
                 traj_start_time_ = time;
-
-                // K_ = mpc_->GetRiccatiFeedback();
             }
         }
         timer.Toc();
-
-        // TODO: Remove
-        // traj_mpc_.ExportToCSV("mpc_logs/first_fb_solve_result_traj.csv");
 
         first_mpc_computed_ = true;
 
@@ -851,7 +843,7 @@ namespace robot
 
 
         if (v_target_.value()[0].head<6>().norm() > command_no_step_threshold_ || v.head<6>().norm() > state_no_step_threshold_) {
-            AddPeriodicContacts();   // Don't use when getting CS from the other node
+            AddPeriodicContacts();
         }
         prep_timer.Toc();
 
@@ -1215,7 +1207,11 @@ namespace robot
                 b_temp = b_temp + Eigen::Vector4d::Constant(-0.1*(frame_idx));
             }
             for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-                contact_schedule_.SetPolytope(frame, i, A_temp, b_temp);
+                torc::mpc::ContactInfo poly;
+                poly.A_ = A_temp;
+                poly.b_ = b_temp;
+                poly.height_ = 0;
+                contact_schedule_.SetPolytope(frame, i, poly);
             }
 
             frame_idx++;
@@ -1252,8 +1248,10 @@ namespace robot
             num_proj_footholds += points.size();
         }
 
+        int num_markers = viz_frames.size() + force_frames_.size() + num_nom_footholds + num_proj_footholds + mpc_settings_->nodes;
+
         visualization_msgs::msg::MarkerArray msg;
-        msg.markers.resize(viz_frames.size() + force_frames_.size() + num_nom_footholds + num_proj_footholds);
+        msg.markers.resize(num_markers);
         // std::cerr << "marker size: " << msg.markers.size() << std::endl;
         // std::cerr << "num nom footholds: " << num_nom_footholds << std::endl;
         // std::cerr << "num proj footholds: " << num_proj_footholds << std::endl;
@@ -1405,17 +1403,93 @@ namespace robot
 
                 i++;
             }
+        }        
+
+        // Reference frames
+        // TODO: May want to move this under the mutex
+        for (int j = 0; j < mpc_settings_->nodes; j++) {
+                msg.markers[i].type = visualization_msgs::msg::Marker::LINE_LIST;
+                msg.markers[i].header.frame_id = "world";
+                msg.markers[i].header.stamp = this->now();
+                msg.markers[i].ns = "config_ref";
+                msg.markers[i].id = i;
+                msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
+
+                msg.markers[i].scale.x = 0.01;
+
+                geometry_msgs::msg::Point base, xpoint, ypoint, zpoint;
+
+                base.x = q_base_target_->GetNodeData(j)[0];
+                base.y = q_base_target_->GetNodeData(j)[1];
+                base.z = q_base_target_->GetNodeData(j)[2];
+
+                const double line_len = 0.05;
+                torc::mpc::vector3_t xline = {.05, 0, 0};
+                torc::mpc::vector3_t yline = {0, .05, 0};
+                torc::mpc::vector3_t zline = {0, 0, .05}; 
+                
+                // Rotate into the correct frame
+                torc::mpc::quat_t quat(q_base_target_->GetNodeData(0).segment<4>(3));
+                torc::mpc::matrix3_t R = quat.toRotationMatrix();   // TODO: add a transpose?
+
+                xline = R*xline;
+                yline = R*yline;
+                zline = R*zline;
+
+                xline += q_base_target_->GetNodeData(j).head<3>();
+                yline += q_base_target_->GetNodeData(j).head<3>();
+                zline += q_base_target_->GetNodeData(j).head<3>();
+
+                // TODO: Change the colors
+                std_msgs::msg::ColorRGBA color;
+
+                xpoint.x = xline[0];
+                xpoint.y = xline[1];
+                xpoint.z = xline[2];
+                color.a = 1.0;
+                color.r = 0.81;
+                color.g = 0.01;
+                color.b = 0.988;
+                msg.markers[i].points.emplace_back(base);
+                msg.markers[i].points.emplace_back(xpoint);
+                msg.markers[i].colors.push_back(color);
+                msg.markers[i].colors.push_back(color);
+
+                ypoint.x = yline[0];
+                ypoint.y = yline[1];
+                ypoint.z = yline[2];
+                color.a = 1.0;
+                color.r = 1.;
+                color.g = 0.72;
+                color.b = 0.01;
+                msg.markers[i].points.emplace_back(base);
+                msg.markers[i].points.emplace_back(ypoint);
+                msg.markers[i].colors.push_back(color);
+                msg.markers[i].colors.push_back(color);
+
+                zpoint.x = zline[0];
+                zpoint.y = zline[1];
+                zpoint.z = zline[2];
+                color.a = 1.0;
+                color.r = 0.01;
+                color.g = 0.988;
+                color.b = 0.92;
+                msg.markers[i].points.emplace_back(base);
+                msg.markers[i].points.emplace_back(zpoint);
+                msg.markers[i].colors.push_back(color);
+                msg.markers[i].colors.push_back(color);
+
+                i++;
         }
 
-
-        std::lock_guard<std::mutex> lock(polytope_mutex_);
+        std::lock_guard<std::mutex> lock(polytope_mutex_);        
 
         int num_polytope_markers = 0;
         for (const auto& frame : viz_polytope_frames_) {
             num_polytope_markers += contact_schedule_.GetNumContacts(frame);
         }
         
-        msg.markers.resize(viz_frames.size() + force_frames_.size() + num_nom_footholds + num_proj_footholds + num_polytope_markers);
+        msg.markers.resize(num_markers + num_polytope_markers);
 
         // TODO: There is a bug in this block of code for the quad
         int frame_idx = 0;
@@ -1488,7 +1562,7 @@ namespace robot
                 // TODO: Do better
                 // TODO: Check this to make sure it will work for more than the default polytope
                 geometry_msgs::msg::Point corner;
-                corner.z = 0;
+                corner.z = polytope.height_;
 
                 // std::cout << "b: " << polytope.b_.transpose() << std::endl;
                 corner.x = polytope.b_(0);
@@ -1860,21 +1934,7 @@ namespace robot
             next_left_insertion_time_ += 2*swing_time_;
         }
 
-        // Set polytopes for newly created contacts
-        for (const auto& frame : mpc_settings_->contact_frames) {
-            if (contact_schedule_.GetNumContacts(frame) > 0 && contact_schedule_.GetPolytopes(frame).back().A_.size() == 0) {
-                torc::mpc::ContactInfo polytope = contact_schedule_.GetDefaultContactInfo();
-                if (contact_schedule_.GetNumContacts(frame) > 1) {
-                    polytope = contact_schedule_.GetPolytopes(frame).at(contact_schedule_.GetPolytopes(frame).size() - 2);
-                }
-                contact_schedule_.SetPolytope(frame, contact_schedule_.GetNumContacts(frame) - 1, polytope.A_, polytope.b_);
-            }
-        }
-
-        contact_schedule_.CleanContacts(-1); //-0.1);
-        // for (const auto& frame : mpc_->GetContactFrames()) {
-        //     std::cout << frame << " num Contacts: " << contact_schedule_.GetNumContacts(frame) << std::endl;
-        // }
+        contact_schedule_.CleanContacts(-1);
     }
 
     void MpcController::ParseContactParameters() {
@@ -1940,7 +2000,7 @@ namespace robot
             Eigen::Map<matrixx_t> A(a_mat.data(), 2, 2);
             Eigen::Vector4d b(msg.polytopes[i].b_vec.data());
 
-            polytopes.emplace_back(A, b);
+            polytopes.emplace_back(A, b, msg.polytopes[i].height);
         }
 
         std::lock_guard<std::mutex> lock(polytope_mutex_);

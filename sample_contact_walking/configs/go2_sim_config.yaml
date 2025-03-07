@@ -28,7 +28,7 @@ onboard:
         mpc_loop_period_sec: 0.008 #0.01 #0.008 #0.01 #0.01
         max_mpc_solves: 1000000 #-37 #125 
 # ---------- Contact schedule ---------- #
-        swing_time: 0.3 #0.2 #0.25
+        swing_time: 0.3 #0.4 #0.3 #0.2 #0.25
         first_swing_time: 2. #0.1 #0.1 #2.
         double_stance_time: 0.0
         right_foot_first: True
@@ -132,13 +132,13 @@ onboard:
       executable: mujoco_geom_reader
       params:
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
-        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile_scene.xml
+        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile_scene.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile2_scene.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_1.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_2_basic_stones.xml
-        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_3_multiple_stones.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_3_multiple_stones.xml
       # ----- Tile Scene ---- #
-        foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9"]
+        foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9", "stair1", "stair2", "stair3"]
       publishers:
         # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting
@@ -254,11 +254,11 @@ onboard:
         - ros_parameter: mujoco_setting
           robot_pkg: go2_model
           # model_xml_path: go2_scene.xml
-          # model_xml_path: go2_tile_scene.xml
+          model_xml_path: go2_tile_scene.xml
           # model_xml_path: go2_tile2_scene.xml
           # model_xml_path: go2_lab_space_1.xml
           # model_xml_path: go2_lab_space_2_basic_stones.xml
-          model_xml_path: go2_lab_space_3_multiple_stones.xml
+          # model_xml_path: go2_lab_space_3_multiple_stones.xml
           n_u: 36
           num_steps_per_viz: 16 # No longer used
           sensor_settings:

@@ -62,6 +62,7 @@ class MujocoGeomReader(ObeliskController):
             polytope = ContactPolytope()
             polytope.a_mat = [1., 0., 0., 1.]
             polytope.b_vec = self.b_vecs[j].tolist()
+            polytope.height = self.heights[j]
 
             polytopes.polytopes.append(polytope)
 
@@ -74,6 +75,7 @@ class MujocoGeomReader(ObeliskController):
         # Read in the terrain from Mujoco
         self.b_vecs = []
         self.A_mats = []
+        self.heights = []
         self.foothold_geoms = foothold_geoms
 
         for geom_name in foothold_geoms:
@@ -93,9 +95,10 @@ class MujocoGeomReader(ObeliskController):
                 geom_pos = self.mujoco_model.geom_pos[geom_id]
                 # geom_rot = self.mujoco_model.geom_quat[geom_id]
 
-                # TODO: Determine a way to encode the height of the polytope
-                # For now assuming it is flush with the ground
 
+                self.heights.append(geom_pos[2] + half_sizes[2])
+                self.get_logger().info(f"height: {self.heights[-1]}")
+        
                 # TODO: Deal with geometry at an angle
                 
                 # Get the smallest and largest x and y values

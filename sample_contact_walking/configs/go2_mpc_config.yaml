@@ -199,7 +199,7 @@ contacts:
   hip_offsets: [-0.1934, 0.142, 0.2234, -0.142, 0.2234, 0.142, -0.1934, -0.142]
   apex_height: 0.08
   apex_time: 0.75
-  default_ground_height: 0.01
+  default_ground_height: 0.0 #0.01
 line_search:
   alpha_min: 1e-3
   large_constraint_vio: 1e-2
