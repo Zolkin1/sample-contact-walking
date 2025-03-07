@@ -606,6 +606,7 @@ namespace robot
                     // TODO: Fix the state for when we re-enter this loop
                     {
                         std::lock_guard<std::mutex> lock(polytope_mutex_);
+                        step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_, nom_footholds_, projected_footholds_, true);
                         mpc_->UpdateContactSchedule(contact_schedule_);  // TODO: There is an issue with polytopes here
                     }
 
@@ -796,7 +797,8 @@ namespace robot
             for (const auto& frame : mpc_settings_->contact_frames) {
                 if (contact_schedule_.InContact(frame, 0)) {
                     vector3_t contact_pos = mpc_model_->GetFrameState(frame).placement.translation();
-                    mpc_->SetDefaultGroundHeight(frame, contact_pos[2]);
+                    // std::cout << "contact pos[2]: " << contact_pos[2] << std::endl;
+                    mpc_->SetFootOffset(frame, contact_pos[2] - contact_schedule_.GetPolytopes(frame)[contact_schedule_.GetContactIndex(frame, 0)].height_);
                     mean_contact_height += contact_pos[2];
                     num_in_contact++;
                 }
@@ -807,7 +809,10 @@ namespace robot
 
             // Adjust the target height to be relative to the foot height
             for (int i = 0; i < q_target_.value().GetNumNodes(); i++) {
+                // TODO: Put back
                 q_target_.value()[i][2] = mean_contact_height + z_target_;
+                std::cout << "Mean contact height: " << mean_contact_height << ", z target: " << z_target_ << ", q target: " <<  q_target_.value()[i][2] << std::endl;
+                // TODO: Adjust this for the height over the length of the horizon
             }
 
             // Update the target base height relative to the foot
@@ -817,14 +822,19 @@ namespace robot
             // mpc_->UpdateContactSchedule(contact_schedule_); // TODO: Why do I do this here?
             std::map<std::string, std::vector<torc::mpc::vector3_t>> contact_foot_pos;
             const auto [q_ref, v_ref] = ref_gen_->GenerateReference(q, v, q_target_.value(), v_target_.value(), mpc_->GetSwingTrajectory(),
-                mpc_settings_->hip_offsets, contact_schedule_, contact_foot_pos, *q_base_target_, *v_base_target_);
+                mpc_settings_->hip_offsets, contact_schedule_, z_target_, mean_contact_height, contact_foot_pos, *q_base_target_, *v_base_target_);
 
             mpc_->SetForwardKinematicsTarget(contact_foot_pos);
         }
 
+        std::cout << "q_target_ z: " << q_target_.value()[0][2] << std::endl;
+        std::cout << "q_base_target z: " << (*q_base_target_)[0][2] << std::endl;   // TODO: Need to fix this
+
+        // TODO: Put back after debugging
+        // TODO: Need to make sure this works as expected
         // Set base targets
-        mpc_->SetConfigBaseTarget(*q_base_target_);
-        mpc_->SetVelBaseTarget(*v_base_target_);
+        // mpc_->SetConfigBaseTarget(*q_base_target_);
+        // mpc_->SetVelBaseTarget(*v_base_target_);
 
         double mpc_start_time = this->now().seconds();
         if (mpc_->GetSolveCounter() < max_mpc_solves) {
@@ -1265,11 +1275,7 @@ namespace robot
         int num_markers = viz_frames.size() + force_frames_.size() + num_nom_footholds + num_proj_footholds + mpc_settings_->nodes;
 
         visualization_msgs::msg::MarkerArray msg;
-<<<<<<< HEAD
         msg.markers.resize(num_markers);
-=======
-        msg.markers.resize(viz_frames.size() + force_frames_.size() + num_nom_footholds + num_proj_footholds);
->>>>>>> main
         // std::cerr << "marker size: " << msg.markers.size() << std::endl;
         // std::cerr << "num nom footholds: " << num_nom_footholds << std::endl;
         // std::cerr << "num proj footholds: " << num_proj_footholds << std::endl;
