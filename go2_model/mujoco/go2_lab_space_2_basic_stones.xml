@@ -21,9 +21,18 @@
     <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
 
     <body>
-      <geom name="tile1" pos="-2.25 0 -0.095" type="box" contype="4" conaffinity="1" size="1 1.5 0.095" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
-      <geom name="tile2" pos="0 0 -0.095" type="box" contype="4" conaffinity="1" size="1 1.5 0.095" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
-      <geom name="tile3" pos="2.25 0 -0.095" type="box" contype="4" conaffinity="1" size="1 1.5 0.095" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="tileA" pos="0 0 0.06985" type="box" contype="4" conaffinity="1" size="0.606425 0.508 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="tileB" pos="2 0 0.066675" type="box" contype="4" conaffinity="1" size="0.6096 0.5334 0.066675" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="tileC" pos="4 0 0.0650875" type="box" contype="4" conaffinity="1" size="0.606425 0.5334 0.0650875" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="tileD" pos="6 0 0.066675" type="box" contype="4" conaffinity="1" size="0.5969 0.508 0.066675" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>      
+      <geom name="tileE" pos="8 0 0.0650875" type="box" contype="4" conaffinity="1" size="0.5969 0.508 0.0650875" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="small_block1" pos="0.75 0.25 0.0650875" type="box" contype="4" conaffinity="1" size="0.09525 0.09525 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="small_block2" pos="0.75 -0.25 0.0650875" type="box" contype="4" conaffinity="1" size="0.09525 0.09525 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="small_block3" pos="1 0.25 0.0650875" type="box" contype="4" conaffinity="1" size="0.09525 0.09525 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="small_block4" pos="1 -0.25 0.0650875" type="box" contype="4" conaffinity="1" size="0.09525 0.09525 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="small_block5" pos="1.15 0. 0.0650875" type="box" contype="4" conaffinity="1" size="0.09525 0.09525 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="large_block1" pos="1.15 -0.5 0.09525" type="box" contype="4" conaffinity="1" size="0.098425 0.0968375 0.09525" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="large_block2" pos="1.15 0.5 0.09525" type="box" contype="4" conaffinity="1" size="0.098425 0.0968375 0.09525" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
     </body>
 
   </worldbody>
