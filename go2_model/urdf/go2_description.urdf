@@ -1379,4 +1379,11 @@ Stephen Brawner (brawner@gmail.com)
     <parent link="torso"/>
     <child link="torso_tracking_camera_vel_frame"/>
   </joint>
+
+  <link name="torso_mocap"></link>
+  <joint name="torso_mocap_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0.0 0 0"/>
+    <parent link="torso"/>
+    <child link="torso_mocap"/>
+  </joint>
 </robot>

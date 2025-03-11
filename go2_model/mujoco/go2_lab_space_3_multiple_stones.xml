@@ -21,9 +21,23 @@
     <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
 
     <body>
-      <geom name="tile1" pos="-1.35 0 -0.095" type="box" contype="4" conaffinity="1" size="0.25 1.5 0.095" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
-      <geom name="tile2" pos="0 0 -0.095" type="box" contype="4" conaffinity="1" size="1 1.5 0.095" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
-      <geom name="tile3" pos="-2.25 0 -0.095" type="box" contype="4" conaffinity="1" size="0.5 1.5 0.095" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="tileA" pos="0 0 0.06985" type="box" contype="4" conaffinity="1" size="0.606425 0.508 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <!-- 9cm from other block -->
+      <geom name="tileB" pos="1.9 0 0.066675" type="box" contype="4" conaffinity="1" size="0.6096 0.5334 0.066675" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <!-- 12cm gap -->
+      <geom name="tileC" pos="0 1.16 0.0650875" type="box" contype="4" conaffinity="1" size="0.606425 0.5334 0.0650875" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <!-- 10cm gap -->
+      <geom name="tileD" pos="0 -1.11 0.066675" type="box" contype="4" conaffinity="1" size="0.5969 0.508 0.066675" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>      
+      <geom name="tileE" pos="1.3 1.2 0.0650875" type="box" contype="4" conaffinity="1" size="0.5969 0.508 0.0650875" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <!-- 5cm gap to the tile -->
+      <geom name="small_block1" pos="0.75 0.225 0.0650875" type="box" contype="4" conaffinity="1" size="0.09525 0.09525 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="small_block2" pos="0.75 -0.2 0.0650875" type="box" contype="4" conaffinity="1" size="0.09525 0.09525 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <!-- 16cm gap to other block  -->
+      <geom name="small_block3" pos="1.1 0.2 0.0650875" type="box" contype="4" conaffinity="1" size="0.09525 0.09525 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="small_block4" pos="1.1 -0.35 0.0650875" type="box" contype="4" conaffinity="1" size="0.09525 0.09525 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="small_block5" pos="1 -0.1 0.0650875" type="box" contype="4" conaffinity="1" size="0.09525 0.09525 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="large_block1" pos=".8 -0.5 0.09525" type="box" contype="4" conaffinity="1" size="0.098425 0.0968375 0.09525" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="large_block2" pos="1. 0.5 0.09525" type="box" contype="4" conaffinity="1" size="0.098425 0.0968375 0.09525" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
     </body>
 
   </worldbody>

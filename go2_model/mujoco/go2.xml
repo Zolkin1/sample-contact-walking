@@ -154,6 +154,7 @@
       
       <site name="imu" pos="-0.02557 0 0.04232"/>
       <site name="torso_mocap_site" pos="0 0 0" euler="0 0 0" size="0.01"/>
+      <!-- <site name="tracking_camera_site" pos="-0.0635 -0.12 -0.01" euler="0.0 3.14159 1.57079" size="0.01"/> -->
       <site name="tracking_camera_site" pos="-0.0635 -0.12 -0.01" euler="0.0 3.14159 1.57079" size="0.01"/>
       <site name="tracking_camera_site_vel" pos="-0.0635 -0.12 -0.01" euler="0.0 0 -1.57079" size="0.01"/>
 
@@ -412,7 +413,11 @@
   </actuator>
 
   <keyframe>
-    <key name="home" qpos="0 0 0.29 0 0 0 0 0 1.1 -1.2 0 1.1 -1.2 0 0.9 -1.8 0 0.9 -1.8"
+    <!-- <key name="home" qpos="0 0 0.29 0 0 0 0 0 1.1 -1.2 0 1.1 -1.2 0 0.9 -1.8 0 0.9 -1.8"
+      ctrl="0 1.1 -2 0 1.1 -2 0 0.9 -1.8 0 0.9 -1.8
+            0 0 0 0 0 0 0 0 0 0 0 0
+            0 0 0 0 0 0 0 0 0 0 0 0"/> -->
+    <key name="home" qpos="0 0 0.41 0 0 0 0 0 1.1 -1.2 0 1.1 -1.2 0 0.9 -1.8 0 0.9 -1.8"
       ctrl="0 1.1 -2 0 1.1 -2 0 0.9 -1.8 0 0.9 -1.8
             0 0 0 0 0 0 0 0 0 0 0 0
             0 0 0 0 0 0 0 0 0 0 0 0"/>

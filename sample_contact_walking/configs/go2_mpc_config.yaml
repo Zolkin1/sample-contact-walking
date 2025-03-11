@@ -31,7 +31,7 @@ solver_settings:
   ric_alg: 1
   split_step: 0
 constraints:
-  friction_coef: 0.5 #0.7 #0.5  # TODO: Tune this
+  friction_coef: 0.7 #0.4 #0.5 #0.7 #0.5  # TODO: Tune this
   friction_margin: 2
   max_grf: 250 #800
   min_grf: 10

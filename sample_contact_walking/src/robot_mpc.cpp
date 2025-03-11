@@ -812,6 +812,7 @@ namespace robot
         // std::cout << "q_target_ z: " << q_target_.value()[0][2] << std::endl;
         // std::cout << "q_base_target z: " << (*q_base_target_)[0][2] << std::endl;   // TODO: Need to fix this
 
+
         // TODO: I'm not sure these really improve anything. If anything they almost look like they make it worse
         // Set base targets
         mpc_->SetConfigBaseTarget(*q_base_target_);

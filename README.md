@@ -176,6 +176,8 @@ Note that you should be connected to the network with the optitrack computer via
 You should set the `Server IP` as the opti track computer's IP (normally `192.168.1.2`).
 `Client IP` should be your IP.
 
+Make sure VRPN is NOT streaming.
+
 Launch with 
 ```
 ros2 launch natnet_ros2 gui_natnet_ros2.launch.py
@@ -208,3 +210,10 @@ ros2 launch perception_node perception_launch_tracking_only.py
 ```
 ros2 run realsense_ros2 rs_t265_node
 ```
+
+## Making the Go2 Optitrack Object
+1. Align the marker to the lower left (left in the quadruped frame) marker
+2. Then from this marker apply the following transform: 0.0in up, 4.296in into the robot, 4in to the front
+
+# TODO:
+Re-examine/measure the camera frame position

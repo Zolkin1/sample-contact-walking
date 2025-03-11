@@ -132,13 +132,16 @@ onboard:
       executable: mujoco_geom_reader
       params:
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
-        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile_scene.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile_scene.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile2_scene.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_1.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_2_basic_stones.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_3_multiple_stones.xml
+        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_4_thin_and_blocks.xml
       # ----- Tile Scene ---- #
-        foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9", "stair1", "stair2", "stair3"]
+        foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9", "stair1", "stair2", "stair3",
+                        "tileA", "tileB", "tileC", "tileD", "tileE", "small_block1", "small_block2", "small_block3", "small_block4", "small_block5",
+                        "large_block1", "large_block2"]
       publishers:
         # Contact schedule publisher
         - ros_parameter: pub_ctrl_setting
@@ -182,7 +185,7 @@ onboard:
         joint_vel_variance: 0. #0.0004
         base_vel_variance: 0. #0.005 #0.0004
         log_file_name: "mpc_logs/go2_sim_estimator_log.csv"
-        base_pose_sensor: 0 #2
+        base_pose_sensor: 2 #0 #2
         foot_frames: ["RL_foot", "FR_foot", "FL_foot", "RR_foot"]
         foot_offset: 0.012 # NOTE: This number is important
       callback_groups:
@@ -254,11 +257,12 @@ onboard:
         - ros_parameter: mujoco_setting
           robot_pkg: go2_model
           # model_xml_path: go2_scene.xml
-          model_xml_path: go2_tile_scene.xml
+          # model_xml_path: go2_tile_scene.xml
           # model_xml_path: go2_tile2_scene.xml
           # model_xml_path: go2_lab_space_1.xml
           # model_xml_path: go2_lab_space_2_basic_stones.xml
           # model_xml_path: go2_lab_space_3_multiple_stones.xml
+          model_xml_path: go2_lab_space_4_thin_and_blocks.xml
           n_u: 36
           num_steps_per_viz: 16 # No longer used
           sensor_settings:
@@ -307,7 +311,7 @@ onboard:
               imu_quat_sensor: framequat
           # ---------- Mocap ---------- #
           - topic: /obelisk/go2/torso_pose
-            dt: 0.002
+            dt: 0.004
             msg_type: PoseStamped
             sensor_names:
               base_mocap_pos_sensor: framepos
