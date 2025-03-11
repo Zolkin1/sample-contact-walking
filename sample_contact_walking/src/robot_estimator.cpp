@@ -207,6 +207,7 @@ namespace robot {
         base_nanosec_ = msg.header.stamp.nanosec;
         mocap_time_ = msg.header.stamp;
 
+        // TODO: Consider removing this and using the camera velocity
         if (!use_sim_state_ && recieved_first_mocap_) {
             double elapsed_time = (mocap_time_ - prev_mocap_time_).seconds();
             if (elapsed_time > 0) {
@@ -282,48 +283,42 @@ namespace robot {
 
         // Receive the odometry information
 
-        // ---------- Pose Information ---------- //
-        // TODO: If I go to async then I may want to do this in a the compute estimated state function
-        // Convert the sensor data into the pelvis (base) frame
-        torc::models::vector3_t pos;
-        pos << msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z;
-        torc::models::quat_t orientation(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z);
+        // ---------------------------------------- REMOVING POSE FOR OPTITRACK ---------------------------------------- //
+        // // ---------- Pose Information ---------- //
+        // // TODO: If I go to async then I may want to do this in a the compute estimated state function
+        // // Convert the sensor data into the pelvis (base) frame
+        // torc::models::vector3_t pos;
+        // pos << msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z;
+        // torc::models::quat_t orientation(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z);
 
-        // DEBUGGING -----
-        // Choose a random orientation
-        // static torc::models::quat_t rand_orientation = torc::models::quat_t::UnitRandom();
-        // torc::models::quat_t rand_orientation(0.246242, -0.314924, -0.896867, 0.189256);
-        // RCLCPP_WARN_STREAM_ONCE(this->get_logger(), "rand orientation: " << rand_orientation);
-        // orientation = rand_orientation;
-        // DEBUGGING -----
-
-        pinocchio::SE3 frame_pose(orientation, pos);
+        // pinocchio::SE3 frame_pose(orientation, pos);
 
         torc::models::vectorx_t config = mpc_model_->GetNeutralConfig();
         for (int i = 0; i < joint_pos_.size(); i++) {
             config[7 + i] = joint_pos_[i];
         }
 
-        pinocchio::SE3 base_pose = mpc_model_->TransformPose(frame_pose, "torso_tracking_camera", base_link_name_, config);
+        // pinocchio::SE3 base_pose = mpc_model_->TransformPose(frame_pose, "torso_tracking_camera", base_link_name_, config);
 
-        // Now adjust by the default pose
-        // base_pose = default_pose_.inverse()*base_pose;
-        base_pose.rotation() = default_pose_.rotation().inverse()*base_pose.rotation();
-        base_pose.translation() = base_pose.translation() - default_pose_.translation();
+        // // Now adjust by the default pose
+        // // base_pose = default_pose_.inverse()*base_pose;
+        // base_pose.rotation() = default_pose_.rotation().inverse()*base_pose.rotation();
+        // base_pose.translation() = base_pose.translation() - default_pose_.translation();
 
-        // Low pass filter
-        Eigen::Vector3d filtered_pos = camera_pos_lpf_->Filter(base_pose.translation());
+        // // Low pass filter
+        // Eigen::Vector3d filtered_pos = camera_pos_lpf_->Filter(base_pose.translation());
 
-        base_pos_.at(0) = filtered_pos[0];
-        base_pos_.at(1) = filtered_pos[1];
-        base_pos_.at(2) = filtered_pos[2];
+        // base_pos_.at(0) = filtered_pos[0];
+        // base_pos_.at(1) = filtered_pos[1];
+        // base_pos_.at(2) = filtered_pos[2];
 
-        torc::models::quat_t fb_quat(base_pose.rotation());
+        // torc::models::quat_t fb_quat(base_pose.rotation());
 
-        base_quat_.x() = fb_quat.x();
-        base_quat_.y() = fb_quat.y();
-        base_quat_.z() = fb_quat.z();
-        base_quat_.w() = fb_quat.w();
+        // base_quat_.x() = fb_quat.x();
+        // base_quat_.y() = fb_quat.y();
+        // base_quat_.z() = fb_quat.z();
+        // base_quat_.w() = fb_quat.w();
+        // ---------------------------------------- REMOVING POSE FOR OPTITRACK ---------------------------------------- //
 
         // ---------- Twist Information ---------- //
         // Compute the base twist given the measured twist

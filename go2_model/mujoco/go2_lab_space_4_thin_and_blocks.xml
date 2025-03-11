@@ -1,0 +1,38 @@
+<mujoco model="go2 scene">
+  <include file="go2.xml"/>
+
+  <statistic center="0 0 0.1" extent="0.8"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="-130" elevation="-20"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
+      markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
+    <material name="box_material" shininess="0.1" specular="0.5" roughness="0.3"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
+
+    <body>
+      <geom name="tileA" pos="0 0.1 0.06985" type="box" contype="4" conaffinity="1" size="0.606425 0.508 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <!-- 9cm from other block -->
+      <geom name="tileB" pos="2.427 0 0.066675" type="box" contype="4" conaffinity="1" size="0.6096 0.5334 0.066675" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <!-- 15cm thick plank gap -->
+      <geom name="tileC" pos="1.212 0.89 0.0650875" type="box" contype="4" conaffinity="1" size="0.606425 0.5334 0.0650875" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <!-- 5cm gap to the tile -->
+      <geom name="small_block1" pos="0.75 0.225 0.0650875" type="box" contype="4" conaffinity="1" size="0.09525 0.09525 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="small_block2" pos="0.95 0.15 0.0650875" type="box" contype="4" conaffinity="1" size="0.09525 0.09525 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="small_block3" pos="1.2 0.25 0.0650875" type="box" contype="4" conaffinity="1" size="0.09525 0.09525 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="small_block4" pos="1.7 0.2 0.0650875" type="box" contype="4" conaffinity="1" size="0.09525 0.09525 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+      <geom name="small_block5" pos="1.5 0.15 0.0650875" type="box" contype="4" conaffinity="1" size="0.09525 0.09525 0.06985" friction="0.5" material="box_material" rgba="0.87 0.72 0.53 1.0"/>
+    </body>
+
+  </worldbody>
+</mujoco>
