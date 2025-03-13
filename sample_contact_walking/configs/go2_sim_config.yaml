@@ -14,7 +14,7 @@ onboard:
         state_vel_no_step_threshold: 0.4
         command_vel_no_step_threshold: 0.05
         constant_vel: 0.2
-        num_samples: 4 #6 #2 #1 #2
+        num_samples: 5 #4 #6 #2 #1 #2 # TODO: Play with this value
 # ---------- Viz ---------- #
         viz_frames: ["torso", "FR_foot", "FL_foot", "RR_foot", "RL_foot"]
         viz_forces: True

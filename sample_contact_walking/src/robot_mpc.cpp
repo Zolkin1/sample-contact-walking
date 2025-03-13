@@ -63,11 +63,6 @@ namespace robot
         this->RegisterObkPublisher<sample_contact_msgs::msg::CommandedTarget>(
                     "target_pub_setting", "target_pub");
 
-        // // ----- Contact Schedule Subscriber ----- //
-        // this->RegisterObkSubscription<sample_contact_msgs::msg::ContactSchedule>(
-        //             "contact_schedule_sub_setting", "contact_schedule_sub",
-        //             std::bind(&MpcController::ContactScheduleCallback, this, std::placeholders::_1));
-
         // ----- Contact Schedule Subscriber ----- //
         this->RegisterObkSubscription<sample_contact_msgs::msg::ContactPolytopeArray>(
                     "polytope_sub_setting", "contact_polytope_sub",
@@ -113,7 +108,6 @@ namespace robot
         mpc_settings_->poly_contact_pairs = poly_contact_frames;
 
         mpc_model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, urdf_path, mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values);
-        // mpc_model_ = std::make_unique<torc::models::FullOrderRigidBody>(model_name, "/home/zolkin/torc/tests/test_data/g1_hand.urdf", mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values);
         
         torc::models::FullOrderRigidBody mpc_model_temp(model_name, urdf_path, mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values);
 
@@ -122,159 +116,6 @@ namespace robot
             mpc_model_temp, mpc_settings_->polytope_delta);
         q_base_target_ = std::make_unique<torc::mpc::SimpleTrajectory>(FLOATING_POS_SIZE, mpc_settings_->nodes);
         v_base_target_ = std::make_unique<torc::mpc::SimpleTrajectory>(FLOATING_VEL_SIZE, mpc_settings_->nodes);
-
-        // ---------- Constraints ---------- //
-        // torc::models::FullOrderRigidBody mpc_model_temp(model_name, "/home/zolkin/torc/tests/test_data/g1_hand.urdf", mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values);
-        // Dynamics //
-        // ---------- Full Order Dynamics ---------- //
-        torc::mpc::DynamicsConstraint dynamics_constraint(mpc_model_temp, mpc_settings_->contact_frames, model_name + "_robot_full_order",
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, 0, mpc_settings_->nodes_full_dynamics + 100);
-
-        // ---------- Centroidal Dynamics ---------- //
-        torc::mpc::CentroidalDynamicsConstraint centroidal_dynamics(mpc_model_temp, mpc_settings_->contact_frames, model_name + "_robot_centroidal",
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->nodes_full_dynamics - 100, mpc_settings_->nodes - 100); // 0, mpc_settings_->nodes
-        // ---------- SRB Dynamics ---------- //
-        torc::mpc::SRBConstraint srb_dynamics(mpc_settings_->nodes_full_dynamics - 100, mpc_settings_->nodes - 100, // 0 - 100, mpc_settings_->nodes - 100,
-             model_name + "_robot_srb",
-            mpc_settings_->contact_frames, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_model_temp, mpc_settings_->q_target);
-
-        // Box constraints // 
-        // Config
-        std::vector<int> config_lims_idxs;
-        for (int i = 0; i < mpc_model_->GetConfigDim() - torc::mpc::FLOATING_BASE; ++i) {
-            config_lims_idxs.push_back(i + torc::mpc::FLOATING_VEL);
-        }
-        torc::mpc::BoxConstraint config_box(1, mpc_settings_->nodes, model_name + "config_box",
-            mpc_model_->GetLowerConfigLimits().tail(mpc_model_->GetConfigDim() - torc::mpc::FLOATING_BASE),
-            mpc_model_->GetUpperConfigLimits().tail(mpc_model_->GetConfigDim() - torc::mpc::FLOATING_BASE),
-            config_lims_idxs);
-
-        // Vel
-        std::vector<int> vel_lims_idxs;
-        for (int i = 0; i < mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL; ++i) {
-            vel_lims_idxs.push_back(i + torc::mpc::FLOATING_VEL);
-        }
-        torc::mpc::BoxConstraint vel_box(1, mpc_settings_->nodes, model_name + "vel_box",
-            -mpc_model_->GetVelocityJointLimits().tail(mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL),
-            mpc_model_->GetVelocityJointLimits().tail(mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL),
-            vel_lims_idxs);
-
-        // Torque
-        std::vector<int> tau_lims_idxs;
-        for (int i = 0; i < mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL; ++i) {
-            tau_lims_idxs.push_back(i);
-        }
-        torc::mpc::BoxConstraint tau_box(0, mpc_settings_->nodes, model_name + "tau_box",
-            -mpc_model_->GetTorqueJointLimits().tail(mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL),
-            mpc_model_->GetTorqueJointLimits().tail(mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL),
-            tau_lims_idxs);
-
-        // Force
-        std::vector<int> force_lim_idxs;
-        for (int i = 0; i < 3; i++) {
-            force_lim_idxs.push_back(i);
-        }
-        vectorx_t stance_lb(3), stance_ub(3);
-        stance_lb << -1000, -1000, mpc_settings_->min_grf;
-        stance_ub << 1000, 1000, mpc_settings_->max_grf;
-        torc::mpc::BoxConstraint stance_force_box(0, mpc_settings_->nodes, "stance_force_box",
-            stance_lb, // Minimum force on the ground
-            stance_ub,
-            force_lim_idxs);
-
-        vectorx_t swing_lb(3), swing_ub(3);
-        swing_lb << 0, 0, 0;
-        swing_ub << 0, 0, 0;
-        torc::mpc::BoxConstraint swing_force_box(0, mpc_settings_->nodes, "swing_force_box",
-            swing_lb, // Minimum force on the ground
-            swing_ub,
-            force_lim_idxs);
-
-        // ---------- Friction Cone Constraints ---------- //
-        torc::mpc::FrictionConeConstraint friction_cone_constraint(0, mpc_settings_->nodes - 1, model_name + "friction_cone_cone",
-            mpc_settings_->friction_coef, mpc_settings_->friction_margin, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);
-
-        // ---------- Swing Constraints ---------- //
-        torc::mpc::SwingConstraint swing_constraint(mpc_settings_->swing_start_node, mpc_settings_->swing_end_node, model_name + "swing_constraint",
-            mpc_model_temp, mpc_settings_->contact_frames,
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);
-
-        // ---------- Holonomic Constraints ---------- //
-        //2, nodes
-        torc::mpc::HolonomicConstraint holonomic_constraint(mpc_settings_->holonomic_start_node, mpc_settings_->holonomic_end_node, model_name + "holonomic_constraint", mpc_model_temp, 
-            mpc_settings_->contact_frames, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);  // The -1 in the last node helps with weird issues (feasibility I think)
-
-        // ---------- Collision Constraints ---------- //
-        torc::mpc::CollisionConstraint collision_constraint(mpc_settings_->collision_start_node, mpc_settings_->collision_end_node,
-            model_name + "collision_constraint", mpc_model_temp, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->collision_data);
-
-        // ---------- Polytope Constraints ---------- //
-        torc::mpc::PolytopeConstraint polytope_constraint(mpc_settings_->polytope_start_node, mpc_settings_->polytope_end_node, model_name + "polytope_constraint",
-            mpc_settings_->polytope_frames,
-            mpc_settings_->deriv_lib_path, 
-            mpc_settings_->compile_derivs,
-            mpc_model_temp);
-
-        std::cout << "===== Constraints Created =====" << std::endl;
-
-        // --------------------------------- //
-        // ------------- Costs ------------- //
-        // --------------------------------- //
-        // ---------- Velocity Tracking ---------- //
-        torc::mpc::LinearLsCost vel_tracking(0, mpc_settings_->nodes, model_name + "vel_tracking",
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->cost_data.at(1).weight.size());
-
-        // ---------- Tau Tracking ---------- //
-        torc::mpc::LinearLsCost tau_tracking(0, mpc_settings_->nodes, model_name + "tau_tracking",
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->cost_data.at(2).weight.size());
-
-        // ---------- Force Tracking ---------- //
-        torc::mpc::LinearLsCost force_tracking(0, mpc_settings_->nodes, model_name + "force_tracking",
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->cost_data.at(3).weight.size());
-
-        // ---------- Config Tracking ---------- //
-        torc::mpc::ConfigTrackingCost config_tracking(0, mpc_settings_->nodes, model_name + "config_tracking", mpc_settings_->cost_data.at(0).weight.size(),
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_model_temp);
-
-        // ---------- Forward Kinematics Tracking ---------- //
-        // For now they all need the same weight
-        // Need to read the contact frames from the settings (TODO, later)
-        RCLCPP_INFO_STREAM(this->get_logger(), "FK weight: " << mpc_settings_->cost_data.at(4).weight.transpose());
-        torc::mpc::ForwardKinematicsCost fk_cost(0, mpc_settings_->nodes, model_name + "fk_cost", mpc_settings_->cost_data.at(4).weight.size(),
-            mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_model_temp, mpc_settings_->contact_frames);
-
-
-        std::cout << "===== Costs Created =====" << std::endl;
-
-        // --------------------------------- //
-        // -------------- MPC -------------- //
-        // --------------------------------- //
-        // torc::mpc::MpcSettings mpc_settings_temp("/home/zolkin/torc/tests/test_data/g1_mpc_config.yaml");
-        torc::mpc::MpcSettings mpc_settings_temp(this->get_parameter("params_path").as_string());
-        mpc_settings_temp.poly_contact_pairs = poly_contact_frames;
-        mpc_ = std::make_shared<torc::mpc::HpipmMpc>(mpc_settings_temp, mpc_model_temp);
-        std::cout << "===== MPC Created =====" << std::endl;
-
-        mpc_->SetDynamicsConstraints(std::move(dynamics_constraint));
-        mpc_->SetCentroidalDynamicsConstraints(std::move(centroidal_dynamics));
-        // mpc_->SetSrbConstraint(std::move(srb_dynamics));
-        mpc_->SetConfigBox(config_box);
-        mpc_->SetVelBox(vel_box);
-        mpc_->SetTauBox(tau_box);
-        mpc_->SetForceBox(stance_force_box, swing_force_box);
-        mpc_->SetFrictionCone(std::move(friction_cone_constraint));
-        mpc_->SetSwingConstraint(std::move(swing_constraint));
-        mpc_->SetHolonomicConstraint(std::move(holonomic_constraint));
-        mpc_->SetCollisionConstraint(std::move(collision_constraint));
-        mpc_->SetPolytopeConstraint(std::move(polytope_constraint));
-        std::cout << "===== MPC Constraints Added =====" << std::endl;
-
-        mpc_->SetVelTrackingCost(std::move(vel_tracking));
-        mpc_->SetTauTrackingCost(std::move(tau_tracking));
-        mpc_->SetForceTrackingCost(std::move(force_tracking));
-        mpc_->SetConfigTrackingCost(std::move(config_tracking));
-        mpc_->SetFowardKinematicsCost(std::move(fk_cost));  // TODO: Fix for biped
-        std::cout << "===== MPC Costs Added =====" << std::endl;
 
         // Make the MPC vector for parallelization
         ConstructMPCVec();
@@ -295,15 +136,16 @@ namespace robot
         torc::mpc::Trajectory traj;
         q_target_ = torc::mpc::SimpleTrajectory(mpc_model_->GetConfigDim(), mpc_settings_->nodes);
         q_target_->SetAllData(mpc_settings_->q_target);
-        mpc_->SetConfigTarget(q_target_.value());
         z_target_ = mpc_settings_->q_target[2];
 
         v_target_ = torc::mpc::SimpleTrajectory(mpc_model_->GetVelDim(), mpc_settings_->nodes);
         v_target_->SetAllData(mpc_settings_->v_target);
-        mpc_->SetVelTarget(v_target_.value());
 
-        mpc_->SetLinTrajConfig(q_target_.value());
-        mpc_->SetLinTrajVel(v_target_.value());
+        // mpc_->SetConfigTarget(q_target_.value());
+        // mpc_->SetVelTarget(v_target_.value());
+
+        // mpc_->SetLinTrajConfig(q_target_.value());
+        // mpc_->SetLinTrajVel(v_target_.value());
 
         // --------------------------------- //
         // ---------- Skip Joints ---------- //
@@ -413,11 +255,11 @@ namespace robot
         this->declare_parameter<bool>("controller_target", false);
         this->get_parameter("controller_target", controller_target_);
 
-        traj_out_ = mpc_->GetTrajectory();
+        traj_out_ = mpc_vec_[0].GetTrajectory();
         traj_out_.SetConfiguration(0, q_ic_);
         traj_out_.SetVelocity(0, v_ic_);
         traj_mpc_ = traj_out_;
-        mpc_->SetLinTraj(traj_mpc_);    // TODO: Should I maybe get rid of this and see if it makes a difference?
+        // mpc_->SetLinTraj(traj_mpc_);    // TODO: Should I maybe get rid of this and see if it makes a difference?
         // ------------------------------------------------ //
 
 
@@ -828,7 +670,7 @@ namespace robot
 
             // mpc_->UpdateContactSchedule(contact_schedule_); // TODO: Why do I do this here?
             std::map<std::string, std::vector<torc::mpc::vector3_t>> contact_foot_pos;
-            const auto [q_ref, v_ref] = ref_gen_->GenerateReference(q, v, q_target_.value(), v_target_.value(), mpc_->GetSwingTrajectory(),
+            const auto [q_ref, v_ref] = ref_gen_->GenerateReference(q, v, q_target_.value(), v_target_.value(), mpc_vec_[thread_num].GetSwingTrajectory(),
                 mpc_settings_->hip_offsets, contact_schedule_, z_target_, mean_contact_height, contact_foot_pos, *q_base_target_, *v_base_target_);
 
                 mpc_vec_[thread_num].SetForwardKinematicsTarget(contact_foot_pos);
@@ -873,7 +715,6 @@ namespace robot
             // Assign start time too
             traj_start_time_ = mpc_start_time_[0];
             }
-
         }
         timer.Toc();
 

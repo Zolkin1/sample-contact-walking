@@ -186,7 +186,7 @@ namespace robot {
 
             std::shared_ptr<torc::mpc::MpcSettings> mpc_settings_;
             std::shared_ptr<torc::controller::WbcSettings> wbc_settings_;
-            std::shared_ptr<torc::mpc::HpipmMpc> mpc_;
+            // std::shared_ptr<torc::mpc::HpipmMpc> mpc_;
             std::vector<torc::mpc::HpipmMpc> mpc_vec_;
 
             std::vector<torc::mpc::Trajectory> mpc_trajs_;
