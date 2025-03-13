@@ -217,3 +217,12 @@ ros2 run realsense_ros2 rs_t265_node
 
 # TODO:
 Re-examine/measure the camera frame position
+
+# OMP and Parallelization
+```
+export OMP_PLACES=cores
+```
+```
+OMP_PROC_BIND=close
+```
+Of course I can still play with the others and see what the effect is, but this seems to really decrease the varaince of the solves.

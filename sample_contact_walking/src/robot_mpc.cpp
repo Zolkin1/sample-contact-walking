@@ -1,5 +1,6 @@
 #include <vector>
 #include <pthread.h>
+#include <omp.h>
 
 #include "obelisk_node.h"
 #include "obelisk_ros_utils.h"
@@ -275,6 +276,9 @@ namespace robot
         mpc_->SetFowardKinematicsCost(std::move(fk_cost));  // TODO: Fix for biped
         std::cout << "===== MPC Costs Added =====" << std::endl;
 
+        // Make the MPC vector for parallelization
+        ConstructMPCVec();
+
         // --------------------------------- //
         // -------------- WBC -------------- //
         // --------------------------------- //
@@ -464,9 +468,14 @@ namespace robot
 
         time_offset_ = this->now().seconds();
         log_file_.open("mpc_logs/" + mpc_loop_log_name);
-        timing_log_file_.open("mpc_logs/" + mpc_timing_log_name);
         contact_schedule_log_file_.open("mpc_logs/" + contact_schedule_log_name);
         force_sensor_log_file_.open("mpc_logs/" + foot_sensor_log_name);
+
+        // Need a timing log for each MPC thread
+        for (int i = 0; i < this->get_parameter("num_samples").as_int(); i++) {
+            timing_log_files_.emplace_back("mpc_logs/" + std::to_string(i) + "_" + mpc_timing_log_name);
+            RCLCPP_ERROR_STREAM(this->get_logger(), "timing log file: " << "mpc_logs/" + std::to_string(i) + "_" + mpc_timing_log_name);
+        }
 
         // Spin up MPC thread
         mpc_thread_ = std::thread(&MpcController::MpcThread, this);
@@ -478,7 +487,9 @@ namespace robot
 
     MpcController::~MpcController() {
         log_file_.close();
-        timing_log_file_.close();
+        for (int i = 0; i < timing_log_files_.size(); i++) {
+            timing_log_files_[i].close();
+        }
         contact_schedule_log_file_.close();
         force_sensor_log_file_.close();
 
@@ -560,134 +571,145 @@ namespace robot
     // If I still need more, I can try to adjust the thread prio
     // Experimentally, note that the faster I run it, the more consistent (and faster, up to a limit) it is
     void MpcController::MpcThread() {
-        // Prevents uncessary cache misses by pinning to a CPU
-        cpu_set_t cpuset;
-        CPU_ZERO(&cpuset);
-        CPU_SET(2, &cpuset);  // Pin to CPU 2
 
-        pthread_t thread = pthread_self();
-        if (pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset) != 0) {
-            perror("pthread_setaffinity_np");
-        }
+        int num_samples = this->get_parameter("num_samples").as_int();
+        // TODO: Deal with pinning to specific threads!
+        #pragma omp parallel num_threads(num_samples)
+        {
+            // TODO: Make sure this is in use when using a single CPU!
+            // // Prevents uncessary cache misses by pinning to a CPU
+            // cpu_set_t cpuset;
+            // CPU_ZERO(&cpuset);
+            // CPU_SET(2, &cpuset);  // Pin to CPU 2
 
-        // TODO: Consider putting this back
-        // struct sched_param param;
-        // param.sched_priority = 99;
-        // pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
+            // pthread_t thread = pthread_self();
+            // if (pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset) != 0) {
+            //     perror("pthread_setaffinity_np");
+            // }
 
-        const long mpc_loop_rate_ns = this->get_parameter("mpc_loop_period_sec").as_double()*1e9;
-        RCLCPP_INFO_STREAM(this->get_logger(), "MPC loop period set to: " << mpc_loop_rate_ns << "ns.");
-        
-        static bool first_loop = true;
+            // TODO: Consider putting this back
+            // struct sched_param param;
+            // param.sched_priority = 99;
+            // pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
 
-        while (true) {
-            // Start the timer
-            auto start_time = this->now();
+            int thread_num = omp_get_thread_num();
 
-            if (recieved_first_state_ && GetState() == Mpc) {
-                RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Computing first trajectory.");
+            const long mpc_loop_rate_ns = this->get_parameter("mpc_loop_period_sec").as_double()*1e9;
+            RCLCPP_INFO_STREAM(this->get_logger(), "MPC loop period set to: " << mpc_loop_rate_ns << "ns.");
+            
+            static bool first_loop = true;
 
-                vectorx_t q, v;
+            while (true) {
+                // Start the timer
+                auto start_time = this->now();
 
-                if (first_loop) {
-                    // Read in state
-                    {
-                        // Get the mutex to protect the states
-                        std::lock_guard<std::mutex> lock(est_state_mut_);
+                if (recieved_first_state_ && GetState() == Mpc) {
+                    RCLCPP_INFO_STREAM_ONCE(this->get_logger(), "Computing first trajectory.");
 
-                        // Create current state
-                        q = q_;
-                        v = v_;
+                    vectorx_t q, v;
+
+                    if (first_loop) {
+                        int thread_num = omp_get_thread_num();
+
+                        // Read in state
+                        {
+                            // Get the mutex to protect the states
+                            std::lock_guard<std::mutex> lock(est_state_mut_);
+
+                            // Create current state
+                            q = q_;
+                            v = v_;
+                        }
+
+                        // // TODO: Remove
+                        // q = q_ic_;
+                        // v = v_ic_;
+                        // TODO: Fix the state for when we re-enter this loop
+                        {
+                            std::lock_guard<std::mutex> lock(polytope_mutex_);
+                            step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_, nom_footholds_, projected_footholds_, true);
+                            mpc_vec_[thread_num].UpdateContactSchedule(contact_schedule_);  // TODO: There is an issue with polytopes here
+                        }
+
+                        UpdateMpcTargets(q);
+                        mpc_vec_[thread_num].SetConfigTarget(q_target_.value());
+                        mpc_vec_[thread_num].SetVelTarget(v_target_.value());
+
+                        std::cout << "q: " << q.transpose() << std::endl;
+                        std::cout << "v: " << v.transpose() << std::endl;
+                        std::cout << "q target 0: " << q_target_.value()[0].transpose() << std::endl;
+                        std::cout << "v target 0: " << v_target_.value()[0].transpose() << std::endl;
+
+                        for (int i = 0; i < 2; i++) {   // TODO: If i run too many iterations of this then sometimes I get a quat normilazation error in the next loop
+                            // if (i == 0) {
+                            //     mpc_->GetTrajectory().ExportToCSV("mpc_logs/solve_0_linearization_traj.csv");
+                            // }
+                            mpc_vec_[thread_num].CreateQPData();
+                            mpc_vec_[thread_num].Compute(this->now().seconds() - time_offset_, q, v, traj_mpc_);
+                            // if (i == 0) {
+                            //     traj_mpc_.ExportToCSV("mpc_logs/solve_0_result_traj.csv");
+                            // }
+                            mpc_vec_[thread_num].LogMPCCompute(this->now().seconds() - time_offset_, q, v);
+                        }
+                        double time = this->now().seconds();
+                        {
+                            // Get the traj mutex to protect it
+                            std::lock_guard<std::mutex> lock(traj_out_mut_);
+                            traj_out_ = traj_mpc_;
+
+                            // Assign time time too
+                            traj_start_time_ = time;
+                        }
+
+                        // prev_time = this->now();
+
+                        first_loop = false;
                     }
+
+                    // ------------------------------------ //
+                    // ---------- MPC Computation --------- //
+                    // ------------------------------------ //
+                    double prep_time = PreperationPhase();
+                    const auto [fb_time, fb_prep_time] = FeedbackPhase();
+
+                    // Log timing
+                    timing_log_files_[thread_num] << this->now().seconds() - time_offset_ << "," << prep_time + fb_prep_time << "," << fb_time << std::endl;
+
+                    // std::cout << "Prep time took " << prep_time + fb_prep_time << " ms" << std::endl;
+                    // std::cout << "Feedback time took " << fb_time << " ms" << std::endl;
+
+                    // TODO: If this is slow, then I need to move it
+                    torc::utils::TORCTimer viz_timer;
+                    viz_timer.Tic();
+                    PublishTrajViz(traj_mpc_, viz_frames_);
+                    viz_timer.Toc();
+                    // std::cout << "viz publish took " << viz_timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
 
                     // // TODO: Remove
-                    // q = q_ic_;
-                    // v = v_ic_;
-                    // TODO: Fix the state for when we re-enter this loop
-                    {
-                        std::lock_guard<std::mutex> lock(polytope_mutex_);
-                        step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_, nom_footholds_, projected_footholds_, true);
-                        mpc_->UpdateContactSchedule(contact_schedule_);  // TODO: There is an issue with polytopes here
-                    }
-
-                    UpdateMpcTargets(q);
-                    mpc_->SetConfigTarget(q_target_.value());
-                    mpc_->SetVelTarget(v_target_.value());
-
-                    std::cout << "q: " << q.transpose() << std::endl;
-                    std::cout << "v: " << v.transpose() << std::endl;
-                    std::cout << "q target 0: " << q_target_.value()[0].transpose() << std::endl;
-                    std::cout << "v target 0: " << v_target_.value()[0].transpose() << std::endl;
-
-                    for (int i = 0; i < 2; i++) {   // TODO: If i run too many iterations of this then sometimes I get a quat normilazation error in the next loop
-                        if (i == 0) {
-                            mpc_->GetTrajectory().ExportToCSV("mpc_logs/solve_0_linearization_traj.csv");
-                        }
-                        mpc_->CreateQPData();
-                        mpc_->Compute(this->now().seconds() - time_offset_, q, v, traj_mpc_);
-                        if (i == 0) {
-                            traj_mpc_.ExportToCSV("mpc_logs/solve_0_result_traj.csv");
-                        }
-                        mpc_->LogMPCCompute(this->now().seconds() - time_offset_, q, v);
-                    }
-                    double time = this->now().seconds();
-                    {
-                        // Get the traj mutex to protect it
-                        std::lock_guard<std::mutex> lock(traj_out_mut_);
-                        traj_out_ = traj_mpc_;
-
-                        // Assign time time too
-                        traj_start_time_ = time;
-                    }
-
-                    // prev_time = this->now();
-
-                    first_loop = false;
+                    // if (mpc_->GetSolveCounter() >= 100) {
+                    //     throw std::runtime_error("MPC cycles completed!");
+                    // }
+                } else {
+                    first_loop = true;
                 }
 
-                // ------------------------------------ //
-                // ---------- MPC Computation --------- //
-                // ------------------------------------ //
-                double prep_time = PreperationPhase();
-                const auto [fb_time, fb_prep_time] = FeedbackPhase();
+                // Stop timer
+                auto stop_time = this->now(); 
 
-                // Log timing
-                timing_log_file_ << this->now().seconds() - time_offset_ << "," << prep_time + fb_prep_time << "," << fb_time << std::endl;
-
-                // std::cout << "Prep time took " << prep_time + fb_prep_time << " ms" << std::endl;
-                // std::cout << "Feedback time took " << fb_time << " ms" << std::endl;
-
-                // TODO: If this is slow, then I need to move it
-                torc::utils::TORCTimer viz_timer;
-                viz_timer.Tic();
-                PublishTrajViz(traj_mpc_, viz_frames_);
-                viz_timer.Toc();
-                // std::cout << "viz publish took " << viz_timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
-
-                // // TODO: Remove
-                // if (mpc_->GetSolveCounter() >= 100) {
-                //     throw std::runtime_error("MPC cycles completed!");
+                // Compute difference
+                const long time_left = mpc_loop_rate_ns - (stop_time - start_time).nanoseconds();
+                // if ((stop_time - start_time).nanoseconds()*1e-6 > 100) {
+                //     std::cerr << "MPC Setup: " << setup_timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
+                //     std::cerr << "MPC Compute + Copy: " << mpc_timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
+                //     throw std::runtime_error("MPC computation took longer than 100ms!");
                 // }
-            } else {
-                first_loop = true;
-            }
-
-            // Stop timer
-            auto stop_time = this->now(); 
-
-            // Compute difference
-            const long time_left = mpc_loop_rate_ns - (stop_time - start_time).nanoseconds();
-            // if ((stop_time - start_time).nanoseconds()*1e-6 > 100) {
-            //     std::cerr << "MPC Setup: " << setup_timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
-            //     std::cerr << "MPC Compute + Copy: " << mpc_timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
-            //     throw std::runtime_error("MPC computation took longer than 100ms!");
-            // }
-            // std::cout << "MPC Loop time (ms): " << static_cast<double>((stop_time - start_time).nanoseconds())/1e6 << std::endl;
-            if (time_left > 0) {
-                while ((-(this->now() - start_time).nanoseconds() + mpc_loop_rate_ns) > 0) {}
-            } else {
-                // TODO: Put back!
-                // RCLCPP_WARN_STREAM(this->get_logger(), "MPC computation took longer than loop rate allowed for. " << std::abs(time_left)*1e-6 << "ms over time.");
+                // std::cout << "MPC Loop time (ms): " << static_cast<double>((stop_time - start_time).nanoseconds())/1e6 << std::endl;
+                if (time_left > 0) {
+                    while ((-(this->now() - start_time).nanoseconds() + mpc_loop_rate_ns) > 0) {}
+                } else {
+                    // TODO: Put back!
+                    // RCLCPP_WARN_STREAM(this->get_logger(), "MPC computation took longer than loop rate allowed for. " << std::abs(time_left)*1e-6 << "ms over time.");
+                }
             }
         }
     }
@@ -722,14 +744,15 @@ namespace robot
             // TODO: Look into what target to use, for now just use the old targets
             // TODO: Consider making this update at a slower rate (20-50Hz)
             step_planner_timer.Tic();
+            // TODO: Is this thread safe?
             step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_, nom_footholds_, projected_footholds_);
             step_planner_timer.Toc();
-            mpc_->UpdateContactSchedule(contact_schedule_); // TODO: Need to do this at the same time as the reference generation
+            mpc_vec_[omp_get_thread_num()].UpdateContactSchedule(contact_schedule_); // TODO: Need to do this at the same time as the reference generation
         }
                 
 
         // Linearize around current trajectory
-        mpc_->CreateQPData();
+        mpc_vec_[omp_get_thread_num()].CreateQPData();
 
         timer.Toc();
 
@@ -741,6 +764,8 @@ namespace robot
     std::pair<double, double> MpcController::FeedbackPhase() {
         torc::utils::TORCTimer timer;
         timer.Tic();
+
+        int thread_num = omp_get_thread_num();
 
         vectorx_t q, v;
 
@@ -776,13 +801,13 @@ namespace robot
             std::lock_guard<std::mutex> lock(polytope_mutex_);
             // Update the ground heights    // TODO: Change this when I add the height patch back in
             UpdateMpcTargets(q);
-            mpc_model_->FirstOrderFK(q);
+            mpc_model_vec_[thread_num].FirstOrderFK(q);
             double mean_contact_height = 0;
             float num_in_contact = 0;
             for (const auto& frame : mpc_settings_->contact_frames) {
                 if (contact_schedule_.InContact(frame, 0)) {
-                    vector3_t contact_pos = mpc_model_->GetFrameState(frame).placement.translation();
-                    mpc_->SetFootOffset(frame, contact_pos[2] - contact_schedule_.GetPolytopes(frame)[contact_schedule_.GetContactIndex(frame, 0)].height_);
+                    vector3_t contact_pos = mpc_model_vec_[thread_num].GetFrameState(frame).placement.translation();
+                    mpc_vec_[thread_num].SetFootOffset(frame, contact_pos[2] - contact_schedule_.GetPolytopes(frame)[contact_schedule_.GetContactIndex(frame, 0)].height_);
                     mean_contact_height += contact_pos[2];
                     num_in_contact++;
                 }
@@ -798,40 +823,57 @@ namespace robot
             }
 
             // Update the target base height relative to the foot
-            mpc_->SetConfigTarget(q_target_.value());
-            mpc_->SetVelTarget(v_target_.value());
+            mpc_vec_[thread_num].SetConfigTarget(q_target_.value());
+            mpc_vec_[thread_num].SetVelTarget(v_target_.value());
 
             // mpc_->UpdateContactSchedule(contact_schedule_); // TODO: Why do I do this here?
             std::map<std::string, std::vector<torc::mpc::vector3_t>> contact_foot_pos;
             const auto [q_ref, v_ref] = ref_gen_->GenerateReference(q, v, q_target_.value(), v_target_.value(), mpc_->GetSwingTrajectory(),
                 mpc_settings_->hip_offsets, contact_schedule_, z_target_, mean_contact_height, contact_foot_pos, *q_base_target_, *v_base_target_);
 
-            mpc_->SetForwardKinematicsTarget(contact_foot_pos);
+                mpc_vec_[thread_num].SetForwardKinematicsTarget(contact_foot_pos);
+            // std::cout << "q_target_ z: " << q_target_.value()[0][2] << std::endl;
+            // std::cout << "q_base_target z: " << (*q_base_target_)[0][2] << std::endl;   // TODO: Need to fix this
+
+
+            // TODO: I'm not sure these really improve anything. If anything they almost look like they make it worse
+            // Set base targets
+            mpc_vec_[thread_num].SetConfigBaseTarget(*q_base_target_);
+            mpc_vec_[thread_num].SetVelBaseTarget(*v_base_target_);
+
         }
 
-        // std::cout << "q_target_ z: " << q_target_.value()[0][2] << std::endl;
-        // std::cout << "q_base_target z: " << (*q_base_target_)[0][2] << std::endl;   // TODO: Need to fix this
-
-
-        // TODO: I'm not sure these really improve anything. If anything they almost look like they make it worse
-        // Set base targets
-        mpc_->SetConfigBaseTarget(*q_base_target_);
-        mpc_->SetVelBaseTarget(*v_base_target_);
-
         double mpc_start_time = this->now().seconds();
-        if (mpc_->GetSolveCounter() < max_mpc_solves) {
+        if (mpc_vec_[thread_num].GetSolveCounter() < max_mpc_solves) {
             // ---- Solve MPC ----- //
             double time = this->now().seconds();        // NOTE: The quad uses the time here
-            mpc_->Compute(mpc_start_time - time_offset_, q, v, traj_mpc_);
+            mpc_vec_[thread_num].Compute(mpc_start_time - time_offset_, q, v, traj_mpc_);
             // double time = this->now().seconds();    // NOTE: The humanoid uses the time here
             {
-                // Get the traj mutex to protect it
-                std::lock_guard<std::mutex> lock(traj_out_mut_);
-                traj_out_ = traj_mpc_;
+                // Record trajectory
+                mpc_trajs_[thread_num] = traj_mpc_;
 
                 // Assign start time too
-                traj_start_time_ = time;
+                mpc_start_time_[thread_num] = time;
             }
+
+            // std::cout << "MPC compute finished for thread " << thread_num << std::endl;
+            #pragma omp barrier // Wait for all the threads to finish their compute
+
+            // Execute the decision making once
+            #pragma omp single
+            {
+            // TODO: Decide which thread's solution to use
+            // For now always use thread 0
+
+            // Get the traj mutex to protect it
+            std::lock_guard<std::mutex> lock(traj_out_mut_);
+            traj_out_ = mpc_trajs_[0];
+
+            // Assign start time too
+            traj_start_time_ = mpc_start_time_[0];
+            }
+
         }
         timer.Toc();
 
@@ -840,7 +882,7 @@ namespace robot
         torc::utils::TORCTimer prep_timer;
         prep_timer.Tic();
         // Part of the preperation phase
-        mpc_->LogMPCCompute(mpc_start_time - time_offset_, q, v);
+        mpc_vec_[thread_num].LogMPCCompute(mpc_start_time - time_offset_, q, v);
 
 
         if (v_target_.value()[0].head<6>().norm() > command_no_step_threshold_ || v.head<6>().norm() > state_no_step_threshold_) {
@@ -1409,78 +1451,79 @@ namespace robot
         // Reference frames
         // TODO: May want to move this under the mutex
         for (int j = 0; j < mpc_settings_->nodes; j++) {
-                msg.markers[i].type = visualization_msgs::msg::Marker::LINE_LIST;
-                msg.markers[i].header.frame_id = "world";
-                msg.markers[i].header.stamp = this->now();
-                msg.markers[i].ns = "config_ref";
-                msg.markers[i].id = i;
-                msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
+            // TODO: Put back and figure out what to do with multithreading
+                // msg.markers[i].type = visualization_msgs::msg::Marker::LINE_LIST;
+                // msg.markers[i].header.frame_id = "world";
+                // msg.markers[i].header.stamp = this->now();
+                // msg.markers[i].ns = "config_ref";
+                // msg.markers[i].id = i;
+                // msg.markers[i].action = visualization_msgs::msg::Marker::MODIFY;
 
-                msg.markers[i].scale.x = 0.01;
+                // msg.markers[i].scale.x = 0.01;
 
-                geometry_msgs::msg::Point base, xpoint, ypoint, zpoint;
+                // geometry_msgs::msg::Point base, xpoint, ypoint, zpoint;
 
-                base.x = q_base_target_->GetNodeData(j)[0];
-                base.y = q_base_target_->GetNodeData(j)[1];
-                base.z = q_base_target_->GetNodeData(j)[2];
+                // base.x = q_base_target_->GetNodeData(j)[0];
+                // base.y = q_base_target_->GetNodeData(j)[1];
+                // base.z = q_base_target_->GetNodeData(j)[2];
 
-                const double line_len = 0.05;
-                torc::mpc::vector3_t xline = {.05, 0, 0};
-                torc::mpc::vector3_t yline = {0, .05, 0};
-                torc::mpc::vector3_t zline = {0, 0, .05}; 
+                // const double line_len = 0.05;
+                // torc::mpc::vector3_t xline = {.05, 0, 0};
+                // torc::mpc::vector3_t yline = {0, .05, 0};
+                // torc::mpc::vector3_t zline = {0, 0, .05}; 
                 
-                // Rotate into the correct frame
-                torc::mpc::quat_t quat(q_base_target_->GetNodeData(0).segment<4>(3));
-                torc::mpc::matrix3_t R = quat.toRotationMatrix();   // TODO: add a transpose?
+                // // Rotate into the correct frame
+                // torc::mpc::quat_t quat(q_base_target_->GetNodeData(0).segment<4>(3));
+                // torc::mpc::matrix3_t R = quat.toRotationMatrix();   // TODO: add a transpose?
 
-                xline = R*xline;
-                yline = R*yline;
-                zline = R*zline;
+                // xline = R*xline;
+                // yline = R*yline;
+                // zline = R*zline;
 
-                xline += q_base_target_->GetNodeData(j).head<3>();
-                yline += q_base_target_->GetNodeData(j).head<3>();
-                zline += q_base_target_->GetNodeData(j).head<3>();
+                // xline += q_base_target_->GetNodeData(j).head<3>();
+                // yline += q_base_target_->GetNodeData(j).head<3>();
+                // zline += q_base_target_->GetNodeData(j).head<3>();
 
-                // TODO: Change the colors
-                std_msgs::msg::ColorRGBA color;
+                // // TODO: Change the colors
+                // std_msgs::msg::ColorRGBA color;
 
-                xpoint.x = xline[0];
-                xpoint.y = xline[1];
-                xpoint.z = xline[2];
-                color.a = 1.0;
-                color.r = 0.81;
-                color.g = 0.01;
-                color.b = 0.988;
-                msg.markers[i].points.emplace_back(base);
-                msg.markers[i].points.emplace_back(xpoint);
-                msg.markers[i].colors.push_back(color);
-                msg.markers[i].colors.push_back(color);
+                // xpoint.x = xline[0];
+                // xpoint.y = xline[1];
+                // xpoint.z = xline[2];
+                // color.a = 1.0;
+                // color.r = 0.81;
+                // color.g = 0.01;
+                // color.b = 0.988;
+                // msg.markers[i].points.emplace_back(base);
+                // msg.markers[i].points.emplace_back(xpoint);
+                // msg.markers[i].colors.push_back(color);
+                // msg.markers[i].colors.push_back(color);
 
-                ypoint.x = yline[0];
-                ypoint.y = yline[1];
-                ypoint.z = yline[2];
-                color.a = 1.0;
-                color.r = 1.;
-                color.g = 0.72;
-                color.b = 0.01;
-                msg.markers[i].points.emplace_back(base);
-                msg.markers[i].points.emplace_back(ypoint);
-                msg.markers[i].colors.push_back(color);
-                msg.markers[i].colors.push_back(color);
+                // ypoint.x = yline[0];
+                // ypoint.y = yline[1];
+                // ypoint.z = yline[2];
+                // color.a = 1.0;
+                // color.r = 1.;
+                // color.g = 0.72;
+                // color.b = 0.01;
+                // msg.markers[i].points.emplace_back(base);
+                // msg.markers[i].points.emplace_back(ypoint);
+                // msg.markers[i].colors.push_back(color);
+                // msg.markers[i].colors.push_back(color);
 
-                zpoint.x = zline[0];
-                zpoint.y = zline[1];
-                zpoint.z = zline[2];
-                color.a = 1.0;
-                color.r = 0.01;
-                color.g = 0.988;
-                color.b = 0.92;
-                msg.markers[i].points.emplace_back(base);
-                msg.markers[i].points.emplace_back(zpoint);
-                msg.markers[i].colors.push_back(color);
-                msg.markers[i].colors.push_back(color);
+                // zpoint.x = zline[0];
+                // zpoint.y = zline[1];
+                // zpoint.z = zline[2];
+                // color.a = 1.0;
+                // color.r = 0.01;
+                // color.g = 0.988;
+                // color.b = 0.92;
+                // msg.markers[i].points.emplace_back(base);
+                // msg.markers[i].points.emplace_back(zpoint);
+                // msg.markers[i].colors.push_back(color);
+                // msg.markers[i].colors.push_back(color);
 
-                i++;
+                // i++;
         }
 
         std::lock_guard<std::mutex> lock(polytope_mutex_);        
@@ -2143,6 +2186,212 @@ namespace robot
         }
 
         this->GetPublisher<sample_contact_msgs::msg::CommandedTarget>("target_pub")->publish(target_msg);
+    }
+
+    void MpcController::ConstructMPCVec() {
+        this->declare_parameter("num_samples", 1);
+        const int num_samples = this->get_parameter("num_samples").as_int();
+
+        RCLCPP_INFO_STREAM(this->get_logger(), "Running OpenMP with " << num_samples << " parallel sections.");
+
+        //  Update model
+        std::filesystem::path urdf_path(this->get_parameter("urdf_path").as_string());
+
+        // Create model
+        std::string robot_name = this->get_parameter("robot_name").as_string();
+        RCLCPP_INFO_STREAM(this->get_logger(), "Config yaml robot name: " << robot_name);
+        std::string model_name = get_name() + robot_name + "_model";
+
+        mpc_trajs_.resize(num_samples);
+        mpc_start_time_.resize(num_samples);
+
+        for (int i = 0; i < num_samples; i++) {
+            // ------------------------------------ //
+            // ----- Create and configure MPC ----- //
+            // ------------------------------------ //
+            // Make the polytope frame associations
+            std::string robot_name = this->get_parameter("robot_name").as_string();
+            std::vector<std::pair<std::string, std::string>> poly_contact_frames;
+            if (robot_name == "g1") {
+                poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[0], mpc_settings_->contact_frames[0]);
+                poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[0], mpc_settings_->contact_frames[1]);
+                poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[1], mpc_settings_->contact_frames[2]);
+                poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[1], mpc_settings_->contact_frames[3]);
+            } else if (robot_name == "go2") {
+                poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[0], mpc_settings_->contact_frames[0]);
+                poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[1], mpc_settings_->contact_frames[1]);
+                poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[2], mpc_settings_->contact_frames[2]);
+                poly_contact_frames.emplace_back(mpc_settings_->polytope_frames[3], mpc_settings_->contact_frames[3]);
+            }
+            mpc_settings_->poly_contact_pairs = poly_contact_frames;
+            
+            torc::models::FullOrderRigidBody mpc_model_temp(model_name, urdf_path, mpc_settings_->joint_skip_names, mpc_settings_->joint_skip_values);
+            mpc_model_vec_.push_back(mpc_model_temp);
+
+            // TODO: Consider moving this
+            // Reference Generator
+            ref_gen_ = std::make_unique<torc::mpc::ReferenceGenerator>(mpc_settings_->nodes, mpc_settings_->contact_frames, mpc_settings_->dt,
+                mpc_model_temp, mpc_settings_->polytope_delta);
+            q_base_target_ = std::make_unique<torc::mpc::SimpleTrajectory>(FLOATING_POS_SIZE, mpc_settings_->nodes);
+            v_base_target_ = std::make_unique<torc::mpc::SimpleTrajectory>(FLOATING_VEL_SIZE, mpc_settings_->nodes);
+
+            // TODO: Can always make the derivative libraries have different names if I am worried about thread safety
+
+            // ---------- Constraints ---------- //
+            // Dynamics //
+            // ---------- Full Order Dynamics ---------- //
+            torc::mpc::DynamicsConstraint dynamics_constraint(mpc_model_temp, mpc_settings_->contact_frames, model_name + "_robot_full_order",
+                mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, 0, mpc_settings_->nodes_full_dynamics + 100);
+
+            // ---------- Centroidal Dynamics ---------- //
+            torc::mpc::CentroidalDynamicsConstraint centroidal_dynamics(mpc_model_temp, mpc_settings_->contact_frames, model_name + "_robot_centroidal",
+                mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->nodes_full_dynamics - 100, mpc_settings_->nodes - 100); // 0, mpc_settings_->nodes
+
+            // Box constraints // 
+            // Config
+            std::vector<int> config_lims_idxs;
+            for (int i = 0; i < mpc_model_->GetConfigDim() - torc::mpc::FLOATING_BASE; ++i) {
+                config_lims_idxs.push_back(i + torc::mpc::FLOATING_VEL);
+            }
+            torc::mpc::BoxConstraint config_box(1, mpc_settings_->nodes, model_name + "config_box",
+                mpc_model_->GetLowerConfigLimits().tail(mpc_model_->GetConfigDim() - torc::mpc::FLOATING_BASE),
+                mpc_model_->GetUpperConfigLimits().tail(mpc_model_->GetConfigDim() - torc::mpc::FLOATING_BASE),
+                config_lims_idxs);
+
+            // Vel
+            std::vector<int> vel_lims_idxs;
+            for (int i = 0; i < mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL; ++i) {
+                vel_lims_idxs.push_back(i + torc::mpc::FLOATING_VEL);
+            }
+            torc::mpc::BoxConstraint vel_box(1, mpc_settings_->nodes, model_name + "vel_box",
+                -mpc_model_->GetVelocityJointLimits().tail(mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL),
+                mpc_model_->GetVelocityJointLimits().tail(mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL),
+                vel_lims_idxs);
+
+            // Torque
+            std::vector<int> tau_lims_idxs;
+            for (int i = 0; i < mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL; ++i) {
+                tau_lims_idxs.push_back(i);
+            }
+            torc::mpc::BoxConstraint tau_box(0, mpc_settings_->nodes, model_name + "tau_box",
+                -mpc_model_->GetTorqueJointLimits().tail(mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL),
+                mpc_model_->GetTorqueJointLimits().tail(mpc_model_->GetVelDim() - torc::mpc::FLOATING_VEL),
+                tau_lims_idxs);
+
+            // Force
+            std::vector<int> force_lim_idxs;
+            for (int i = 0; i < 3; i++) {
+                force_lim_idxs.push_back(i);
+            }
+            vectorx_t stance_lb(3), stance_ub(3);
+            stance_lb << -1000, -1000, mpc_settings_->min_grf;
+            stance_ub << 1000, 1000, mpc_settings_->max_grf;
+            torc::mpc::BoxConstraint stance_force_box(0, mpc_settings_->nodes, "stance_force_box",
+                stance_lb, // Minimum force on the ground
+                stance_ub,
+                force_lim_idxs);
+
+            vectorx_t swing_lb(3), swing_ub(3);
+            swing_lb << 0, 0, 0;
+            swing_ub << 0, 0, 0;
+            torc::mpc::BoxConstraint swing_force_box(0, mpc_settings_->nodes, "swing_force_box",
+                swing_lb, // Minimum force on the ground
+                swing_ub,
+                force_lim_idxs);
+
+            // ---------- Friction Cone Constraints ---------- //
+            torc::mpc::FrictionConeConstraint friction_cone_constraint(0, mpc_settings_->nodes - 1, model_name + "friction_cone_cone",
+                mpc_settings_->friction_coef, mpc_settings_->friction_margin, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);
+
+            // ---------- Swing Constraints ---------- //
+            torc::mpc::SwingConstraint swing_constraint(mpc_settings_->swing_start_node, mpc_settings_->swing_end_node, model_name + "swing_constraint",
+                mpc_model_temp, mpc_settings_->contact_frames,
+                mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);
+
+            // ---------- Holonomic Constraints ---------- //
+            //2, nodes
+            torc::mpc::HolonomicConstraint holonomic_constraint(mpc_settings_->holonomic_start_node, mpc_settings_->holonomic_end_node, model_name + "holonomic_constraint", mpc_model_temp, 
+                mpc_settings_->contact_frames, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs);  // The -1 in the last node helps with weird issues (feasibility I think)
+
+            // ---------- Collision Constraints ---------- //
+            torc::mpc::CollisionConstraint collision_constraint(mpc_settings_->collision_start_node, mpc_settings_->collision_end_node,
+                model_name + "collision_constraint", mpc_model_temp, mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->collision_data);
+
+            // ---------- Polytope Constraints ---------- //
+            torc::mpc::PolytopeConstraint polytope_constraint(mpc_settings_->polytope_start_node, mpc_settings_->polytope_end_node, model_name + "polytope_constraint",
+                mpc_settings_->polytope_frames,
+                mpc_settings_->deriv_lib_path, 
+                mpc_settings_->compile_derivs,
+                mpc_model_temp);
+
+            std::cout << "===== Constraints Created =====" << std::endl;
+
+            // --------------------------------- //
+            // ------------- Costs ------------- //
+            // --------------------------------- //
+            // ---------- Velocity Tracking ---------- //
+            torc::mpc::LinearLsCost vel_tracking(0, mpc_settings_->nodes, model_name + "vel_tracking",
+                mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->cost_data.at(1).weight.size());
+
+            // ---------- Tau Tracking ---------- //
+            torc::mpc::LinearLsCost tau_tracking(0, mpc_settings_->nodes, model_name + "tau_tracking",
+                mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->cost_data.at(2).weight.size());
+
+            // ---------- Force Tracking ---------- //
+            torc::mpc::LinearLsCost force_tracking(0, mpc_settings_->nodes, model_name + "force_tracking",
+                mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_settings_->cost_data.at(3).weight.size());
+
+            // ---------- Config Tracking ---------- //
+            torc::mpc::ConfigTrackingCost config_tracking(0, mpc_settings_->nodes, model_name + "config_tracking", mpc_settings_->cost_data.at(0).weight.size(),
+                mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_model_temp);
+
+            // ---------- Forward Kinematics Tracking ---------- //
+            // For now they all need the same weight
+            // Need to read the contact frames from the settings (TODO, later)
+            RCLCPP_INFO_STREAM(this->get_logger(), "FK weight: " << mpc_settings_->cost_data.at(4).weight.transpose());
+            torc::mpc::ForwardKinematicsCost fk_cost(0, mpc_settings_->nodes, model_name + "fk_cost", mpc_settings_->cost_data.at(4).weight.size(),
+                mpc_settings_->deriv_lib_path, mpc_settings_->compile_derivs, mpc_model_temp, mpc_settings_->contact_frames);
+
+
+            std::cout << "===== Costs Created =====" << std::endl;
+
+            // --------------------------------- //
+            // -------------- MPC -------------- //
+            // --------------------------------- //
+            // torc::mpc::MpcSettings mpc_settings_temp("/home/zolkin/torc/tests/test_data/g1_mpc_config.yaml");
+            torc::mpc::MpcSettings mpc_settings_temp(this->get_parameter("params_path").as_string());
+            mpc_settings_temp.poly_contact_pairs = poly_contact_frames;
+            size_t pos = mpc_settings_temp.log_file_name.find(".");
+            if (pos != std::string::npos) {
+                mpc_settings_temp.log_file_name.insert(pos, "_" + std::to_string(i));
+            } else {
+                throw std::runtime_error("No dot found in the mpc log name!");
+            }
+            torc::mpc::HpipmMpc mpc(mpc_settings_temp, mpc_model_temp);
+            std::cout << "===== MPC Created =====" << std::endl;
+
+            mpc.SetDynamicsConstraints(std::move(dynamics_constraint));
+            mpc.SetCentroidalDynamicsConstraints(std::move(centroidal_dynamics));
+            mpc.SetConfigBox(config_box);
+            mpc.SetVelBox(vel_box);
+            mpc.SetTauBox(tau_box);
+            mpc.SetForceBox(stance_force_box, swing_force_box);
+            mpc.SetFrictionCone(std::move(friction_cone_constraint));
+            mpc.SetSwingConstraint(std::move(swing_constraint));
+            mpc.SetHolonomicConstraint(std::move(holonomic_constraint));
+            mpc.SetCollisionConstraint(std::move(collision_constraint));
+            mpc.SetPolytopeConstraint(std::move(polytope_constraint));
+            std::cout << "===== MPC Constraints Added =====" << std::endl;
+
+            mpc.SetVelTrackingCost(std::move(vel_tracking));
+            mpc.SetTauTrackingCost(std::move(tau_tracking));
+            mpc.SetForceTrackingCost(std::move(force_tracking));
+            mpc.SetConfigTrackingCost(std::move(config_tracking));
+            mpc.SetFowardKinematicsCost(std::move(fk_cost));  // TODO: Fix for biped
+            std::cout << "===== MPC Costs Added =====" << std::endl;
+
+            mpc_vec_.push_back(std::move(mpc));
+        }
     }
 
 } // namespace robot

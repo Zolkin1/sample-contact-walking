@@ -14,6 +14,7 @@ onboard:
         state_vel_no_step_threshold: 0.4
         command_vel_no_step_threshold: 0.05
         constant_vel: 0.2
+        num_samples: 4 #6 #2 #1 #2
 # ---------- Viz ---------- #
         viz_frames: ["torso", "FR_foot", "FL_foot", "RR_foot", "RL_foot"]
         viz_forces: True
@@ -131,13 +132,13 @@ onboard:
     - pkg: contact_planning
       executable: mujoco_geom_reader
       params:
-        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
+        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile_scene.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile2_scene.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_1.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_2_basic_stones.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_3_multiple_stones.xml
-        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_4_thin_and_blocks.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_4_thin_and_blocks.xml
       # ----- Tile Scene ---- #
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9", "stair1", "stair2", "stair3",
                         "tileA", "tileB", "tileC", "tileD", "tileE", "small_block1", "small_block2", "small_block3", "small_block4", "small_block5",
@@ -256,13 +257,13 @@ onboard:
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: go2_model
-          # model_xml_path: go2_scene.xml
+          model_xml_path: go2_scene.xml
           # model_xml_path: go2_tile_scene.xml
           # model_xml_path: go2_tile2_scene.xml
           # model_xml_path: go2_lab_space_1.xml
           # model_xml_path: go2_lab_space_2_basic_stones.xml
           # model_xml_path: go2_lab_space_3_multiple_stones.xml
-          model_xml_path: go2_lab_space_4_thin_and_blocks.xml
+          # model_xml_path: go2_lab_space_4_thin_and_blocks.xml
           n_u: 36
           num_steps_per_viz: 16 # No longer used
           sensor_settings:

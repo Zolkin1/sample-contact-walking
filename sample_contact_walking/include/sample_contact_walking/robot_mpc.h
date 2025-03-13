@@ -74,6 +74,8 @@ namespace robot {
             void LogCurrentControl(const vectorx_t& q_control, const vectorx_t& v_control, const vectorx_t& tau, const vectorx_t& force, const vectorx_t& tau_mpc);
             void LogEigenVec(const vectorx_t& x);
 
+            void ConstructMPCVec();
+
             // Viz
             void PublishTrajViz(const torc::mpc::Trajectory& traj, const std::vector<std::string>& viz_frames);
             void PublishTrajStateViz();
@@ -166,6 +168,7 @@ namespace robot {
             // std::shared_ptr<torc::mpc::FullOrderMpc> mpc_;
             std::unique_ptr<torc::models::FullOrderRigidBody> model_;               // Full model
             std::unique_ptr<torc::models::FullOrderRigidBody> mpc_model_;           // Potentially reduced model for the MPC
+            std::vector<torc::models::FullOrderRigidBody> mpc_model_vec_;
             std::unique_ptr<torc::models::FullOrderRigidBody> wbc_model_;           // Potentially reduced model for the MPC
             torc::mpc::ContactSchedule contact_schedule_;
 
@@ -184,6 +187,10 @@ namespace robot {
             std::shared_ptr<torc::mpc::MpcSettings> mpc_settings_;
             std::shared_ptr<torc::controller::WbcSettings> wbc_settings_;
             std::shared_ptr<torc::mpc::HpipmMpc> mpc_;
+            std::vector<torc::mpc::HpipmMpc> mpc_vec_;
+
+            std::vector<torc::mpc::Trajectory> mpc_trajs_;
+            std::vector<double> mpc_start_time_;
 
             // MPC Skipped joint indexes
             // TODO: Find a better way to do this
@@ -209,7 +216,7 @@ namespace robot {
 
             double time_offset_;
             std::ofstream log_file_;
-            std::ofstream timing_log_file_;
+            std::vector<std::ofstream> timing_log_files_;
             std::ofstream contact_schedule_log_file_;
             std::ofstream force_sensor_log_file_;
     };
