@@ -14,7 +14,7 @@ onboard:
         state_vel_no_step_threshold: 0.4
         command_vel_no_step_threshold: 0.05
         constant_vel: 0.2
-        num_samples: 5 #4 #6 #2 #1 #2 # TODO: Play with this value
+        num_samples: 4 #2 #4 #5 #4 #6 #2 #1 #2 # TODO: Play with this value
 # ---------- Viz ---------- #
         viz_frames: ["torso", "FR_foot", "FL_foot", "RR_foot", "RL_foot"]
         viz_forces: True
@@ -132,8 +132,8 @@ onboard:
     - pkg: contact_planning
       executable: mujoco_geom_reader
       params:
-        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
-        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile_scene.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
+        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile_scene.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile2_scene.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_1.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_2_basic_stones.xml
@@ -257,8 +257,8 @@ onboard:
       sim:
         - ros_parameter: mujoco_setting
           robot_pkg: go2_model
-          model_xml_path: go2_scene.xml
-          # model_xml_path: go2_tile_scene.xml
+          # model_xml_path: go2_scene.xml
+          model_xml_path: go2_tile_scene.xml
           # model_xml_path: go2_tile2_scene.xml
           # model_xml_path: go2_lab_space_1.xml
           # model_xml_path: go2_lab_space_2_basic_stones.xml

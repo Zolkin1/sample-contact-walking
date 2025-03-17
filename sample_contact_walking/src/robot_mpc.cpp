@@ -220,7 +220,7 @@ namespace robot
         this->declare_parameter<std::vector<double>>("foot_offsets", {-1});
         std::vector<double> contact_offsets = this->get_parameter("foot_offsets").as_double_array();
         step_planner_ = std::make_unique<torc::step_planning::StepPlanner>(contact_polytopes, mpc_settings_->contact_frames, contact_offsets,
-            0.4, mpc_settings_->polytope_delta);
+            0.4, mpc_settings_->polytope_delta, "mpc_logs/polytope_planner_log.csv");   // TODO: Pull the csv from a config
         // ------------------------------------------------ //
 
         // ------------------------------------------------ //
@@ -415,6 +415,9 @@ namespace robot
     void MpcController::MpcThread() {
 
         int num_samples = this->get_parameter("num_samples").as_int();
+        first_prep_.resize(num_samples, true);
+        cs_update_prev_time_.resize(num_samples);
+
         // TODO: Deal with pinning to specific threads!
         #pragma omp parallel num_threads(num_samples)
         {
@@ -469,8 +472,8 @@ namespace robot
                         // TODO: Fix the state for when we re-enter this loop
                         {
                             std::lock_guard<std::mutex> lock(polytope_mutex_);
-                            step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_, nom_footholds_, projected_footholds_, true);
-                            mpc_vec_[thread_num].UpdateContactSchedule(contact_schedule_);  // TODO: There is an issue with polytopes here
+                            step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_[thread_num], nom_footholds_, projected_footholds_, true);
+                            mpc_vec_[thread_num].UpdateContactSchedule(contact_schedule_vec_[thread_num]);  // TODO: There is an issue with polytopes here
                         }
 
                         UpdateMpcTargets(q);
@@ -560,19 +563,32 @@ namespace robot
         torc::utils::TORCTimer timer;
         timer.Tic();
 
-        static auto prev_time = this->now();
+
+        const int thread_num = omp_get_thread_num();
+        std::cerr << "thread num: " << thread_num << std::endl;
+
+        // if (first_prep_[thread_num]) {
+        //     cs_update_prev_time_[thread_num] = this->now().seconds();
+        //     first_prep_[thread_num] = false;
+        // }
+        static double prev_time = this->now().seconds();
 
         // Update contact schedule and polytopes
         // Shift the contact schedule
+        #pragma omp single
         {
             std::lock_guard<std::mutex> lock(polytope_mutex_);
             auto current_time = this->now();
-            double time_shift_sec = (current_time - prev_time).nanoseconds()/1e9;
-            contact_schedule_.ShiftSwings(-time_shift_sec);    // TODO: Do I need a mutex on this later?
+            double time_shift_sec = (current_time.seconds() - prev_time);
+            for (int j = 0; j < contact_schedule_vec_.size(); j++) { // By doing them all in a single I don't need to worry about the schedules getting out of sync
+                contact_schedule_vec_[j].ShiftSwings(-time_shift_sec);    // TODO: Do I need a mutex on this later?
+            }
             next_left_insertion_time_ -= time_shift_sec;
             next_right_insertion_time_ -= time_shift_sec;
+            // std::cout << "time shift: " << time_shift_sec << std::endl;
+            // std::cout << "next right insertion: " << next_right_insertion_time_ << std::endl;
+            prev_time = this->now().seconds();
         }
-        prev_time = this->now();
 
         if (!recieved_polytope_) {
             UpdateContactPolytopes();
@@ -581,21 +597,32 @@ namespace robot
         
         // ----- No Reference ----- //
         torc::utils::TORCTimer step_planner_timer;
+        #pragma omp single
         {
             std::lock_guard<std::mutex> lock(polytope_mutex_);
             // TODO: Look into what target to use, for now just use the old targets
             // TODO: Consider making this update at a slower rate (20-50Hz)
             step_planner_timer.Tic();
             // TODO: Is this thread safe?
-            step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_, nom_footholds_, projected_footholds_);
+            // TODO: Update for the sampler
+            // TODO: Probably needs to be in a single block to do the sampling just once
+            // step_planner_->PlanStepsSampling(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_, nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
+            // step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_[thread_num], nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
+            for (int j = 0; j < contact_schedule_vec_.size(); j++) {
+                // TODO: The nominal footholds an projected footholds are NOT thread safe!
+                step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_[j], nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
+                // mpc_vec_[j].UpdateContactSchedule(contact_schedule_vec_[j]); // TODO: Need to do this at the same time as the reference generation
+                // mpc_vec_[j].CreateQPData();
+            }
             step_planner_timer.Toc();
-            mpc_vec_[omp_get_thread_num()].UpdateContactSchedule(contact_schedule_); // TODO: Need to do this at the same time as the reference generation
         }
                 
 
-        // Linearize around current trajectory
-        mpc_vec_[omp_get_thread_num()].CreateQPData();
+        // TODO: Do I need the mutex on the contact schedules?
+        mpc_vec_[thread_num].UpdateContactSchedule(contact_schedule_vec_[thread_num]); // TODO: Need to do this at the same time as the reference generation
 
+        // Linearize around current trajectory
+        mpc_vec_[thread_num].CreateQPData();
         timer.Toc();
 
         // std::cout << "step planner took " << step_planner_timer.Duration<std::chrono::microseconds>().count()/1000.0 << " ms" << std::endl;
@@ -605,9 +632,11 @@ namespace robot
 
     std::pair<double, double> MpcController::FeedbackPhase() {
         torc::utils::TORCTimer timer;
+        torc::utils::TORCTimer prep_timer;
         timer.Tic();
 
         int thread_num = omp_get_thread_num();
+        std::cerr << "thread num: " << thread_num << std::endl;
 
         vectorx_t q, v;
 
@@ -647,9 +676,10 @@ namespace robot
             double mean_contact_height = 0;
             float num_in_contact = 0;
             for (const auto& frame : mpc_settings_->contact_frames) {
-                if (contact_schedule_.InContact(frame, 0)) {
+                if (contact_schedule_vec_[thread_num].InContact(frame, 0)) {
                     vector3_t contact_pos = mpc_model_vec_[thread_num].GetFrameState(frame).placement.translation();
-                    mpc_vec_[thread_num].SetFootOffset(frame, contact_pos[2] - contact_schedule_.GetPolytopes(frame)[contact_schedule_.GetContactIndex(frame, 0)].height_);
+                    mpc_vec_[thread_num].SetFootOffset(frame, contact_pos[2] - contact_schedule_vec_[thread_num].GetPolytopes(frame)[contact_schedule_vec_[thread_num].GetContactIndex(frame, 0)].height_);
+                    // mpc_vec_[thread_num].SetFootOffset(frame, contact_pos[2] - contact_schedule_vec_[thread_num].GetPolytopes(frame)[0].height_);
                     mean_contact_height += contact_pos[2];
                     num_in_contact++;
                 }
@@ -671,7 +701,7 @@ namespace robot
             // mpc_->UpdateContactSchedule(contact_schedule_); // TODO: Why do I do this here?
             std::map<std::string, std::vector<torc::mpc::vector3_t>> contact_foot_pos;
             const auto [q_ref, v_ref] = ref_gen_->GenerateReference(q, v, q_target_.value(), v_target_.value(), mpc_vec_[thread_num].GetSwingTrajectory(),
-                mpc_settings_->hip_offsets, contact_schedule_, z_target_, mean_contact_height, contact_foot_pos, *q_base_target_, *v_base_target_);
+                mpc_settings_->hip_offsets, contact_schedule_vec_[thread_num], z_target_, mean_contact_height, contact_foot_pos, *q_base_target_, *v_base_target_);
 
                 mpc_vec_[thread_num].SetForwardKinematicsTarget(contact_foot_pos);
             // std::cout << "q_target_ z: " << q_target_.value()[0][2] << std::endl;
@@ -700,10 +730,10 @@ namespace robot
             }
 
             // std::cout << "MPC compute finished for thread " << thread_num << std::endl;
-            #pragma omp barrier // Wait for all the threads to finish their compute
+            // #pragma omp barrier // Wait for all the threads to finish their compute
 
             // Execute the decision making once
-            #pragma omp single
+            // #pragma omp single
             {
             // TODO: Decide which thread's solution to use
             // For now always use thread 0
@@ -720,14 +750,17 @@ namespace robot
 
         first_mpc_computed_ = true;
 
-        torc::utils::TORCTimer prep_timer;
+        // torc::utils::TORCTimer prep_timer;
         prep_timer.Tic();
         // Part of the preperation phase
         mpc_vec_[thread_num].LogMPCCompute(mpc_start_time - time_offset_, q, v);
 
 
-        if (v_target_.value()[0].head<6>().norm() > command_no_step_threshold_ || v.head<6>().norm() > state_no_step_threshold_) {
-            AddPeriodicContacts();
+        #pragma omp single
+        {
+            if (v_target_.value()[0].head<6>().norm() > command_no_step_threshold_ || v.head<6>().norm() > state_no_step_threshold_) {
+                AddPeriodicContacts();
+            }
         }
         prep_timer.Toc();
 
@@ -1090,12 +1123,14 @@ namespace robot
             } else {
                 b_temp = b_temp + Eigen::Vector4d::Constant(-0.1*(frame_idx));
             }
-            for (int i = 0; i < contact_schedule_.GetNumContacts(frame); i++) {
-                torc::mpc::ContactInfo poly;
-                poly.A_ = A_temp;
-                poly.b_ = b_temp;
-                poly.height_ = 0;
-                contact_schedule_.SetPolytope(frame, i, poly);
+            for (int j = 0; j < contact_schedule_vec_.size(); j++) {
+                for (int i = 0; i < contact_schedule_vec_[j].GetNumContacts(frame); i++) {
+                    torc::mpc::ContactInfo poly;
+                    poly.A_ = A_temp;
+                    poly.b_ = b_temp;
+                    poly.height_ = 0;
+                    contact_schedule_vec_[j].SetPolytope(frame, i, poly);
+                }
             }
 
             frame_idx++;
@@ -1371,7 +1406,7 @@ namespace robot
 
         int num_polytope_markers = 0;
         for (const auto& frame : viz_polytope_frames_) {
-            num_polytope_markers += contact_schedule_.GetNumContacts(frame);
+            num_polytope_markers += contact_schedule_vec_[0].GetNumContacts(frame);
         }
         
         msg.markers.resize(num_markers + num_polytope_markers);
@@ -1386,8 +1421,8 @@ namespace robot
                 // Grab the contact polytopes
                 // std::lock_guard<std::mutex> lock(polytope_mutex_); // Grabbed above
 
-                polytope_vec = contact_schedule_.GetPolytopes(frame);
-                num_contacts = contact_schedule_.GetNumContacts(frame);
+                polytope_vec = contact_schedule_vec_[0].GetPolytopes(frame);
+                num_contacts = contact_schedule_vec_[0].GetNumContacts(frame);
             }
 
             if (num_contacts != polytope_vec.size()) {
@@ -1800,26 +1835,34 @@ namespace robot
 
     void MpcController::AddPeriodicContacts() {
         std::lock_guard<std::mutex> lock(polytope_mutex_);
-
+        
         while (next_right_insertion_time_ < 1) {
-            for (const auto& frame : right_frames_) {
-                contact_schedule_.InsertSwingByDuration(frame, next_right_insertion_time_,  swing_time_);
-                contact_schedule_log_file_ << "0," << this->now().seconds() - time_offset_ << "," << next_right_insertion_time_ << "," << next_right_insertion_time_ + swing_time_ << std::endl;
+            for (int j = 0; j < contact_schedule_vec_.size(); j++) {
+                for (const auto& frame : right_frames_) {
+                    contact_schedule_vec_[j].InsertSwingByDuration(frame, next_right_insertion_time_,  swing_time_);
+                    if (j == 0) {
+                        contact_schedule_log_file_ << "0," << this->now().seconds() - time_offset_ << "," << next_right_insertion_time_ << "," << next_right_insertion_time_ + swing_time_ << std::endl;
+                    }
+                }
             }
-
             next_right_insertion_time_ += 2*swing_time_;
         }
 
         while (next_left_insertion_time_ < 1) {
-            for (const auto& frame : left_frames_) {
-                contact_schedule_.InsertSwingByDuration(frame, next_left_insertion_time_,  swing_time_);
-                contact_schedule_log_file_ << "1," << this->now().seconds() - time_offset_ << "," << next_left_insertion_time_ << "," << next_left_insertion_time_ + swing_time_ << std::endl;
+            for (int j = 0; j < contact_schedule_vec_.size(); j++) {
+                for (const auto& frame : left_frames_) {
+                    contact_schedule_vec_[j].InsertSwingByDuration(frame, next_left_insertion_time_,  swing_time_);
+                    if (j == 0) {
+                        contact_schedule_log_file_ << "1," << this->now().seconds() - time_offset_ << "," << next_left_insertion_time_ << "," << next_left_insertion_time_ + swing_time_ << std::endl;
+                    }
+                }
             }
-
             next_left_insertion_time_ += 2*swing_time_;
         }
 
-        contact_schedule_.CleanContacts(-1);
+        for (int j = 0; j < contact_schedule_vec_.size(); j++) {
+            contact_schedule_vec_[j].CleanContacts(-1);
+        }
     }
 
     void MpcController::ParseContactParameters() {
@@ -1847,21 +1890,23 @@ namespace robot
         }
 
 
-        contact_schedule_.SetFrames(mpc_settings_->contact_frames);
+        for (int j = 0; j < contact_schedule_vec_.size(); j++) {
+            contact_schedule_vec_[j].SetFrames(mpc_settings_->contact_frames);
 
-        // TODO: Put back
-        if (right_foot_first_) {
-            for (const auto& rf : right_frames_) {
-                contact_schedule_.InsertSwingByDuration(rf, first_swing_time_, swing_time_);
+            // TODO: Put back
+            if (right_foot_first_) {
+                for (const auto& rf : right_frames_) {
+                    contact_schedule_vec_[j].InsertSwingByDuration(rf, first_swing_time_, swing_time_);
+                }
+                next_right_insertion_time_ = first_swing_time_ + 2*swing_time_;
+                next_left_insertion_time_ = first_swing_time_ + swing_time_;
+            } else {
+                for (const auto& lf : right_frames_) {
+                    contact_schedule_vec_[j].InsertSwingByDuration(lf, first_swing_time_, swing_time_);
+                }
+                next_left_insertion_time_ = first_swing_time_ + 2*swing_time_;
+                next_right_insertion_time_ = first_swing_time_ + swing_time_;
             }
-            next_right_insertion_time_ = first_swing_time_ + 2*swing_time_;
-            next_left_insertion_time_ = first_swing_time_ + swing_time_;
-        } else {
-            for (const auto& lf : right_frames_) {
-                contact_schedule_.InsertSwingByDuration(lf, first_swing_time_, swing_time_);
-            }
-            next_left_insertion_time_ = first_swing_time_ + 2*swing_time_;
-            next_right_insertion_time_ = first_swing_time_ + swing_time_;
         }
         AddPeriodicContacts();
 
@@ -1924,6 +1969,7 @@ namespace robot
 
         constexpr int MENU = 7;
         constexpr int SQUARES = 6;
+        constexpr int GUIDE = 11;
 
         static rclcpp::Time last_menu_press = this->now();
         static rclcpp::Time last_A_press = this->now();
@@ -1932,6 +1978,10 @@ namespace robot
         static rclcpp::Time last_target_update = this->now();
         static rclcpp::Time last_LT_press = this->now();
         static rclcpp::Time last_RT_press = this->now();
+
+        if (msg.buttons[GUIDE]) {
+            throw std::runtime_error("Controller E-Stop hit!");
+        }
 
         if (msg.buttons[MENU] && (this->now() - last_menu_press).seconds() > 1e-1) {
             RCLCPP_INFO_STREAM(this->get_logger(), "Press the menu button (three horizontal lines) to recieve this message.\n"
@@ -2042,6 +2092,9 @@ namespace robot
         std::string robot_name = this->get_parameter("robot_name").as_string();
         RCLCPP_INFO_STREAM(this->get_logger(), "Config yaml robot name: " << robot_name);
         std::string model_name = get_name() + robot_name + "_model";
+
+        // contact_schedule_vec_.resize(num_samples + 1);
+        contact_schedule_vec_.resize(num_samples);
 
         mpc_trajs_.resize(num_samples);
         mpc_start_time_.resize(num_samples);
