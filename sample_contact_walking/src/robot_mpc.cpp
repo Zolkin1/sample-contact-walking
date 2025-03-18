@@ -751,11 +751,19 @@ namespace robot
                 std::cout << "Best idx: " << idx << std::endl;
 
                 // Get the traj mutex to protect it
-                std::lock_guard<std::mutex> lock(traj_out_mut_);
-                traj_out_ = mpc_trajs_[idx];
+                {
+                    std::lock_guard<std::mutex> lock(traj_out_mut_);
+                    traj_out_ = mpc_trajs_[idx];
 
-                // Assign start time too
-                traj_start_time_ = mpc_start_time_[idx];
+                    // Assign start time too
+                    traj_start_time_ = mpc_start_time_[idx];
+                }
+                // Now reset all the contact schedules to the best one
+                for (int i = 0; i < contact_schedule_vec_.size(); i++) {
+                    if (i != idx) {
+                        contact_schedule_vec_[i] = contact_schedule_vec_[idx];
+                    }
+                }
             }
         }
         timer.Toc();
