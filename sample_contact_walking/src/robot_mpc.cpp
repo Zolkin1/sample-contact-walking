@@ -577,52 +577,59 @@ namespace robot
         // Shift the contact schedule
         #pragma omp single
         {
-            std::lock_guard<std::mutex> lock(polytope_mutex_);
-            auto current_time = this->now();
-            double time_shift_sec = (current_time.seconds() - prev_time);
-            for (int j = 0; j < contact_schedule_vec_.size(); j++) { // By doing them all in a single I don't need to worry about the schedules getting out of sync
-                contact_schedule_vec_[j].ShiftSwings(-time_shift_sec);    // TODO: Do I need a mutex on this later?
+            {
+                std::lock_guard<std::mutex> lock(polytope_mutex_);
+                auto current_time = this->now();
+                double time_shift_sec = (current_time.seconds() - prev_time);
+                for (int j = 0; j < contact_schedule_vec_.size(); j++) { // By doing them all in a single I don't need to worry about the schedules getting out of sync
+                    contact_schedule_vec_[j].ShiftSwings(-time_shift_sec);    // TODO: Do I need a mutex on this later?
+                }
+                next_left_insertion_time_ -= time_shift_sec;
+                next_right_insertion_time_ -= time_shift_sec;
+                // std::cout << "time shift: " << time_shift_sec << std::endl;
+                // std::cout << "next right insertion: " << next_right_insertion_time_ << std::endl;
+                prev_time = this->now().seconds();
             }
-            next_left_insertion_time_ -= time_shift_sec;
-            next_right_insertion_time_ -= time_shift_sec;
-            // std::cout << "time shift: " << time_shift_sec << std::endl;
-            // std::cout << "next right insertion: " << next_right_insertion_time_ << std::endl;
-            prev_time = this->now().seconds();
-        }
 
-        if (!recieved_polytope_) {
-            UpdateContactPolytopes();
-            std::cout << "No polytope received yet!" << std::endl;
+            while (!recieved_polytope_) {
+                // RCLCPP_INFO_STREAM("Waiting on polytope information...");
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            }
+            // if (!recieved_polytope_) {
+            //     UpdateContactPolytopes();
+            //     // std::vector<torc::mpc::ContactInfo> poly = {torc::mpc::ContactSchedule::GetDefaultContactInfo()};
+            //     // step_planner_->UpdateContactPolytopes(poly);
+            //     std::cout << "No polytope received yet!" << std::endl;
+            // } 
+            
+            // ----- No Reference ----- //
+            torc::utils::TORCTimer step_planner_timer;
+            {
+                std::lock_guard<std::mutex> lock(polytope_mutex_);
+                // TODO: Look into what target to use, for now just use the old targets
+                // TODO: Consider making this update at a slower rate (20-50Hz)
+                step_planner_timer.Tic();
+                // TODO: Is this thread safe?
+                // TODO: Update for the sampler
+                // TODO: Probably needs to be in a single block to do the sampling just once
+                // TODO: Make new nominal and projected foothold variables
+                step_planner_->PlanStepsSampling(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_, nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
+                // step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_.back(), nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
+                for (int j = 0; j < contact_schedule_vec_.size(); j++) {
+                    // TODO: The nominal footholds an projected footholds are NOT thread safe!
+                    // step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_[j], nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
+                    mpc_vec_[j].UpdateContactSchedule(contact_schedule_vec_[j]); // TODO: Need to do this at the same time as the reference generation
+                    mpc_vec_[j].CreateQPData();
+                }
+                step_planner_timer.Toc();
+            }
         } 
-        
-        // ----- No Reference ----- //
-        torc::utils::TORCTimer step_planner_timer;
-        #pragma omp single
-        {
-            std::lock_guard<std::mutex> lock(polytope_mutex_);
-            // TODO: Look into what target to use, for now just use the old targets
-            // TODO: Consider making this update at a slower rate (20-50Hz)
-            step_planner_timer.Tic();
-            // TODO: Is this thread safe?
-            // TODO: Update for the sampler
-            // TODO: Probably needs to be in a single block to do the sampling just once
-            // step_planner_->PlanStepsSampling(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_, nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
-            // step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_[thread_num], nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
-            for (int j = 0; j < contact_schedule_vec_.size(); j++) {
-                // TODO: The nominal footholds an projected footholds are NOT thread safe!
-                step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_[j], nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
-                // mpc_vec_[j].UpdateContactSchedule(contact_schedule_vec_[j]); // TODO: Need to do this at the same time as the reference generation
-                // mpc_vec_[j].CreateQPData();
-            }
-            step_planner_timer.Toc();
-        }
-                
 
-        // TODO: Do I need the mutex on the contact schedules?
-        mpc_vec_[thread_num].UpdateContactSchedule(contact_schedule_vec_[thread_num]); // TODO: Need to do this at the same time as the reference generation
+        // // TODO: Do I need the mutex on the contact schedules?
+        // mpc_vec_[thread_num].UpdateContactSchedule(contact_schedule_vec_[thread_num]); // TODO: Need to do this at the same time as the reference generation
 
-        // Linearize around current trajectory
-        mpc_vec_[thread_num].CreateQPData();
+        // // Linearize around current trajectory
+        // mpc_vec_[thread_num].CreateQPData();
         timer.Toc();
 
         // std::cout << "step planner took " << step_planner_timer.Duration<std::chrono::microseconds>().count()/1000.0 << " ms" << std::endl;
@@ -727,23 +734,28 @@ namespace robot
 
                 // Assign start time too
                 mpc_start_time_[thread_num] = time;
+
+                mpc_costs_[thread_num] = mpc_vec_[thread_num].GetMostRecentCost();
             }
 
             // std::cout << "MPC compute finished for thread " << thread_num << std::endl;
-            // #pragma omp barrier // Wait for all the threads to finish their compute
+            #pragma omp barrier // Wait for all the threads to finish their compute
 
             // Execute the decision making once
-            // #pragma omp single
+            #pragma omp single
             {
-            // TODO: Decide which thread's solution to use
-            // For now always use thread 0
+                // TODO: Decide which thread's solution to use
+                // For now always use thread 0
+                int idx = ChooseBestSample();
 
-            // Get the traj mutex to protect it
-            std::lock_guard<std::mutex> lock(traj_out_mut_);
-            traj_out_ = mpc_trajs_[0];
+                std::cout << "Best idx: " << idx << std::endl;
 
-            // Assign start time too
-            traj_start_time_ = mpc_start_time_[0];
+                // Get the traj mutex to protect it
+                std::lock_guard<std::mutex> lock(traj_out_mut_);
+                traj_out_ = mpc_trajs_[idx];
+
+                // Assign start time too
+                traj_start_time_ = mpc_start_time_[idx];
             }
         }
         timer.Toc();
@@ -765,6 +777,21 @@ namespace robot
         prep_timer.Toc();
 
         return {timer.Duration<std::chrono::microseconds>().count()/1000.0, prep_timer.Duration<std::chrono::microseconds>().count()/1000.0};
+    }
+
+    int MpcController::ChooseBestSample() {
+        int idx = 0;
+
+        double min_cost = 1e10;
+        for (int i = 0; i < mpc_costs_.size(); i++) {
+            std::cout << "cost[" << i << "]: " << mpc_costs_[i] << std::endl;
+            if (mpc_costs_[i] < min_cost) {
+                min_cost = mpc_costs_[i];
+                idx = i;
+            }
+        }
+
+        return idx;
     }
 
     obelisk_control_msgs::msg::PDFeedForward MpcController::ComputeControl() {
@@ -2098,6 +2125,7 @@ namespace robot
 
         mpc_trajs_.resize(num_samples);
         mpc_start_time_.resize(num_samples);
+        mpc_costs_.resize(num_samples);
 
         for (int i = 0; i < num_samples; i++) {
             // ------------------------------------ //

@@ -50,6 +50,9 @@ namespace robot {
             // Updating contact info
             void UpdateContactPolytopes();
 
+            // Sampling
+            int ChooseBestSample();
+
             // Joystick interface
             void JoystickCallback(const sensor_msgs::msg::Joy& msg);
 
@@ -144,7 +147,7 @@ namespace robot {
             // Foot step polytopes
             std::mutex polytope_mutex_;
             // std::map<std::string, std::vector<torc::mpc::ContactInfo>> contact_polytopes_;
-            bool recieved_polytope_;
+            std::atomic<bool> recieved_polytope_;
 
             vectorx_t q_ic_;
             vectorx_t v_ic_;
@@ -194,6 +197,7 @@ namespace robot {
 
             std::vector<torc::mpc::Trajectory> mpc_trajs_;
             std::vector<double> mpc_start_time_;
+            std::vector<double> mpc_costs_;
 
             // MPC Skipped joint indexes
             // TODO: Find a better way to do this
