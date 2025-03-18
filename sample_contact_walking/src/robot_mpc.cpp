@@ -456,6 +456,11 @@ namespace robot
                     if (first_loop) {
                         int thread_num = omp_get_thread_num();
 
+                        while (!recieved_polytope_) {
+                            // RCLCPP_INFO_STREAM("Waiting on polytope information...");
+                            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                        }
+
                         // Read in state
                         {
                             // Get the mutex to protect the states
@@ -472,7 +477,7 @@ namespace robot
                         // TODO: Fix the state for when we re-enter this loop
                         {
                             std::lock_guard<std::mutex> lock(polytope_mutex_);
-                            step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_[thread_num], nom_footholds_, projected_footholds_, true);
+                            step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_[thread_num], nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_, true);
                             mpc_vec_[thread_num].UpdateContactSchedule(contact_schedule_vec_[thread_num]);  // TODO: There is an issue with polytopes here
                         }
 
@@ -497,6 +502,7 @@ namespace robot
                             mpc_vec_[thread_num].LogMPCCompute(this->now().seconds() - time_offset_, q, v);
                         }
                         double time = this->now().seconds();
+                        #pragma omp single  // In theory it doesn't really matter which thread executes this for the first loop because they should all compute the same thing
                         {
                             // Get the traj mutex to protect it
                             std::lock_guard<std::mutex> lock(traj_out_mut_);
@@ -565,7 +571,7 @@ namespace robot
 
 
         const int thread_num = omp_get_thread_num();
-        std::cerr << "thread num: " << thread_num << std::endl;
+        // std::cerr << "prep thread num: " << thread_num << std::endl;
 
         // if (first_prep_[thread_num]) {
         //     cs_update_prev_time_[thread_num] = this->now().seconds();
@@ -591,10 +597,10 @@ namespace robot
                 prev_time = this->now().seconds();
             }
 
-            while (!recieved_polytope_) {
-                // RCLCPP_INFO_STREAM("Waiting on polytope information...");
-                std::this_thread::sleep_for(std::chrono::milliseconds(20));
-            }
+            // while (!recieved_polytope_) {
+            //     // RCLCPP_INFO_STREAM("Waiting on polytope information...");
+            //     std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            // }
             // if (!recieved_polytope_) {
             //     UpdateContactPolytopes();
             //     // std::vector<torc::mpc::ContactInfo> poly = {torc::mpc::ContactSchedule::GetDefaultContactInfo()};
@@ -615,21 +621,21 @@ namespace robot
                 // TODO: Make new nominal and projected foothold variables
                 step_planner_->PlanStepsSampling(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_, nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
                 // step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_.back(), nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
-                for (int j = 0; j < contact_schedule_vec_.size(); j++) {
-                    // TODO: The nominal footholds an projected footholds are NOT thread safe!
-                    // step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_[j], nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
-                    mpc_vec_[j].UpdateContactSchedule(contact_schedule_vec_[j]); // TODO: Need to do this at the same time as the reference generation
-                    mpc_vec_[j].CreateQPData();
-                }
+                // for (int j = 0; j < contact_schedule_vec_.size(); j++) {
+                //     // TODO: The nominal footholds an projected footholds are NOT thread safe!
+                //     // step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_[j], nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
+                //     mpc_vec_[j].UpdateContactSchedule(contact_schedule_vec_[j]); // TODO: Need to do this at the same time as the reference generation
+                //     mpc_vec_[j].CreateQPData();
+                // }
                 step_planner_timer.Toc();
             }
         } 
 
         // // TODO: Do I need the mutex on the contact schedules?
-        // mpc_vec_[thread_num].UpdateContactSchedule(contact_schedule_vec_[thread_num]); // TODO: Need to do this at the same time as the reference generation
+        mpc_vec_[thread_num].UpdateContactSchedule(contact_schedule_vec_[thread_num]); // TODO: Need to do this at the same time as the reference generation
 
         // // Linearize around current trajectory
-        // mpc_vec_[thread_num].CreateQPData();
+        mpc_vec_[thread_num].CreateQPData();
         timer.Toc();
 
         // std::cout << "step planner took " << step_planner_timer.Duration<std::chrono::microseconds>().count()/1000.0 << " ms" << std::endl;
@@ -643,7 +649,7 @@ namespace robot
         timer.Tic();
 
         int thread_num = omp_get_thread_num();
-        std::cerr << "thread num: " << thread_num << std::endl;
+        // std::cerr << "fb thread num: " << thread_num << std::endl;
 
         vectorx_t q, v;
 
