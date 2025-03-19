@@ -189,6 +189,7 @@ namespace robot {
             // Step Planner
             std::unique_ptr<torc::step_planning::StepPlanner> step_planner_;
             std::map<std::string, std::vector<torc::step_planning::vector2_t>> nom_footholds_, projected_footholds_;   // For visualization
+            bool use_sampling_;
 
             std::shared_ptr<torc::mpc::MpcSettings> mpc_settings_;
             std::shared_ptr<torc::controller::WbcSettings> wbc_settings_;
@@ -226,6 +227,7 @@ namespace robot {
             std::vector<std::ofstream> timing_log_files_;
             std::ofstream contact_schedule_log_file_;
             std::ofstream force_sensor_log_file_;
+            std::ofstream sample_log_file_;
     };
 
     MpcController* MpcController::mujoco_sim_instance_ = nullptr;

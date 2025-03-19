@@ -221,6 +221,9 @@ namespace robot
         std::vector<double> contact_offsets = this->get_parameter("foot_offsets").as_double_array();
         step_planner_ = std::make_unique<torc::step_planning::StepPlanner>(contact_polytopes, mpc_settings_->contact_frames, contact_offsets,
             0.4, mpc_settings_->polytope_delta, "mpc_logs/polytope_planner_log.csv");   // TODO: Pull the csv from a config
+
+        this->declare_parameter<bool>("use_sampling", true);
+        use_sampling_ = this->get_parameter("use_sampling").as_bool();
         // ------------------------------------------------ //
 
         // ------------------------------------------------ //
@@ -301,10 +304,12 @@ namespace robot
         this->declare_parameter<std::string>("mpc_timing_log", {"mpc_timing_log.csv"});
         this->declare_parameter<std::string>("contact_schedule_log", {"contact_schedule_log.csv"});
         this->declare_parameter<std::string>("force_sensor_log", {"force_sensor_log.csv"});
+        this->declare_parameter<std::string>("sample_log", {"sample_log.csv"});
         std::string mpc_loop_log_name = this->get_parameter("mpc_loop_log").as_string();
         std::string mpc_timing_log_name = this->get_parameter("mpc_timing_log").as_string();
         std::string contact_schedule_log_name = this->get_parameter("contact_schedule_log").as_string();
         std::string foot_sensor_log_name = this->get_parameter("force_sensor_log").as_string();
+        std::string sample_log_name = this->get_parameter("sample_log").as_string();
 
         this->get_parameter("polytope_frames", viz_polytope_frames_);
 
@@ -312,6 +317,7 @@ namespace robot
         log_file_.open("mpc_logs/" + mpc_loop_log_name);
         contact_schedule_log_file_.open("mpc_logs/" + contact_schedule_log_name);
         force_sensor_log_file_.open("mpc_logs/" + foot_sensor_log_name);
+        sample_log_file_.open("mpc_logs/" + sample_log_name);
 
         // Need a timing log for each MPC thread
         for (int i = 0; i < this->get_parameter("num_samples").as_int(); i++) {
@@ -334,6 +340,7 @@ namespace robot
         }
         contact_schedule_log_file_.close();
         force_sensor_log_file_.close();
+        sample_log_file_.close();
 
         if (mpc_thread_.joinable()) {
             mpc_thread_.join();
@@ -615,18 +622,17 @@ namespace robot
                 // TODO: Look into what target to use, for now just use the old targets
                 // TODO: Consider making this update at a slower rate (20-50Hz)
                 step_planner_timer.Tic();
-                // TODO: Is this thread safe?
-                // TODO: Update for the sampler
-                // TODO: Probably needs to be in a single block to do the sampling just once
-                // TODO: Make new nominal and projected foothold variables
-                step_planner_->PlanStepsSampling(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_, nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
-                // step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_.back(), nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
-                // for (int j = 0; j < contact_schedule_vec_.size(); j++) {
-                //     // TODO: The nominal footholds an projected footholds are NOT thread safe!
-                //     // step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_[j], nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
-                //     mpc_vec_[j].UpdateContactSchedule(contact_schedule_vec_[j]); // TODO: Need to do this at the same time as the reference generation
-                //     mpc_vec_[j].CreateQPData();
-                // }
+                if (use_sampling_) {
+                    step_planner_->PlanStepsSampling(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_, nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
+                    // step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_.back(), nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
+                } else {
+                    for (int j = 0; j < contact_schedule_vec_.size(); j++) {
+                        // TODO: The nominal footholds an projected footholds are NOT thread safe!
+                        step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_[j], nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
+                    }
+                }
+                // For the raibert benchmark
+
                 step_planner_timer.Toc();
             }
         } 
@@ -754,7 +760,7 @@ namespace robot
                 // For now always use thread 0
                 int idx = ChooseBestSample();
 
-                std::cout << "Best idx: " << idx << std::endl;
+                // std::cout << "Best idx: " << idx << std::endl;
 
                 // Get the traj mutex to protect it
                 {
@@ -764,12 +770,15 @@ namespace robot
                     // Assign start time too
                     traj_start_time_ = mpc_start_time_[idx];
                 }
+                sample_log_file_ << idx << ",";
                 // Now reset all the contact schedules to the best one
                 for (int i = 0; i < contact_schedule_vec_.size(); i++) {
                     if (i != idx) {
                         contact_schedule_vec_[i] = contact_schedule_vec_[idx];
                     }
+                    sample_log_file_ << mpc_costs_[i] << ",";
                 }
+                sample_log_file_ << std::endl;
             }
         }
         timer.Toc();
@@ -798,7 +807,7 @@ namespace robot
 
         double min_cost = 1e10;
         for (int i = 0; i < mpc_costs_.size(); i++) {
-            std::cout << "cost[" << i << "]: " << mpc_costs_[i] << std::endl;
+            // std::cout << "cost[" << i << "]: " << mpc_costs_[i] << std::endl;
             if (mpc_costs_[i] < min_cost) {
                 min_cost = mpc_costs_[i];
                 idx = i;
