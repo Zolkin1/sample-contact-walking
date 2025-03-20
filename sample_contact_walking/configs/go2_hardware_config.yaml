@@ -12,9 +12,12 @@ onboard:
         contact_schedule_log: "go2_hardware_contact_schedule_log.csv"
         mpc_timing_log: "go2_hardware_timing_log.csv"
         force_sensor_log: "go2_hardware_force_sensor_log.csv"
-        state_vel_no_step_threshold: 0.8 #0.4 # Make it large to effectively ignore this condition
+        sample_log: "go2_hardware_sample_log.csv"
+        state_vel_no_step_threshold: 2. #0.8 #0.4 # Make it large to effectively ignore this condition
         command_vel_no_step_threshold: 0.01
         constant_vel: 0.2
+        num_samples: 5 #5 #4 #6 #4 # Use 1 for the raibert benchmark
+        use_sampling: True
 # ---------- Viz ---------- #
         viz_frames: ["torso", "FR_foot", "FL_foot", "RR_foot", "RL_foot"]
         viz_forces: True
@@ -147,8 +150,10 @@ onboard:
       params:
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_scene.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_tile_scene.xml
-        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_2_basic_stones.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_2_basic_stones.xml
         # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_3_multiple_stones.xml
+        # mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_5_simple_blocks.xml
+        mujoco_xml_path: /home/zolkin/sample-contact-walking/go2_model/mujoco/go2_lab_space_6_big_tiles.xml
       # ----- Tile Scene ---- #
         foothold_geoms: ["tile1", "tile2", "tile3", "tile4", "tile5", "tile6", "tile7", "tile8", "tile9", "stair1", "stair2", "stair3",
                         "tileA", "tileB", "tileC", "tileD", "tileE", "small_block1", "small_block2", "small_block3", "small_block4", "small_block5",
@@ -243,7 +248,6 @@ onboard:
       # ---------- Joint Encoders ---------- #
         - ros_parameter: joint_encoders_setting
           topic: /obelisk/go2/joint_encoders
-          # msg_type: ObkJointEncoders
           history_depth: 1
           callback_group: None
       # ---------- Mocap ---------- #
@@ -344,8 +348,9 @@ onboard:
           # model_xml_path: go2_tile_scene.xml
           # model_xml_path: go2_tile2_scene.xml
           # model_xml_path: go2_lab_space_2_basic_stones.xml
-          model_xml_path: go2_lab_space_3_multiple_stones.xml
-          n_u: 36
+          # model_xml_path: go2_lab_space_3_multiple_stones.xml
+          # model_xml_path: go2_lab_space_5_simple_blocks.xml
+          model_xml_path: go2_lab_space_6_big_tiles.xml
           num_steps_per_viz: 16 # No longer used
           sensor_settings:
           # ---------- Joint Encoders ---------- #

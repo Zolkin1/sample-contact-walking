@@ -511,12 +511,15 @@ namespace robot
                         double time = this->now().seconds();
                         #pragma omp single  // In theory it doesn't really matter which thread executes this for the first loop because they should all compute the same thing
                         {
-                            // Get the traj mutex to protect it
-                            std::lock_guard<std::mutex> lock(traj_out_mut_);
-                            traj_out_ = traj_mpc_;
+                            {
+                                // Get the traj mutex to protect it
+                                std::lock_guard<std::mutex> lock(traj_out_mut_);
+                                traj_out_ = traj_mpc_;
 
-                            // Assign time time too
-                            traj_start_time_ = time;
+                                // Assign time time too
+                                traj_start_time_ = time;
+                            }
+                            contact_schedule_raibert_ = contact_schedule_vec_[thread_num];
                         }
 
                         // prev_time = this->now();
@@ -537,10 +540,13 @@ namespace robot
                     // std::cout << "Feedback time took " << fb_time << " ms" << std::endl;
 
                     // TODO: If this is slow, then I need to move it
-                    torc::utils::TORCTimer viz_timer;
-                    viz_timer.Tic();
-                    PublishTrajViz(traj_mpc_, viz_frames_);
-                    viz_timer.Toc();
+                    #pragma omp single //nowait 
+                    {
+                        torc::utils::TORCTimer viz_timer;
+                        viz_timer.Tic();
+                        PublishTrajViz(traj_mpc_, viz_frames_);
+                        viz_timer.Toc();
+                    }
                     // std::cout << "viz publish took " << viz_timer.Duration<std::chrono::microseconds>().count()/1000.0 << "ms" << std::endl;
 
                     // // TODO: Remove
@@ -624,7 +630,9 @@ namespace robot
                 step_planner_timer.Tic();
                 if (use_sampling_) {
                     step_planner_->PlanStepsSampling(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_, nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
-                    // step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_vec_.back(), nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
+
+                    // Run raibert just to log what it would do
+                    step_planner_->PlanStepsHeuristic(q_target_.value(), mpc_settings_->dt, contact_schedule_raibert_, nom_footholds_, projected_footholds_, this->now().seconds() - time_offset_);
                 } else {
                     for (int j = 0; j < contact_schedule_vec_.size(); j++) {
                         // TODO: The nominal footholds an projected footholds are NOT thread safe!
@@ -776,6 +784,7 @@ namespace robot
                     if (i != idx) {
                         contact_schedule_vec_[i] = contact_schedule_vec_[idx];
                     }
+                    contact_schedule_raibert_ = contact_schedule_vec_[idx];
                     sample_log_file_ << mpc_costs_[i] << ",";
                 }
                 sample_log_file_ << std::endl;
@@ -1136,6 +1145,9 @@ namespace robot
             q_base_target(0) = q(0);
             q_base_quat_target = q.segment<4>(3);   // TODO: Play with this a bit
         }
+
+        // TODO: Consider removing
+        // q_base_target(1) = 0;
 
         q_base_target(2) = z_target_;
 
@@ -2099,7 +2111,7 @@ namespace robot
             for (int i = 0; i < v_target_.value().GetNumNodes(); i++) {
                 // TODO: Add some kind of "damping" so the target velocity doesnt change too much
                 v_target_.value()[i](0) = msg.axes[LEFT_JOY_VERT] * 1;
-                v_target_.value()[i](1) = msg.axes[LEFT_JOY_HORZ] * 0; //0. 0.1;
+                v_target_.value()[i](1) = msg.axes[LEFT_JOY_HORZ] * 0.2; //0. 0.1;
             }
             
             // TODO: Add a angular velocity target too using the right joystick

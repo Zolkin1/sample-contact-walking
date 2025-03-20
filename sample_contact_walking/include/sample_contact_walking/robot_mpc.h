@@ -173,7 +173,7 @@ namespace robot {
             std::unique_ptr<torc::models::FullOrderRigidBody> mpc_model_;           // Potentially reduced model for the MPC
             std::vector<torc::models::FullOrderRigidBody> mpc_model_vec_;
             std::unique_ptr<torc::models::FullOrderRigidBody> wbc_model_;           // Potentially reduced model for the MPC
-            // torc::mpc::ContactSchedule contact_schedule_;
+            torc::mpc::ContactSchedule contact_schedule_raibert_;
             std::vector<torc::mpc::ContactSchedule> contact_schedule_vec_;
             std::vector<double> cs_update_prev_time_;
             std::vector<bool> first_prep_;
