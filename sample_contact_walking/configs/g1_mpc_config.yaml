@@ -8,8 +8,8 @@ general_settings:
   node_dt_type: two_groups # Even, two_groups, Adaptive
   node_group_1_n: 5
   node_group_2_n: 20
-  node_dt_1: 0.015 #0.04 #0.015
-  node_dt_2: 0.04 #0.05
+  node_dt_1: 0.025 #0.015 #0.04 #0.015
+  node_dt_2: 0.035 #0.04 #0.05
   compile_derivatives: False
   base_frame: "pelvis"
   scale_cost: False
@@ -18,15 +18,16 @@ general_settings:
   nodes_full_dynamics: 24
   delay_prediction_dt: 0
   terminal_cost_weight: 60
-  log_file_name: "mpc_logs/mpc_sim_log.csv"
+  log_file_name: "mpc_logs/g1_sim_mpc_log.csv"
+  log: False  #True
 solver_settings:
 # ----------------------------- #
 # ----- Simulation Params ----- #
 # ----------------------------- #
-  mode: Balance #Speed
+  mode: Speed #Balance #Speed
   alpha_min: 1e-8
-  max_iter: 8 #12 #8 #10 
-  mu0: 1 #10
+  max_iter: 8 #10 #8 #12 #8 #10 
+  mu0: 10 #1 #10
   tol_stat: 1e-8
   tol_eq: 1e-8
   tol_comp: 1e-8
@@ -39,7 +40,7 @@ solver_settings:
 constraints:
   friction_coef: 0.6
   friction_margin: 2
-  max_grf: 300 #800
+  max_grf: 500 #300 #800
   min_grf: 10
   collisions:
     - frame1: "left_toe"

@@ -15,6 +15,7 @@ general_settings:
   delay_prediction_dt: 0
   terminal_cost_weight: 40 #2 #10
   log_file_name: "mpc_logs/go2_sim_mpc_log.csv"
+  log: False
 solver_settings:
 # HPIPM:
   mode: Speed #Balance #Balance #Balance #Speed #Robust #Balance -- To get a success the best chance is with Robust and give more iterations
