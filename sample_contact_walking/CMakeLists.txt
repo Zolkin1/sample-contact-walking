@@ -48,8 +48,10 @@ include_directories(include)
 ament_export_include_directories(include)
 
 # ------- Controller ------- #
+find_package(OpenMP REQUIRED)
 add_executable(ll_controller src/robot_mpc.cpp)
 target_link_libraries(ll_controller PUBLIC Obelisk::Core Obelisk::Zoo Mpc StepPlanning Wbc) # Wbc
+target_link_libraries(ll_controller PUBLIC OpenMP::OpenMP_CXX)
 
 ament_target_dependencies(ll_controller
     PUBLIC

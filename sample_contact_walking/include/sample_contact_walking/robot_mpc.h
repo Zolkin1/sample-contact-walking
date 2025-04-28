@@ -50,6 +50,9 @@ namespace robot {
             // Updating contact info
             void UpdateContactPolytopes();
 
+            // Sampling
+            int ChooseBestSample();
+
             // Joystick interface
             void JoystickCallback(const sensor_msgs::msg::Joy& msg);
 
@@ -73,6 +76,8 @@ namespace robot {
             // std::pair<vectorx_t, vectorx_t> ReduceState(const vectorx_t& q, const vectorx_t& v, torc::models::FullOrderRigidBody model);
             void LogCurrentControl(const vectorx_t& q_control, const vectorx_t& v_control, const vectorx_t& tau, const vectorx_t& force, const vectorx_t& tau_mpc);
             void LogEigenVec(const vectorx_t& x);
+
+            void ConstructMPCVec();
 
             // Viz
             void PublishTrajViz(const torc::mpc::Trajectory& traj, const std::vector<std::string>& viz_frames);
@@ -142,7 +147,7 @@ namespace robot {
             // Foot step polytopes
             std::mutex polytope_mutex_;
             // std::map<std::string, std::vector<torc::mpc::ContactInfo>> contact_polytopes_;
-            bool recieved_polytope_;
+            std::atomic<bool> recieved_polytope_;
 
             vectorx_t q_ic_;
             vectorx_t v_ic_;
@@ -166,8 +171,12 @@ namespace robot {
             // std::shared_ptr<torc::mpc::FullOrderMpc> mpc_;
             std::unique_ptr<torc::models::FullOrderRigidBody> model_;               // Full model
             std::unique_ptr<torc::models::FullOrderRigidBody> mpc_model_;           // Potentially reduced model for the MPC
+            std::vector<torc::models::FullOrderRigidBody> mpc_model_vec_;
             std::unique_ptr<torc::models::FullOrderRigidBody> wbc_model_;           // Potentially reduced model for the MPC
-            torc::mpc::ContactSchedule contact_schedule_;
+            torc::mpc::ContactSchedule contact_schedule_raibert_;
+            std::vector<torc::mpc::ContactSchedule> contact_schedule_vec_;
+            std::vector<double> cs_update_prev_time_;
+            std::vector<bool> first_prep_;
 
             std::unique_ptr<torc::controller::WbcController> wbc_controller_;
             matrixx_t K_;
@@ -180,10 +189,16 @@ namespace robot {
             // Step Planner
             std::unique_ptr<torc::step_planning::StepPlanner> step_planner_;
             std::map<std::string, std::vector<torc::step_planning::vector2_t>> nom_footholds_, projected_footholds_;   // For visualization
+            bool use_sampling_;
 
             std::shared_ptr<torc::mpc::MpcSettings> mpc_settings_;
             std::shared_ptr<torc::controller::WbcSettings> wbc_settings_;
-            std::shared_ptr<torc::mpc::HpipmMpc> mpc_;
+            // std::shared_ptr<torc::mpc::HpipmMpc> mpc_;
+            std::vector<torc::mpc::HpipmMpc> mpc_vec_;
+
+            std::vector<torc::mpc::Trajectory> mpc_trajs_;
+            std::vector<double> mpc_start_time_;
+            std::vector<double> mpc_costs_;
 
             // MPC Skipped joint indexes
             // TODO: Find a better way to do this
@@ -209,9 +224,10 @@ namespace robot {
 
             double time_offset_;
             std::ofstream log_file_;
-            std::ofstream timing_log_file_;
+            std::vector<std::ofstream> timing_log_files_;
             std::ofstream contact_schedule_log_file_;
             std::ofstream force_sensor_log_file_;
+            std::ofstream sample_log_file_;
     };
 
     MpcController* MpcController::mujoco_sim_instance_ = nullptr;
